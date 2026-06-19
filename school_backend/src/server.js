@@ -2,11 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-
-// Hagaajinta dotenv: Waxay kaliya shaqaynaysaa marka aynu ku jirno deegaanka local-ka
-if (process.env.NODE_ENV !== 'production') {
-  require('dotenv').config();
-}
+require('dotenv').config();
 
 // Routes Import-yada
 const attendanceRoutes = require('./routes/attendanceRoutes');
@@ -20,8 +16,8 @@ const incomeRoutes = require('./routes/incomeRoutes');
 const reportRoutes = require('./routes/report_routes');
 const aiRoutes = require('./routes/aiRoute');
 const paymentRoutes = require('./routes/paymentRoutes');
-const salaryRoutes = require('./routes/salaryRoutes');
-const communicationRoutes = require('./routes/communicationRoutes');
+const salaryRoutes = require('./routes/salaryRoutes'); // Ku daray salaryRoutes
+const communicationRoutes = require('./routes/communicationRoutes'); // Ku daray communicationRoutes rasmiga ah
 
 const app = express();
 
@@ -32,7 +28,8 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- Cache Control Middleware ---
+// --- Cache Control Middleware (Cillad-bixinta Code 304) ---
+// Tani waxay hubinaysaa in Flutter uu mar walba helo xogta cusub ee database-ka
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   next();
@@ -55,8 +52,8 @@ app.use('/api/incomes', incomeRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/salary', salaryRoutes);
-app.use('/api/communications', communicationRoutes);
+app.use('/api/salary', salaryRoutes); // Ku daray salaryRoutes
+app.use('/api/communications', communicationRoutes); // Ku daray communicationRoutes rasmiga ah
 
 // --- Error Handling Middleware ---
 app.use((err, req, res, next) => {
@@ -67,5 +64,5 @@ app.use((err, req, res, next) => {
 // --- Server Startup ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
