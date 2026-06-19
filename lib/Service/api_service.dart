@@ -6,15 +6,17 @@ import '../models/student_model.dart';
 import '../models/bus_model.dart';
 
 class ApiService {
-  static const String baseUrl = "http://127.0.0.1:5000/api/students";
-  static const String teacherUrl = "http://127.0.0.1:5000/api/teachers";
-  static const String attendanceUrl = "http://127.0.0.1:5000/api/attendance";
-  static const String busUrl = "http://127.0.0.1:5000/api/buses";
-  static const String examUrl = "http://127.0.0.1:5000/api/exam";
-  static const String expenseUrl = "http://127.0.0.1:5000/api/expenses";
-  static const String incomeUrl = "http://127.0.0.1:5000/api/incomes";
-  static const String userUrl = "http://127.0.0.1:5000/api/users";
-  static const String aiUrl = "http://127.0.0.1:5000/api/ai/query";
+  static const String serverUrl = "https://smartschool-web.onrender.com";
+  
+  static const String baseUrl = "$serverUrl/api/students";
+  static const String teacherUrl = "$serverUrl/api/teachers";
+  static const String attendanceUrl = "$serverUrl/api/attendance";
+  static const String busUrl = "$serverUrl/api/buses";
+  static const String examUrl = "$serverUrl/api/exam";
+  static const String expenseUrl = "$serverUrl/api/expenses";
+  static const String incomeUrl = "$serverUrl/api/incomes";
+  static const String userUrl = "$serverUrl/api/users";
+  static const String aiUrl = "$serverUrl/api/ai/query";
 
   static const Map<String, String> _headers = {
     "Content-Type": "application/json",
@@ -34,7 +36,6 @@ class ApiService {
     }
   }
 
-  // PAGINATION READY - Waxa kaliya ee aan ku daray waa page iyo limit
   static Future<List<StudentModel>> getAllStudents({int page = 1, int limit = 20}) async {
     try {
       final response = await http.get(Uri.parse("$baseUrl/all?page=$page&limit=$limit"), headers: _headers);
