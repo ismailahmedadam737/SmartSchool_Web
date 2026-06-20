@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class PaymentApiService {
-  static const String baseUrl = 'ttps://smartschool-web.onrender.com/api'; 
+  // Waxaan beddelay localhost una beddelay URL-kaaga Render
+  static const String baseUrl = 'https://smartschool-web.onrender.com/api'; 
 
   // 1. Habka loo diro lacagta
   static Future<Map<String, dynamic>> addPayment({
@@ -24,7 +25,7 @@ class PaymentApiService {
       }),
     );
 
-    if (response.statusCode == 201) {
+    if (response.statusCode == 201 || response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to add payment: ${response.statusCode}');
@@ -46,7 +47,6 @@ class PaymentApiService {
     final response = await http.get(Uri.parse('$baseUrl/payments/total-income'));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      // Waxaan isticmaalnay 'total_income' si waafaqsan server-kaaga
       return double.tryParse(data['total_income'].toString()) ?? 0.0;
     } else {
       throw Exception('Failed to load total income');
@@ -58,7 +58,6 @@ class PaymentApiService {
     final response = await http.get(Uri.parse('$baseUrl/expenses/total-expenses'));
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      // Waxaan isticmaalnay 'total_expenses' si waafaqsan server-kaaga
       return double.tryParse(data['total_expenses'].toString()) ?? 0.0;
     } else {
       throw Exception('Failed to load total expenses');
