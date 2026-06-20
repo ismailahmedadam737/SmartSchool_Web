@@ -27,16 +27,18 @@ class _AuthPageState extends State<AuthPage> {
     String user = _usernameController.text.trim();
     String pass = _passController.text.trim();
 
-    try {
-      final response = await http.post(
-        Uri.parse("http://127.0.0.1:5000/api/users/login"),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "username": user,
-          "password": pass,
-        }),
-      );
-
+  try {
+  // Waxaad u beddeshaa URL-kaaga Render
+  final response = await http.post(
+    Uri.parse("https://smartschool-web.onrender.com/api/users/login"), 
+    headers: {"Content-Type": "application/json"},
+    body: jsonEncode({
+      "username": user,
+      "password": pass,
+    }),
+  );
+  
+  // ... inta kale ee koodkaaga
       final data = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
