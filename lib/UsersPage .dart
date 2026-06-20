@@ -10,7 +10,7 @@ class UsersPage extends StatefulWidget {
 }
 
 class _UsersPageState extends State<UsersPage> {
-  final String baseUrl = "http://127.0.0.1:5000/api/users";
+  final String baseUrl = "https://smartschool-web.onrender.com/api/users";
 
   final TextEditingController usernameController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
