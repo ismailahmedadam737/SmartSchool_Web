@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ExpenseService {
-  static const String expenseUrl = "ttps://smartschool-web.onrender.com/api/api/expenses";
+  static const String expenseUrl = "https://smartschool-web.onrender.com/api/api/expenses";
   static const Map<String, String> _headers = {"Content-Type": "application/json"};
 
   static Future<List<Map<String, dynamic>>> getAllExpenses() async {
