@@ -6,35 +6,23 @@ import '../models/student_model.dart';
 import '../models/bus_model.dart';
 
 class ApiService {
-  static const String baseUrl = "http://127.0.0.1:5000/api/students";
-  static const String teacherUrl = "http://127.0.0.1:5000/api/teachers";
-  static const String attendanceUrl = "http://127.0.0.1:5000/api/attendance";
-  static const String busUrl = "http://127.0.0.1:5000/api/buses";
-  static const String examUrl = "http://127.0.0.1:5000/api/exam";
-  static const String expenseUrl = "http://127.0.0.1:5000/api/expenses";
-  static const String incomeUrl = "http://127.0.0.1:5000/api/incomes";
-  static const String userUrl = "http://127.0.0.1:5000/api/users";
-  static const String aiUrl = "http://127.0.0.1:5000/api/ai/query";
+  static const String _host = "https://smartschool-web.onrender.com/api";
+  
+  static const String baseUrl = "$_host/students";
+  static const String teacherUrl = "$_host/teachers";
+  static const String attendanceUrl = "$_host/attendance";
+  static const String busUrl = "$_host/buses";
+  static const String examUrl = "$_host/exam";
+  static const String expenseUrl = "$_host/expenses";
+  static const String incomeUrl = "$_host/incomes";
+  static const String userUrl = "$_host/users";
 
   static const Map<String, String> _headers = {
     "Content-Type": "application/json",
     "Cache-Control": "no-cache",
   };
 
-  static Future<String> askAI(String question) async {
-    try {
-      final response = await http.post(Uri.parse(aiUrl), headers: _headers, body: jsonEncode({"question": question}));
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body)['data'];
-      }
-      return "Khalad: Server-ku wuxuu soo celiyay ${response.statusCode}";
-    } catch (e) {
-      log("❌ AI Query Error: $e");
-      return "Waan ka xumahay, awood uma lihi inaan jawaab soo saaro hadda.";
-    }
-  }
-
-  // PAGINATION READY - Waxa kaliya ee aan ku daray waa page iyo limit
+  // PAGINATION READY
   static Future<List<StudentModel>> getAllStudents({int page = 1, int limit = 20}) async {
     try {
       final response = await http.get(Uri.parse("$baseUrl/all?page=$page&limit=$limit"), headers: _headers);
@@ -50,7 +38,7 @@ class ApiService {
 
   static Future<bool> registerStudent(StudentModel student) async {
     try {
-      final response = await http.post(Uri.parse("$baseUrl/register"), headers: {"Content-Type": "application/json"}, body: jsonEncode(student.toJson()));
+      final response = await http.post(Uri.parse("$baseUrl/register"), headers: _headers, body: jsonEncode(student.toJson()));
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       log("❌ Register Student Error: $e");
@@ -92,7 +80,7 @@ class ApiService {
 
   static Future<bool> submitAttendance(List<Map<String, dynamic>> students, String className, String month, String date) async {
     try {
-      final response = await http.post(Uri.parse("$attendanceUrl/submit"), headers: {"Content-Type": "application/json"}, body: jsonEncode({"students": students, "class_name": className, "month": month, "date": date}));
+      final response = await http.post(Uri.parse("$attendanceUrl/submit"), headers: _headers, body: jsonEncode({"students": students, "class_name": className, "month": month, "date": date}));
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       return false;
@@ -111,7 +99,7 @@ class ApiService {
 
   static Future<bool> registerTeacher(Map<String, String> teacher) async {
     try {
-      final response = await http.post(Uri.parse("$teacherUrl/register"), headers: {"Content-Type": "application/json"}, body: jsonEncode(teacher));
+      final response = await http.post(Uri.parse("$teacherUrl/register"), headers: _headers, body: jsonEncode(teacher));
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       return false;
@@ -133,7 +121,7 @@ class ApiService {
 
   static Future<bool> updateTeacher(String id, Map<String, String> teacher) async {
     try {
-      final response = await http.put(Uri.parse("$teacherUrl/update/$id"), headers: {"Content-Type": "application/json"}, body: jsonEncode(teacher));
+      final response = await http.put(Uri.parse("$teacherUrl/update/$id"), headers: _headers, body: jsonEncode(teacher));
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -151,7 +139,7 @@ class ApiService {
 
   static Future<bool> registerBus(Bus bus) async {
     try {
-      final response = await http.post(Uri.parse("$busUrl/register"), headers: {"Content-Type": "application/json"}, body: jsonEncode(bus.toJson()));
+      final response = await http.post(Uri.parse("$busUrl/register"), headers: _headers, body: jsonEncode(bus.toJson()));
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       return false;
@@ -173,7 +161,7 @@ class ApiService {
 
   static Future<bool> updateBus(int id, Bus bus) async {
     try {
-      final response = await http.put(Uri.parse("$busUrl/update/$id"), headers: {"Content-Type": "application/json"}, body: jsonEncode(bus.toJson()));
+      final response = await http.put(Uri.parse("$busUrl/update/$id"), headers: _headers, body: jsonEncode(bus.toJson()));
       return response.statusCode == 200;
     } catch (e) {
       return false;
