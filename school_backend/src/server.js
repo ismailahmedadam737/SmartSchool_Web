@@ -14,7 +14,6 @@ const userRoutes = require('./routes/userRoutes');
 const expenseRoutes = require('./routes/expenseRoutes');
 const incomeRoutes = require('./routes/incomeRoutes');
 const reportRoutes = require('./routes/report_routes');
-const aiRoutes = require('./routes/aiRoute');
 const paymentRoutes = require('./routes/paymentRoutes');
 const salaryRoutes = require('./routes/salaryRoutes'); // Ku daray salaryRoutes
 const communicationRoutes = require('./routes/communicationRoutes'); // Ku daray communicationRoutes rasmiga ah
@@ -50,7 +49,6 @@ app.use('/api/users', userRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/incomes', incomeRoutes);
 app.use('/api/reports', reportRoutes);
-app.use('/api/ai', aiRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/salary', salaryRoutes); // Ku daray salaryRoutes
 app.use('/api/communications', communicationRoutes); // Ku daray communicationRoutes rasmiga ah
