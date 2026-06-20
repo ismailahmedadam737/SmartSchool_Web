@@ -212,7 +212,7 @@ class _ReceiptPageState extends State<ReceiptPage> {
         decoration: BoxDecoration(border: Border.all(color: receiptBlue, width: 2.5), borderRadius: BorderRadius.circular(8)),
         child: Column(
           children: const [
-            Text("NORADIN PRIMARY AND KG SCHOOLS", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: receiptBlue)),
+            Text("IFTIINSHE PRIMARY AND KG SCHOOLS", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: receiptBlue)),
             Text("Tel: 063-7758927 // 063-4869775 Zaad: 510624", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF004677))),
           ],
         ));
