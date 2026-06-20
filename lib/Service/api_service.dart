@@ -20,19 +20,6 @@ class ApiService {
     "Cache-Control": "no-cache",
   };
 
-  static Future<String> askAI(String question) async {
-    try {
-      final response = await http.post(Uri.parse(aiUrl), headers: _headers, body: jsonEncode({"question": question}));
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body)['data'];
-      }
-      return "Khalad: Server-ku wuxuu soo celiyay ${response.statusCode}";
-    } catch (e) {
-      log("❌ AI Query Error: $e");
-      return "Waan ka xumahay, awood uma lihi inaan jawaab soo saaro hadda.";
-    }
-  }
-
   static Future<List<StudentModel>> getAllStudents({int page = 1, int limit = 20}) async {
     try {
       final response = await http.get(Uri.parse("$baseUrl/all?page=$page&limit=$limit"), headers: _headers);
