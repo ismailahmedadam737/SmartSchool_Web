@@ -14,7 +14,6 @@ class ApiService {
   static const String expenseUrl = "https://smartschool-web.onrender.com/api/expenses";
   static const String incomeUrl = "https://smartschool-web.onrender.com/api/incomes";
   static const String userUrl = "https://smartschool-web.onrender.com/api/users";
-  static const String aiUrl = "https://smartschool-web.onrender.com/api/ai/query";
 
   static const Map<String, String> _headers = {
     "Content-Type": "application/json",
