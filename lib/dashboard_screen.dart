@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:iftiinshe/AdminMessagesPage.dart';
 import 'package:iftiinshe/AtendancePage.dart';
-import 'package:iftiinshe/ChatDialog.dart';
 import 'package:iftiinshe/CommunicationsPage.dart';
 import 'package:iftiinshe/ExamScheduleGeneratorPage.dart';
 import 'package:iftiinshe/Income%20&%20Outcome.dart';
@@ -68,19 +67,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthPage(userRole: '')), (route) => false);
   }
 
-  void _showChatbot(BuildContext context) {
-    showDialog(context: context, builder: (context) => const ChatDialog());
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: bgColor,
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _showChatbot(context),
-        backgroundColor: const Color(0xFF1A237E),
-        child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
-      ),
       body: Row(
         children: [
           SizedBox(width: 260, child: _buildSidebar()),

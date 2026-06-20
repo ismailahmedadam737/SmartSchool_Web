@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class CommunicationService {
-  static const String baseUrl = "https://smartschool-web.onrender.com/api/communications";
+  static const String baseUrl = "http://localhost:5000/api/communications";
 
   static Future<bool> sendFormMessage(Map<String, String> messageData) async {
     try {
