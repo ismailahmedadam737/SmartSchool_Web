@@ -3,29 +3,11 @@ import 'package:flutter/material.dart';
 class AdminMessagesPage extends StatefulWidget {
   const AdminMessagesPage({super.key});
 
-  // Liiska caalamiga ah ee fariimaha (Static Global List)
-  static List<Map<String, String>> globalMessages = [
-    {
-      "id": "1",
-      "name": "Axmed Cali Cilmi",
-      "phone": "0634455667",
-      "subject": "Diiwaangelinta Carruurta",
-      "message": "Asc maamulka, waxaan rabay inaan ogaado in boos quraac weli ka bannaanyahay fasalka KG2, gabadh baan rabaa inaan iska qoro.",
-      "date": "Maanta, 09:15 AM"
-    },
-    {
-      "id": "2",
-      "name": "Faadumo Jaamac",
-      "phone": "0633211223",
-      "subject": "Xog-wareysi Gaadiidka",
-      "message": "Haddii uu jiro bas qaada ardayda dhiiri-galinta deggen fadlan nala soo xiriiriya xilliyada shaqada.",
-      "date": "Shalay, 04:30 PM"
-    }
-  ];
+  // Waxaan ka dhignay liiska mid madhan markii hore
+  static List<Map<String, String>> globalMessages = [];
 
-  // Kani waa ka caawinaya Sidebar-ka/Drawer-ka inuu ogaado marka gudaha loo galo
-  // Waxay ku bilaabmaysaa 2 fariimood oo cusub. Marka bogga la furo wuxuu noqonayaa 0.
-  static ValueNotifier<int> unreadCountNotifier = ValueNotifier<int>(2);
+  // Waxaan ka dhignay 0 maadaama aysan jirin fariimo markii hore
+  static ValueNotifier<int> unreadCountNotifier = ValueNotifier<int>(0);
 
   @override
   State<AdminMessagesPage> createState() => _AdminMessagesPageState();
@@ -37,7 +19,7 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
   @override
   void initState() {
     super.initState();
-    // MARKA GUDAHA LOO GALO BOGGAN: Si toos ah u baabi'i calaamaddii Sidebar-ka (Ka dhig 0)
+    // Marka bogga la furo, waxaa la hubinayaa in fariimaha cusub ay yihiin 0
     WidgetsBinding.instance.addPostFrameCallback((_) {
       AdminMessagesPage.unreadCountNotifier.value = 0;
     });
@@ -47,17 +29,15 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
     
-    // Habaynta midabada casriga ah
     final Color cardColor = isDarkMode ? const Color(0xFF1E1E2E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
     final Color subTextColor = isDarkMode ? Colors.white60 : const Color(0xFF475569);
 
     return Scaffold(
-      backgroundColor: Colors.transparent, // Waxay dhaxlaysaa dhabarka weyn ee Dashboard-ka
+      backgroundColor: Colors.transparent, 
       body: SafeArea(
         child: Row(
           children: [
-            // DHINACA LEFT: Sawirka dad fariimo qoraya iyo Header-ka
             Expanded(
               flex: 5,
               child: Container(
@@ -65,7 +45,6 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(25),
                   image: const DecorationImage(
-                    // Halkan waxaa lagu beddelay sawir muujinaya qof fariin ka diraya taleefanka
                     image: NetworkImage("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop"),
                     fit: BoxFit.cover,
                   ),
@@ -87,7 +66,6 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Qaybta sare iyo badhanka Refresh-ka
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -119,7 +97,6 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                           )
                         ],
                       ),
-                      // Qaybta qoraalka hoose ee kaarka
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -139,8 +116,6 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                 ),
               ),
             ),
-
-            // DHINACA RIGHT: Fariimaha oo u qulqulaya si toos ah
             Expanded(
               flex: 6,
               child: Padding(
@@ -183,7 +158,6 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    // Profile, Name iyo Saacadda
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
@@ -221,7 +195,6 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                                             ),
                                           ],
                                         ),
-                                        // Saacadda
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
@@ -236,8 +209,6 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                                       ],
                                     ),
                                     const Divider(height: 30, thickness: 0.8),
-                                    
-                                    // Subject
                                     Row(
                                       children: [
                                         Container(
@@ -256,15 +227,11 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                                       ],
                                     ),
                                     const SizedBox(height: 10),
-                                    
-                                    // Fariinta oo faahfaahsan
                                     Text(
                                       msg['message']!,
                                       style: TextStyle(color: isDarkMode ? Colors.white70 : const Color(0xFF334155), fontSize: 14, height: 1.5),
                                     ),
                                     const SizedBox(height: 15),
-                                    
-                                    // Badhamada waxqabadka
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.end,
                                       children: [
@@ -285,9 +252,7 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                           ),
-                                          onPressed: () {
-                                            // Action-ka ka jawaabista
-                                          },
+                                          onPressed: () {},
                                           icon: const Icon(Icons.reply_rounded, color: Color(0xFF1A237E), size: 18),
                                           label: const Text(
                                             "Ka Jawaab",
