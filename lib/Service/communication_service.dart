@@ -14,11 +14,7 @@ class CommunicationService {
         body: json.encode(messageData),
       );
 
-      if (response.statusCode == 200) {
-        return true;
-      } else {
-        return false;
-      }
+      return response.statusCode == 200;
     } catch (e) {
       print("Cillad xiriirka: $e");
       return false;
