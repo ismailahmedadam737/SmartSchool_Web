@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const cron = require('node-cron'); // Ku daray maktabaddan
+const { Pool } = require('pg');    // Si aan ula xiriirno database-ka
 require('dotenv').config();
 
 // Routes Import-yada
@@ -15,10 +17,11 @@ const expenseRoutes = require('./routes/expenseRoutes');
 const incomeRoutes = require('./routes/incomeRoutes');
 const reportRoutes = require('./routes/report_routes');
 const paymentRoutes = require('./routes/paymentRoutes');
-const salaryRoutes = require('./routes/salaryRoutes'); // Ku daray salaryRoutes
-const communicationRoutes = require('./routes/communicationRoutes'); // Ku daray communicationRoutes rasmiga ah
+const salaryRoutes = require('./routes/salaryRoutes');
+const communicationRoutes = require('./routes/communicationRoutes');
 
 const app = express();
+const pool = new Pool({ connectionString: process.env.DATABASE_URL }); // Waxaan u baahanahay pool si aan u tirtirno xogta
 
 // --- Middleware ---
 app.use(helmet()); 
@@ -27,19 +30,28 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- Cache Control Middleware (Cillad-bixinta Code 304) ---
-// Tani waxay hubinaysaa in Flutter uu mar walba helo xogta cusub ee database-ka
+// --- Cache Control ---
 app.use((req, res, next) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   next();
 });
 
-// --- Root Route ---
+// --- CRON JOB: Tirtirida Fariimaha 24 saac kadib ---
+// Waxay soconaysaa saacad kasta
+cron.schedule('0 * * * *', async () => {
+  try {
+    const result = await pool.query("DELETE FROM messages WHERE created_at < NOW() - INTERVAL '24 hours'");
+    console.log(`🧹 Cleanup: ${result.rowCount} fariimood oo duugoobay waa la tirtiray.`);
+  } catch (err) {
+    console.error('❌ Khalad ka dhacay tirtirida otomaatiga ah:', err);
+  }
+});
+
+// --- API Routes ---
 app.get('/', (req, res) => {
   res.send('🚀 Iftiinshe School Management System API is Running...');
 });
 
-// --- API Routes ---
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/teachers', teacherRoutes);
@@ -50,10 +62,10 @@ app.use('/api/expenses', expenseRoutes);
 app.use('/api/incomes', incomeRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);
-app.use('/api/salary', salaryRoutes); // Ku daray salaryRoutes
-app.use('/api/communications', communicationRoutes); // Ku daray communicationRoutes rasmiga ah
+app.use('/api/salary', salaryRoutes);
+app.use('/api/communications', communicationRoutes);
 
-// --- Error Handling Middleware ---
+// --- Error Handling ---
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ message: 'Something went wrong on the server!' });
@@ -62,5 +74,5 @@ app.use((err, req, res, next) => {
 // --- Server Startup ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server is running on port ${PORT}`);
 });
