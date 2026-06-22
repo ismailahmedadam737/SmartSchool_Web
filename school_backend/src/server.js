@@ -2,8 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const cron = require('node-cron'); // Ku daray maktabaddan
-const { Pool } = require('pg');    // Si aan ula xiriirno database-ka
+const { Pool } = require('pg');
 require('dotenv').config();
 
 // Routes Import-yada
@@ -21,7 +20,7 @@ const salaryRoutes = require('./routes/salaryRoutes');
 const communicationRoutes = require('./routes/communicationRoutes');
 
 const app = express();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL }); // Waxaan u baahanahay pool si aan u tirtirno xogta
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 // --- Middleware ---
 app.use(helmet()); 
@@ -36,16 +35,18 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- CRON JOB: Tirtirida Fariimaha 24 saac kadib ---
-// Waxay soconaysaa saacad kasta
+// --- CRON JOB: Waa laga saaray qaybtan si aysan fariimuhu u tirtirmi ---
+/*
+const cron = require('node-cron');
 cron.schedule('0 * * * *', async () => {
   try {
     const result = await pool.query("DELETE FROM messages WHERE created_at < NOW() - INTERVAL '24 hours'");
-    console.log(`🧹 Cleanup: ${result.rowCount} fariimood oo duugoobay waa la tirtiray.`);
+    console.log(`🧹 Cleanup: ${result.rowCount} fariimood waa la tirtiray.`);
   } catch (err) {
-    console.error('❌ Khalad ka dhacay tirtirida otomaatiga ah:', err);
+    console.error('❌ Khalad ka dhacay tirtirida:', err);
   }
 });
+*/
 
 // --- API Routes ---
 app.get('/', (req, res) => {
