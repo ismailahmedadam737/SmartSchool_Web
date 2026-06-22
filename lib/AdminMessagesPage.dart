@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'communication_service.dart'; // Hubi in magaca faylku uu yahay midka saxda ah
 
 class AdminMessagesPage extends StatefulWidget {
   const AdminMessagesPage({super.key});
@@ -42,10 +43,26 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
     }
   }
 
+  // Function-ka tirtirida oo casri ah
+  Future<void> _handleDelete(int id, int index) async {
+    bool success = await CommunicationService.deleteMessage(id);
+    if (success) {
+      setState(() {
+        AdminMessagesPage.globalMessages.removeAt(index);
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Fariinta waa la tirtiray")));
+      }
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Tirtiriddu way fashilantay!")));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    
     final Color cardColor = isDarkMode ? const Color(0xFF1E1E2E) : Colors.white;
     final Color textColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
     final Color subTextColor = isDarkMode ? Colors.white60 : const Color(0xFF475569);
@@ -256,9 +273,7 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
                                             padding: const EdgeInsets.all(10),
                                           ),
                                           icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                                          onPressed: () {
-                                            setState(() => AdminMessagesPage.globalMessages.removeAt(index));
-                                          },
+                                          onPressed: () => _handleDelete(msg['id'], index),
                                         ),
                                         const SizedBox(width: 10),
                                         TextButton.icon(
