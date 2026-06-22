@@ -20,9 +20,11 @@ const salaryRoutes = require('./routes/salaryRoutes');
 const communicationRoutes = require('./routes/communicationRoutes');
 
 const app = express();
+
+// Database Connection
 const pool = new Pool({ 
     connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false } // Kani wuxuu xallinayaa digniintii SSL-ka
+    ssl: { rejectUnauthorized: false } 
 });
 
 // --- Middleware ---
@@ -43,23 +45,7 @@ app.get('/', (req, res) => {
   res.send('🚀 Iftiinshe School Management System API is Running...');
 });
 
-// --- Delete Endpoint (Si looga tirtiro database-ka) ---
-app.delete('/api/communications/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const result = await pool.query('DELETE FROM communications WHERE id = $1', [id]);
-    
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Fariintan lama helin.' });
-    }
-    
-    res.status(200).json({ message: 'Fariintii si joogto ah ayaa loo tirtiray.' });
-  } catch (err) {
-    console.error('❌ Khalad dhacay:', err);
-    res.status(500).json({ message: 'Server error: Tirtiriddu way fashilantay.' });
-  }
-});
-
+// Routes usage
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/teachers', teacherRoutes);
@@ -71,6 +57,8 @@ app.use('/api/incomes', incomeRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/salary', salaryRoutes);
+// Halkan waxaa laga maamuli doonaa dhammaan communications routes, 
+// oo ay ku jirto tan delete-ka ahayd.
 app.use('/api/communications', communicationRoutes);
 
 // --- Error Handling ---

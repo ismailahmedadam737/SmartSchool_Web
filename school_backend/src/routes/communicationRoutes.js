@@ -2,14 +2,14 @@ const express = require('express');
 const router = express.Router();
 const commCtrl = require('../controllers/communicationController');
 
-// Route-ka dirista fariinta
+// 1. Fariin cusub dirista (POST: /api/communications/send)
 router.post('/send', commCtrl.sendSchoolMessage);
 
-// Route-ka soo akhrinta fariimaha
+// 2. Soo akhrinta dhammaan fariimaha (GET: /api/communications/all)
 router.get('/all', commCtrl.getAllMessages);
 
-// Route-ka tirtirida fariinta (Kani waa midka cusub)
-// Fadlan hubi in function-ka 'deleteMessage' uu ku jiro 'communicationController.js'
+// 3. Tirtirida fariin gaar ah (DELETE: /api/communications/:id)
+// Fadlan hubi in id-ga la soo dirayo uu yahay kan saxda ah ee database-ka
 router.delete('/:id', commCtrl.deleteMessage);
 
 module.exports = router;
