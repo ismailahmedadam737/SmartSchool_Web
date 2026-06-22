@@ -20,7 +20,10 @@ const salaryRoutes = require('./routes/salaryRoutes');
 const communicationRoutes = require('./routes/communicationRoutes');
 
 const app = express();
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const pool = new Pool({ 
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false } // Kani wuxuu xallinayaa digniintii SSL-ka
+});
 
 // --- Middleware ---
 app.use(helmet()); 
@@ -35,22 +38,26 @@ app.use((req, res, next) => {
   next();
 });
 
-// --- CRON JOB: Waa laga saaray qaybtan si aysan fariimuhu u tirtirmi ---
-/*
-const cron = require('node-cron');
-cron.schedule('0 * * * *', async () => {
-  try {
-    const result = await pool.query("DELETE FROM messages WHERE created_at < NOW() - INTERVAL '24 hours'");
-    console.log(`🧹 Cleanup: ${result.rowCount} fariimood waa la tirtiray.`);
-  } catch (err) {
-    console.error('❌ Khalad ka dhacay tirtirida:', err);
-  }
-});
-*/
-
 // --- API Routes ---
 app.get('/', (req, res) => {
   res.send('🚀 Iftiinshe School Management System API is Running...');
+});
+
+// --- Delete Endpoint (Si looga tirtiro database-ka) ---
+app.delete('/api/communications/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM communications WHERE id = $1', [id]);
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: 'Fariintan lama helin.' });
+    }
+    
+    res.status(200).json({ message: 'Fariintii si joogto ah ayaa loo tirtiray.' });
+  } catch (err) {
+    console.error('❌ Khalad dhacay:', err);
+    res.status(500).json({ message: 'Server error: Tirtiriddu way fashilantay.' });
+  }
 });
 
 app.use('/api/attendance', attendanceRoutes);
@@ -73,7 +80,7 @@ app.use((err, req, res, next) => {
 });
 
 // --- Server Startup ---
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on port ${PORT}`);
 });
