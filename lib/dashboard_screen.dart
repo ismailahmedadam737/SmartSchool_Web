@@ -193,7 +193,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
  Widget _lineChartCard() {
     return Container(
-      height: 270,
+      height: 260,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -258,7 +258,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 Widget _buildPieChart() {
   return Container(
-    height: 270,
+    height: 260,
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]),
     child: Column(children: [
