@@ -26,7 +26,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  String selectedMenu = "Dashboard";
+  String selectedMenu = "Dashboard ";
   bool isDarkMode = false;
   final ScrollController _sidebarController = ScrollController();
   final ScrollController _imageScrollController = ScrollController();
@@ -106,12 +106,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildHeader(),
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
           _buildScrollingImagesRow(),
-          const SizedBox(height: 40),
+          const SizedBox(height: 20),
           Row(
             children: [
-              Expanded(flex: 7, child: _buildLineChart()),
+               Expanded(flex: 6, child: _lineChartCard()),
               const SizedBox(width: 30),
               Expanded(flex: 4, child: _buildPieChart()),
             ],
@@ -157,7 +157,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text("Admin Dashboard", style: TextStyle(color: isDarkMode ? Colors.white70 : Colors.grey[600], fontSize: 25)),
           Text(selectedMenu, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: textColor)),
         ]),
         Row(children: [
@@ -192,14 +191,97 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-
-  Widget _buildLineChart() {
-    return Container(height: 400, padding: const EdgeInsets.all(25), decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text("Student Growth", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)), const SizedBox(height: 30), Expanded(child: LineChart(LineChartData(gridData: const FlGridData(show: false), titlesData: const FlTitlesData(show: true), lineBarsData: [LineChartBarData(spots: [const FlSpot(0, 3), const FlSpot(4, 5), const FlSpot(8, 8), const FlSpot(10, 10)], isCurved: true, color: Colors.blueAccent, barWidth: 5, belowBarData: BarAreaData(show: true, color: Colors.blueAccent.withOpacity(0.1)))])))]));
+ Widget _lineChartCard() {
+    return Container(
+      height: 250,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Showing as Bar chart", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
+          const SizedBox(height: 30),
+          Expanded(
+            child: LineChart(
+              LineChartData(
+                gridData: const FlGridData(show: true, drawVerticalLine: false),
+                titlesData: FlTitlesData(
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        switch (value.toInt()) {
+                          case 1: return const Text('Jan');
+                          case 3: return const Text('Mar');
+                          case 5: return const Text('May');
+                          case 7: return const Text('Jul');
+                          case 9: return const Text('Sep');
+                          case 11: return const Text('Nov');
+                        }
+                        return const Text('');
+                      },
+                    ),
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: const [
+                      FlSpot(1, 3000),
+                      FlSpot(3, 4500),
+                      FlSpot(5, 4000),
+                      FlSpot(7, 7000),
+                      FlSpot(9, 6500),
+                      FlSpot(11, 9500),
+                    ],
+                    isCurved: true,
+                    gradient: const LinearGradient(colors: [Color(0xFFFF512F), Color(0xFFDD2476)]),
+                    barWidth: 4,
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(colors: [const Color(0xFFFF512F).withOpacity(0.2), const Color(0xFFDD2476).withOpacity(0.0)]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
-
-  Widget _buildPieChart() {
-    return Container(height: 400, padding: const EdgeInsets.all(25), decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10)]), child: Column(children: [Text("Class Distribution", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)), const SizedBox(height: 30), Expanded(child: PieChart(PieChartData(sections: [PieChartSectionData(color: Colors.blue, value: 40, title: '40%', radius: 55), PieChartSectionData(color: const Color.fromARGB(255, 7, 239, 42), value: 30, title: '30%', radius: 55), PieChartSectionData(color: Colors.orange, value: 30, title: '30%', radius: 55)])))]));
-  }
+Widget _buildPieChart() {
+  return Container(
+    height: 250,
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]),
+    child: Column(children: [
+      Text("Showing as Pie Chart", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+      Expanded(
+        child: PieChart(PieChartData(
+          sectionsSpace: 0,
+          centerSpaceRadius: 50,
+          sections: [
+            PieChartSectionData(color: Colors.lightBlue, value: 40, title: '', radius: 30),
+            PieChartSectionData(color:  Colors.green, value: 30, title: '', radius: 30),
+            PieChartSectionData(color:  Colors.redAccent, value: 30, title: '', radius: 30),
+          ],
+        )),
+      ),
+      const Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+        Text("● Students", style: TextStyle(color: Colors.lightBlue)),
+        Text("● Classes", style: TextStyle(color: Colors.green)),
+        Text("● Teachers", style: TextStyle(color: Colors.redAccent)),
+      ])
+    ]),
+  );
+}
 
   Widget _buildSidebar() { return Container(decoration: const BoxDecoration(color: Color(0xFF1E1E2C)), child: Column(children: [const SizedBox(height: 50), _buildSidebarLogo(), const SizedBox(height: 40), Expanded(child: SingleChildScrollView(child: Column(children: [ _navItem(Icons.grid_view_rounded, "Dashboard"), _navItem(Icons.people_alt_rounded, "Students"), _navItem(Icons.school_rounded, "Teachers"), _navItem(Icons.payments_rounded, "Teacher Salary"), _navItem(Icons.how_to_reg, "Attendance"), _navItem(Icons.account_balance_wallet_rounded, "Fees & Accounting"), _navItem(Icons.bus_alert, "Buses"), _navItem(Icons.book, "Exam & Results"), _navItem(Icons.edit_calendar_rounded, "Exam Schedule"), _navItem(Icons.account_balance_wallet_rounded, "Income & Outcome"), _navItem(Icons.bar_chart_rounded, "General Reports"), _navItem(Icons.chat_rounded, "Communications"), _navItem(Icons.mark_as_unread_rounded, "Admin Messages"), _navItem(Icons.person, "Users")]))), const Divider(color: Colors.white10), _navItem(Icons.logout, "Log Out"), const SizedBox(height: 20)])); }
   Widget _buildSidebarLogo() { return Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)), borderRadius: BorderRadius.circular(10)), child: const Text("IFTIINSHE BILE SCHOOLS", style: TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold))); }
