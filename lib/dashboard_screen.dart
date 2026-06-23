@@ -203,7 +203,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Showing as Bar chart", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
+          const Text("Student Growth", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
           const SizedBox(height: 30),
           Expanded(
             child: LineChart(
@@ -262,7 +262,7 @@ Widget _buildPieChart() {
     padding: const EdgeInsets.all(20),
     decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]),
     child: Column(children: [
-      Text("Showing as Pie Chart", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+      Text("Class Distribution", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
       Expanded(
         child: PieChart(PieChartData(
           sectionsSpace: 0,
