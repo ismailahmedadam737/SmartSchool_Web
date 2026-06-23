@@ -84,7 +84,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     switch (selectedMenu) {
       case "Dashboard": return _buildDashboardHome();
       case "Students": return const StudentRegistrationPage();
-      case "Users": return const UsersPage();
+      case "Users": return const UsersPage(currentRole: '',);
       case "Teachers": return const TeachersPage();
       case "Teacher Salary": return const TeacherSalaryPage();
       case "Attendance": return const AttendancePage();

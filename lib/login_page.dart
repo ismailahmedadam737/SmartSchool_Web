@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:iftiinshe/dashboard_screen.dart';
 
 class AuthPage extends StatefulWidget {
-  const AuthPage({super.key, required String userRole});
+  const AuthPage({super.key, required String userRole}); // Halkan ayaan ka saaray 'required String userRole'
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -27,22 +27,20 @@ class _AuthPageState extends State<AuthPage> {
     String user = _usernameController.text.trim();
     String pass = _passController.text.trim();
 
-  try {
-  // Waxaad u beddeshaa URL-kaaga Render
-  final response = await http.post(
-    Uri.parse("https://smartschool-web.onrender.com/api/users/login"), 
-    headers: {"Content-Type": "application/json"},
-    body: jsonEncode({
-      "username": user,
-      "password": pass,
-    }),
-  );
-  
-  // ... inta kale ee koodkaaga
-      final data = jsonDecode(response.body);
+    try {
+      final response = await http.post(
+        Uri.parse("https://smartschool-web.onrender.com/api/users/login"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "username": user,
+          "password": pass,
+        }),
+      );
 
       if (response.statusCode == 200) {
-        String role = data['user']['role'];
+        final data = jsonDecode(response.body);
+        // Halkan ka hubi in key-ga 'role' uu ku jiro 'user' ama si toos ah u yaalo data
+        String role = data['user']['role']; 
 
         if (!mounted) return;
 
@@ -50,12 +48,12 @@ class _AuthPageState extends State<AuthPage> {
           context,
           MaterialPageRoute(
             builder: (_) => DashboardScreen(
-              userRole: role,
-              role: '',
+              userRole: role, role: '', // Waxaan halkan u gudbinay role-kii saxda ahaa
             ),
           ),
         );
       } else {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Username ama Password waa khalad!"),
@@ -64,6 +62,7 @@ class _AuthPageState extends State<AuthPage> {
         );
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Server error!"),
@@ -128,8 +127,7 @@ class _AuthPageState extends State<AuthPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    validator: (v) =>
-                        v!.isEmpty ? "Geli username" : null,
+                    validator: (v) => v!.isEmpty ? "Geli username" : null,
                   ),
                   const SizedBox(height: 20),
 
@@ -154,8 +152,7 @@ class _AuthPageState extends State<AuthPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    validator: (v) =>
-                        v!.isEmpty ? "Geli password" : null,
+                    validator: (v) => v!.isEmpty ? "Geli password" : null,
                   ),
                   const SizedBox(height: 30),
 
@@ -172,9 +169,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                       onPressed: _isLoading ? null : _handleLogin,
                       child: _isLoading
-                          ? const CircularProgressIndicator(
-                              color: Colors.white,
-                            )
+                          ? const CircularProgressIndicator(color: Colors.white)
                           : const Text(
                               "Login",
                               style: TextStyle(
