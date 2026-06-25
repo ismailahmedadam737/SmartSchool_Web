@@ -14,7 +14,7 @@ import 'package:iftiinshe/buses_page.dart';
 import 'package:iftiinshe/finance_page.dart';
 import 'package:iftiinshe/examination_page.dart';
 import 'package:iftiinshe/login_page.dart';
-import 'package:iftiinshe/reports_page.dart';
+import 'package:iftiinshe/reports_page.dart' hide UsersPage;
 import 'package:iftiinshe/student_registration.dart';
 import 'package:iftiinshe/teacher.dart';
 
@@ -256,6 +256,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+// Ku dar ScrollController-ka kor ku xusan widget-kaaga
+final ScrollController _sidebarScrollController = ScrollController();
+
 Widget _buildPieChart() {
   return Container(
     height: 255,
@@ -269,8 +272,8 @@ Widget _buildPieChart() {
           centerSpaceRadius: 50,
           sections: [
             PieChartSectionData(color: Colors.lightBlue, value: 40, title: '', radius: 30),
-            PieChartSectionData(color:  Colors.green, value: 30, title: '', radius: 30),
-            PieChartSectionData(color:  Colors.redAccent, value: 30, title: '', radius: 30),
+            PieChartSectionData(color: Colors.green, value: 30, title: '', radius: 30),
+            PieChartSectionData(color: Colors.redAccent, value: 30, title: '', radius: 30),
           ],
         )),
       ),
@@ -283,7 +286,66 @@ Widget _buildPieChart() {
   );
 }
 
-  Widget _buildSidebar() { return Container(decoration: const BoxDecoration(color: Color(0xFF1E1E2C)), child: Column(children: [const SizedBox(height: 50), _buildSidebarLogo(), const SizedBox(height: 40), Expanded(child: SingleChildScrollView(child: Column(children: [ _navItem(Icons.grid_view_rounded, "Dashboard"), _navItem(Icons.people_alt_rounded, "Students"), _navItem(Icons.school_rounded, "Teachers"), _navItem(Icons.payments_rounded, "Teacher Salary"), _navItem(Icons.how_to_reg, "Attendance"), _navItem(Icons.account_balance_wallet_rounded, "Fees & Accounting"), _navItem(Icons.bus_alert, "Buses"), _navItem(Icons.book, "Exam & Results"), _navItem(Icons.edit_calendar_rounded, "Exam Schedule"), _navItem(Icons.account_balance_wallet_rounded, "Income & Outcome"), _navItem(Icons.bar_chart_rounded, "General Reports"), _navItem(Icons.chat_rounded, "Communications"), _navItem(Icons.mark_as_unread_rounded, "Admin Messages"), _navItem(Icons.person, "Users")]))), const Divider(color: Colors.white10), _navItem(Icons.logout, "Log Out"), const SizedBox(height: 20)])); }
-  Widget _buildSidebarLogo() { return Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)), borderRadius: BorderRadius.circular(10)), child: const Text("IFTIINSHE BILE SCHOOLS", style: TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold))); }
-  Widget _navItem(IconData icon, String title) { bool isActive = selectedMenu == title; return ListTile(onTap: () { if (title == "Log Out") _performLogout(); else setState(() => selectedMenu = title); }, leading: Icon(icon, color: isActive ? Colors.cyanAccent : Colors.white60), title: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.white60)), tileColor: isActive ? Colors.white.withOpacity(0.05) : Colors.transparent); }
+Widget _buildSidebar() {
+  return Container(
+    decoration: const BoxDecoration(color: Color(0xFF1E1E2C)),
+    child: Column(children: [
+      const SizedBox(height: 50),
+      _buildSidebarLogo(),
+      const SizedBox(height: 40),
+      Expanded(
+        child: RawScrollbar(
+          controller: _sidebarScrollController,
+          thumbColor: Colors.amber, // Midabka cad ee aad rabtay
+          thickness: 6.0,
+          thumbVisibility: true,
+          radius: const Radius.circular(10),
+          child: SingleChildScrollView(
+            controller: _sidebarScrollController, // Ku xir controller-ka
+            child: Column(children: [
+              _navItem(Icons.grid_view_rounded, "Dashboard"),
+              _navItem(Icons.people_alt_rounded, "Students"),
+              _navItem(Icons.school_rounded, "Teachers"),
+              _navItem(Icons.payments_rounded, "Teacher Salary"),
+              _navItem(Icons.how_to_reg, "Attendance"),
+              _navItem(Icons.account_balance_wallet_rounded, "Fees & Accounting"),
+              _navItem(Icons.bus_alert, "Buses"),
+              _navItem(Icons.book, "Exam & Results"),
+              _navItem(Icons.edit_calendar_rounded, "Exam Schedule"),
+              _navItem(Icons.account_balance_wallet_rounded, "Income & Outcome"),
+              _navItem(Icons.bar_chart_rounded, "General Reports"),
+              _navItem(Icons.chat_rounded, "Communications"),
+              _navItem(Icons.mark_as_unread_rounded, "Admin Messages"),
+              _navItem(Icons.person, "Users")
+            ]),
+          ),
+        ),
+      ),
+      const Divider(color: Colors.white10),
+      _navItem(Icons.logout, "Log Out"),
+      const SizedBox(height: 20)
+    ]),
+  );
+}
+
+Widget _buildSidebarLogo() {
+  return Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)), borderRadius: BorderRadius.circular(10)),
+    child: const Text("IFTIINSHE BILE SCHOOLS", style: TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold))
+  );
+}
+
+Widget _navItem(IconData icon, String title) {
+  bool isActive = selectedMenu == title;
+  return ListTile(
+    onTap: () {
+      if (title == "Log Out") _performLogout();
+      else setState(() => selectedMenu = title);
+    },
+    leading: Icon(icon, color: isActive ? Colors.cyanAccent : Colors.white60),
+    title: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.white60)),
+    tileColor: isActive ? Colors.white.withOpacity(0.05) : Colors.transparent
+  );
+}
 }
