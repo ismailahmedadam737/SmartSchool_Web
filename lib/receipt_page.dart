@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
-import 'package:iftiinshe/Service/payment_api_service.dart'; // Isticmaal PaymentApiService
+import 'package:iftiinshe/Service/payment_api_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -63,48 +62,44 @@ class _ReceiptPageState extends State<ReceiptPage> {
 
   Future<void> _saveToDatabase() async {
     String currentMonth = DateFormat('MMMM yyyy').format(DateTime.now());
-
-    try {
-      // Isticmaalka PaymentApiService sida aad codsatay
-      await PaymentApiService.addPayment(
-        studentId: widget.studentId,
-        amount: widget.paid,
-        debt: widget.dept,
-        month: currentMonth,
-        transport: "No Bus", // Waxaad bedeli kartaa haddii loo baahdo
-      );
-      debugPrint("✅ Receipt saved successfully!");
-    } catch (e) {
-      debugPrint("❌ Failed to save receipt: $e");
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
-    }
+    await PaymentApiService.addPayment(
+      studentId: widget.studentId,
+      amount: widget.paid,
+      debt: widget.dept,
+      month: currentMonth,
+      transport: "No Bus",
+    );
   }
 
   Future<void> _printReceipt() async {
-    try {
-      await _saveToDatabase();
-      await Future.delayed(const Duration(milliseconds: 300));
-      if (!mounted || _printKey.currentContext == null) return;
-      
-      final boundary = _printKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
-      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-      Uint8List pngBytes = byteData!.buffer.asUint8List();
-      final pdf = pw.Document();
-      
-      pdf.addPage(
-        pw.Page(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(30), 
-          build: (pw.Context context) => pw.Center(
-            child: pw.Image(pw.MemoryImage(pngBytes), fit: pw.BoxFit.contain),
-          ),
+    // 1. Hawsha save-ka iyo daabacaadda oo aan la sugin inta uu UI-ga isbeddelayo
+    _saveToDatabase(); 
+
+    if (!mounted || _printKey.currentContext == null) return;
+    
+    final boundary = _printKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+    
+    // 2. PixelRatio 1.0 ayaa ugu dhakhso badan
+    ui.Image image = await boundary.toImage(pixelRatio: 1.0);
+    ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    Uint8List pngBytes = byteData!.buffer.asUint8List();
+    
+    final pdf = pw.Document();
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(30),
+        build: (pw.Context context) => pw.Center(
+          child: pw.Image(pw.MemoryImage(pngBytes), fit: pw.BoxFit.contain),
         ),
-      );
-      await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save(), name: 'Receipt_${widget.name}.pdf');
-    } catch (e) {
-      debugPrint("Print Error: $e");
-    }
+      ),
+    );
+    
+    // 3. Daabacaadda oo isla markiiba soo baxaysa
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) async => pdf.save(), 
+      name: 'Receipt_${widget.name}.pdf'
+    );
   }
 
   @override
@@ -124,10 +119,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
               child: RepaintBoundary(
                 key: _printKey,
                 child: Container(
-                  padding: const EdgeInsets.all(25), 
-                  width: 650, 
+                  padding: const EdgeInsets.all(25),
+                  width: 650,
                   height: 550,
-                  color: Colors.white, 
+                  color: Colors.white,
                   child: _buildReceiptContent(),
                 ),
               ),
@@ -153,16 +148,10 @@ class _ReceiptPageState extends State<ReceiptPage> {
     String currentDate = DateFormat('dd/MM/yyyy').format(DateTime.now());
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        border: Border.all(color: receiptBlue, width: 2), 
-        borderRadius: BorderRadius.circular(12)
-      ),
+      decoration: BoxDecoration(border: Border.all(color: receiptBlue, width: 2), borderRadius: BorderRadius.circular(12)),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-        decoration: BoxDecoration(
-          border: Border.all(color: receiptBlue, width: 1), 
-          borderRadius: BorderRadius.circular(10)
-        ),
+        decoration: BoxDecoration(border: Border.all(color: receiptBlue, width: 1), borderRadius: BorderRadius.circular(10)),
         child: Column(
           children: [
             _buildHeader(),
@@ -172,27 +161,20 @@ class _ReceiptPageState extends State<ReceiptPage> {
             Expanded(
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
-                decoration: BoxDecoration(
-                  border: Border.all(color: receiptBlue, width: 2.5),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Stack(
+                decoration: BoxDecoration(border: Border.all(color: receiptBlue, width: 2.5), borderRadius: BorderRadius.circular(10)),
+                child: Column(
                   children: [
-                    Column(
-                      children: [
-                        _buildDashedLineInput("Customer Name:", widget.name),
-                        const SizedBox(height: 10),
-                        _buildAmountRow(),
-                        const SizedBox(height: 12),
-                        _buildPaymentMethods(),
-                        const SizedBox(height: 12),
-                        _buildDashedLineInput("In Words:", _convertAmountToWords(widget.paid)),
-                        _buildDashedLineInput("Description:", "School Fee Payment"),
-                        _buildDashedLineInput("Remaining Dept:", "\$${widget.dept.toStringAsFixed(2)}"),
-                        const Spacer(),
-                        _buildSignatures(),
-                      ],
-                    ),
+                    _buildDashedLineInput("Customer Name:", widget.name),
+                    const SizedBox(height: 10),
+                    _buildAmountRow(),
+                    const SizedBox(height: 12),
+                    _buildPaymentMethods(),
+                    const SizedBox(height: 12),
+                    _buildDashedLineInput("In Words:", _convertAmountToWords(widget.paid)),
+                    _buildDashedLineInput("Description:", "School Fee Payment"),
+                    _buildDashedLineInput("Remaining Dept:", "\$${widget.dept.toStringAsFixed(2)}"),
+                    const Spacer(),
+                    _buildSignatures(),
                   ],
                 ),
               ),
@@ -203,19 +185,16 @@ class _ReceiptPageState extends State<ReceiptPage> {
     );
   }
 
-  // Qaybaha kale ee UI-ga (Header, Input, iwm) way ku jiraan sidii aad hore u soo dirtay.
-  // Code-kan kor ku xusan wuxuu xallinayaa dhibaatadii API-ga.
-  
   Widget _buildHeader() => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(border: Border.all(color: receiptBlue, width: 2.5), borderRadius: BorderRadius.circular(8)),
-        child: Column(
-          children: const [
-            Text("IFTIINSHE PRIMARY AND KG SCHOOLS", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: receiptBlue)),
-            Text("Tel: 063-7758927 // 063-4869775 Zaad: 510624", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF004677))),
-          ],
-        ));
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(border: Border.all(color: receiptBlue, width: 2.5), borderRadius: BorderRadius.circular(8)),
+      child: Column(
+        children: const [
+          Text("IFTIINSHE PRIMARY AND KG SCHOOLS", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: receiptBlue)),
+          Text("Tel: 063-7758927 // 063-4869775 Zaad: 510624", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF004677))),
+        ],
+      ));
 
   Widget _buildContactAndDate(String date, String no) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
