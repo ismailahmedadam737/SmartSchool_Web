@@ -881,7 +881,7 @@ pw.Text(
                   );
                 }
               },
-              child: const Text("Gali"),
+              child: const Text("Enter password"),
             )
           ],
         ),
