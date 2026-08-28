@@ -230,26 +230,28 @@ class _TeachersPageState extends State<TeachersPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15)],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            editingIndex == null ? "Diiwaangeli Macalin" : "Cusboonaysii Xogta", 
-            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))
-          ),
-          const SizedBox(height: 25),
-          _inputField("Magaca Buuxa", Icons.person_add_alt_1, nameController),
-          _inputField("Degmada (District)", Icons.location_city, districtController),
-          _inputField("Taleefanka", Icons.phone_android, phoneController),
-          _inputField("Heerka Waxbarasho", Icons.school, levelController),
-          _inputField("Khibradda (Experience)", Icons.workspace_premium, expController),
-          const SizedBox(height: 20),
-          if (editingIndex != null)
-            TextButton(onPressed: _clearFields, child: const Text("Jooji Wax ka bedelka", style: TextStyle(color: Colors.red))),
-          const SizedBox(height: 10),
-          _saveButton(),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              editingIndex == null ? "Diiwaangeli Macalin" : "Cusboonaysii Xogta", 
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))
+            ),
+            const SizedBox(height: 25),
+            _inputField("Magaca Buuxa", Icons.person_add_alt_1, nameController),
+            _inputField("Degmada (District)", Icons.location_city, districtController),
+            _inputField("Taleefanka", Icons.phone_android, phoneController),
+            _inputField("Heerka Waxbarasho", Icons.school, levelController),
+            _inputField("Khibradda (Experience)", Icons.workspace_premium, expController),
+            const SizedBox(height: 20),
+            if (editingIndex != null)
+              TextButton(onPressed: _clearFields, child: const Text("Jooji Wax ka bedelka", style: TextStyle(color: Colors.red))),
+            const SizedBox(height: 10),
+            _saveButton(),
+          ],
+        ),
       ),
     );
   }

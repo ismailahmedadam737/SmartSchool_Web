@@ -231,104 +231,106 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_editingStudentId != null) ...[
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              margin: const EdgeInsets.only(bottom: 15),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                border: Border.all(color: Colors.amber.shade400),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.edit, color: Colors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      "Habka Wax-ka-bedelka (Edit Mode)",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.deepOrange),
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: () => setState(() => _clearFields()),
-                    tooltip: "Ka noqo Edit",
-                  ),
-                ],
-              ),
-            ),
-          ],
-          Text(
-            _editingStudentId != null ? "Cusboonaysii Ardayga" : "Add New Student", 
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
-          ),
-          const SizedBox(height: 25),
-          _buildClassDropdown(),
-          const SizedBox(height: 15),
-          _buildInputField("Magaca Buuxa", Icons.person_outline, _nameController),
-          _buildInputField("Taleefanka", Icons.phone_android_outlined, _phoneController),
-          _buildInputField("Degmada", Icons.map_outlined, _districtController),
-          _buildInputField("Xaafadda", Icons.home_work_outlined, _neighborController),
-          const SizedBox(height: 30),
-          _isSyncing 
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                ElevatedButton(
-                  onPressed: _saveStudent,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.all(0), 
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                  ),
-                  child: Ink(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: _editingStudentId == null 
-                            ? [const Color(0xFF6A11CB), const Color(0xFF2575FC)]
-                            : [Colors.orange.shade700, Colors.deepOrange.shade600],
-                      ),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Container(
-                      height: 55,
-                      alignment: Alignment.center,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(_editingStudentId == null ? Icons.save : Icons.check_circle_outline, color: Colors.white),
-                          const SizedBox(width: 8),
-                          Text(
-                            _editingStudentId == null ? "Kaydi Xogta" : "Cusboonaysii Xogta", 
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_editingStudentId != null) ...[
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                margin: const EdgeInsets.only(bottom: 15),
+                decoration: BoxDecoration(
+                  color: Colors.amber.shade50,
+                  border: Border.all(color: Colors.amber.shade400),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                if (_editingStudentId != null) ...[
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () => setState(() => _clearFields()),
-                    icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                    label: const Text("Ka noqo Edit-ka", style: TextStyle(color: Colors.red)),
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.red),
+                child: Row(
+                  children: [
+                    const Icon(Icons.edit, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    const Expanded(
+                      child: Text(
+                        "Habka Wax-ka-bedelka (Edit Mode)",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.deepOrange),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => setState(() => _clearFields()),
+                      tooltip: "Ka noqo Edit",
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            Text(
+              _editingStudentId != null ? "Cusboonaysii Ardayga" : "Add New Student", 
+              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
+            ),
+            const SizedBox(height: 25),
+            _buildClassDropdown(),
+            const SizedBox(height: 15),
+            _buildInputField("Magaca Buuxa", Icons.person_outline, _nameController),
+            _buildInputField("Taleefanka", Icons.phone_android_outlined, _phoneController),
+            _buildInputField("Degmada", Icons.map_outlined, _districtController),
+            _buildInputField("Xaafadda", Icons.home_work_outlined, _neighborController),
+            const SizedBox(height: 30),
+            _isSyncing 
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  ElevatedButton(
+                    onPressed: _saveStudent,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.all(0), 
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                      minimumSize: const Size.fromHeight(45),
+                    ),
+                    child: Ink(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: _editingStudentId == null 
+                              ? [const Color(0xFF6A11CB), const Color(0xFF2575FC)]
+                              : [Colors.orange.shade700, Colors.deepOrange.shade600],
+                        ),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: Container(
+                        height: 55,
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(_editingStudentId == null ? Icons.save : Icons.check_circle_outline, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Text(
+                              _editingStudentId == null ? "Kaydi Xogta" : "Cusboonaysii Xogta", 
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
+                  if (_editingStudentId != null) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () => setState(() => _clearFields()),
+                      icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                      label: const Text("Ka noqo Edit-ka", style: TextStyle(color: Colors.red)),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                        minimumSize: const Size.fromHeight(45),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-        ],
+              ),
+          ],
+        ),
       ),
     );
   }

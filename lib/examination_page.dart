@@ -791,84 +791,203 @@ pw.Text(
       );
     }
 
-    return Column(
-      children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          IconButton(onPressed: () => setState(() => selectedStudent = null), icon: const Icon(Icons.arrow_back_ios)),
-          Column(
-            children: [
-              Text(selectedStudent!.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              Text(selectedExamType, style: const TextStyle(fontSize: 16, color: Colors.indigo)),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.print, color: Colors.indigo, size: 28),
-            onPressed: _printStudentResult, 
-          ),
-        ]),
-        
-        const SizedBox(height: 10),
-        
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 18),
-          decoration: BoxDecoration(color: Colors.green, borderRadius: BorderRadius.circular(15)),
-          child: Text(
-            "Wadarta: $currentTotalKept / $examTotalMax",
-            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-          ),
-        ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isMobile = constraints.maxWidth < 600;
+        final bool isTablet = constraints.maxWidth < 900;
+        final int crossAxisCount = isMobile ? 2 : (isTablet ? 4 : 7);
 
-        const SizedBox(height: 15),
-        Expanded(
-          child: GridView.builder(
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 7,          
-              crossAxisSpacing: 10,       
-              mainAxisSpacing: 10,
-              childAspectRatio: 0.85,     
-            ),
-            itemCount: filteredResults.length,
-            itemBuilder: (context, index) {
-              final res = filteredResults[index];
-              int score = res['score'] ?? 0;
-              
-              Color statusColor;
-              double percentage = (score / maxPerSubject);
-
-              if (percentage >= 0.8) {
-                statusColor = Colors.green; 
-              } else if (percentage >= 0.5) {
-                statusColor = Colors.orange; 
-              } else {
-                statusColor = Colors.red; 
-              }
-
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15), 
-                  border: Border(top: BorderSide(color: statusColor, width: 5)),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(_getSubjectIcon(res['subject']), color: statusColor.withOpacity(0.7), size: 20),
-                    const SizedBox(height: 4),
-                    Text(
-                      res['subject'], 
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), 
-                      overflow: TextOverflow.ellipsis, 
+        return Column(
+          children: [
+            // Top Bar with Back button, Student info, Print button, and Total score badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10)],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Row(
+                          children: [
+                            IconButton(
+                              onPressed: () => setState(() => selectedStudent = null),
+                              icon: const Icon(Icons.arrow_back_ios, color: Colors.indigo, size: 20),
+                              tooltip: "Ddib u noqo",
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    selectedStudent!.name,
+                                    style: TextStyle(
+                                      fontSize: isMobile ? 15 : 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: const Color(0xFF1A237E),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  Text(
+                                    "Fasalka: ${selectedStudent!.className} | $selectedExamType",
+                                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // PRINT REPORT BUTTON (Rasmiga ah ee Daabacaadda)
+                      ElevatedButton.icon(
+                        onPressed: _printStudentResult,
+                        icon: const Icon(Icons.print_rounded, size: 18),
+                        label: Text(isMobile ? "Daabac PDF" : "Daabac Natiijada (PDF)"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6A11CB),
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 16, vertical: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          elevation: 2,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Total Score Badge
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF11998E), Color(0xFF38EF7D)]),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    const SizedBox(height: 2),
-                    Text("$score", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: statusColor)), 
-                  ],
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(Icons.military_tech_rounded, color: Colors.amber, size: 18),
+                            SizedBox(width: 6),
+                            Text("Wadarta Dhibcaha:", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                          ],
+                        ),
+                        Text(
+                          "$currentTotalKept / $examTotalMax",
+                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Grid View of Subject Scores
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.only(bottom: 16),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,          
+                  crossAxisSpacing: 10,       
+                  mainAxisSpacing: 10,
+                  childAspectRatio: isMobile ? 1.0 : (isTablet ? 0.82 : 0.78),     
                 ),
-              );
-            },
-          ),
-        ),
-      ],
+                itemCount: filteredResults.length,
+                itemBuilder: (context, index) {
+                  final res = filteredResults[index];
+                  int score = res['score'] ?? 0;
+                  
+                  Color statusColor;
+                  String statusText;
+                  double percentage = (score / maxPerSubject);
+
+                  if (percentage >= 0.8) {
+                    statusColor = Colors.green; 
+                    statusText = "Guul (A)";
+                  } else if (percentage >= 0.5) {
+                    statusColor = Colors.orange; 
+                    statusText = "Dhexe (B/C)";
+                  } else {
+                    statusColor = Colors.red; 
+                    statusText = "Dharbaaxo (F)";
+                  }
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14), 
+                      border: Border.all(color: statusColor.withOpacity(0.4), width: 1.5),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 3))],
+                    ),
+                    child: SingleChildScrollView(
+                      physics: const NeverScrollableScrollPhysics(),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(5),
+                            decoration: BoxDecoration(
+                              color: statusColor.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(_getSubjectIcon(res['subject']), color: statusColor, size: isMobile ? 18 : 22),
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            res['subject'], 
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: isMobile ? 11 : 13, color: const Color(0xFF1A237E)), 
+                            overflow: TextOverflow.ellipsis, 
+                          ),
+                          const SizedBox(height: 2),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text("$score", style: TextStyle(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold, color: statusColor)),
+                                Text("/$maxPerSubject", style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: statusColor.withOpacity(0.12),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                statusText,
+                                style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
