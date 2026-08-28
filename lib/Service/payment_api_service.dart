@@ -1,0 +1,76 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter/foundation.dart'; // Si loo isticmaalo debugPrint
+
+class PaymentApiService {
+  static const String baseUrl = 'https://smartschool-web.onrender.com/api'; 
+
+  static Future<Map<String, dynamic>> addPayment({
+    required int studentId,
+    required double amount,
+    required double debt,
+    required String month,
+    required String transport,
+  }) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/payments/add'),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "student_id": studentId, 
+        "amount": amount,
+        "debt": debt,
+        "month": month,
+        "transport": transport,
+      }),
+    );
+
+    if (response.statusCode == 201 || response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      debugPrint("Server Error Body: ${response.body}");
+      throw Exception('Failed to add payment: ${response.statusCode}');
+    }
+  }
+
+  static Future<List<dynamic>> getPaymentsByStudent(int studentId) async {
+    final response = await http.get(Uri.parse('$baseUrl/payments/history/$studentId'));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load payments');
+    }
+  }
+
+  static Future<double> getTotalIncome() async {
+    final response = await http.get(Uri.parse('$baseUrl/payments/total-income'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return double.tryParse(data['total_income'].toString()) ?? 0.0;
+    } else {
+      throw Exception('Failed to load total income');
+    }
+  }
+
+  static Future<double> getTotalExpenses() async {
+    final response = await http.get(Uri.parse('$baseUrl/expenses/total-expenses'));
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return double.tryParse(data['total_expenses'].toString()) ?? 0.0;
+    } else {
+      throw Exception('Failed to load total expenses');
+    }
+  }
+
+  // Method-kan ayaa tirtiraya dhammaan lacagaha server-ka marka Reset All la riixo
+  static Future<void> resetAllPayments() async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/payments/reset-all'), 
+      headers: {"Content-Type": "application/json"},
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      debugPrint("Server Error Body: ${response.body}");
+      throw Exception('Failed to reset payments: ${response.statusCode}');
+    }
+  }
+}
