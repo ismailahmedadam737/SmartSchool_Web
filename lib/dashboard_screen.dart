@@ -137,13 +137,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         {"icon": Icons.school_rounded, "title": "Teachers"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
         {"icon": Icons.note_alt_rounded, "title": "Note"},
         {"icon": Icons.bus_alert, "title": "Buses"},
         {"icon": Icons.book, "title": "Exam & Results"},
         {"icon": Icons.edit_calendar_rounded, "title": "Exam Schedule"},
+        {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
+        {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
         {"icon": Icons.chat_rounded, "title": "Communications"},
         {"icon": Icons.mark_as_unread_rounded, "title": "Admin Messages"},
-        {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
         {"icon": Icons.manage_accounts, "title": "Users"},
       ];
     } else if (role == 'cashier') {
