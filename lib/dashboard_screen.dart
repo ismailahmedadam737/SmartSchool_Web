@@ -49,6 +49,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String r = (widget.userRole.isNotEmpty ? widget.userRole : widget.role).trim().toLowerCase();
     if (r.contains('super')) return 'superadmin';
     if (r.contains('admin')) return 'admin';
+    if (r.contains('teacher') || r.contains('macalin')) return 'teacher';
     if (r.contains('cashier') || r.contains('qasnaji')) return 'cashier';
     return 'user'; // student / parent / user
   }
@@ -57,6 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     switch (normalizedRole) {
       case 'superadmin': return 'Super Admin';
       case 'admin': return 'Admin (School)';
+      case 'teacher': return 'Teacher (Macalin)';
       case 'cashier': return 'Cashier (Finance)';
       case 'user': return 'User (Arday/Waalid)';
       default: return 'User';
@@ -67,8 +69,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     switch (normalizedRole) {
       case 'superadmin': return const Color(0xFF6A11CB);
       case 'admin': return Colors.blueAccent;
+      case 'teacher': return Colors.orangeAccent;
       case 'cashier': return Colors.teal;
-      default: return Colors.orange;
+      default: return Colors.green;
     }
   }
 

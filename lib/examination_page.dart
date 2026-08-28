@@ -20,7 +20,7 @@ class _ExaminationPageState extends State<ExaminationPage> {
   String? selectedClass;
   StudentModel? selectedStudent;
   
-  bool get isUserRole => widget.userRole.trim().toLowerCase().contains('user');
+  bool get isUserRole => widget.userRole.trim().toLowerCase() == 'user';
   
   String selectedExamType = "Monthly Exam";
   final List<String> examTypes = ["Monthly Exam", "Term 1", "Pre-Final", "Final Exam"];

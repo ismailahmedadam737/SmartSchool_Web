@@ -16,7 +16,7 @@ class _AttendancePageState extends State<AttendancePage> {
   String selectedMonth = DateFormat('MMMM').format(DateTime.now());
   DateTime selectedDate = DateTime.now();
   
-  bool get isUserRole => widget.userRole.trim().toLowerCase().contains('user');
+  bool get isUserRole => widget.userRole.trim().toLowerCase() == 'user';
 
   List<String> activeClasses = [];
   List<Map<String, dynamic>> allStudentsFromDb = [];
