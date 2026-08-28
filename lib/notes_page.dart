@@ -545,49 +545,28 @@ class _NotesPageState extends State<NotesPage> {
                         ],
                       ),
                       TextButton.icon(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.close_rounded, color: Colors.white, size: 16),
+                        label: const Text("Xir"),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.white12,
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
-                    ),
-                ],
-              );
-            }),
-            const SizedBox(width: 12),
-            ElevatedButton.icon(
-              onPressed: _showAddNewDebtDialog,
-              icon: const Icon(Icons.add_card_rounded, color: Colors.black, size: 18),
-              label: const Text("+ Geli Baaqi Arday"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.amberAccent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            ElevatedButton.icon(
-              onPressed: _fetchData,
-              icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
-              label: const Text("Refresh"),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6366F1),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
-          ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildMetricsRow({required bool isMobile}) {
+  Widget _buildMetricsRow({bool isMobile = false}) {
     if (isMobile) {
       return Column(
         children: [
@@ -637,7 +616,7 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 
-  Widget _buildFilterControls({required bool isMobile}) {
+  Widget _buildFilterControls({bool isMobile = false}) {
     if (isMobile) {
       return Container(
         padding: const EdgeInsets.all(12),
@@ -753,6 +732,125 @@ class _NotesPageState extends State<NotesPage> {
           const SizedBox(width: 8),
           _filterChip("Baaqi Qeyb (Unpaid)", "Unpaid"),
         ],
+      ),
+    );
+  }
+
+  Widget _filterChip(String label, String value) {
+    final bool isSelected = selectedFilter == value;
+    return GestureDetector(
+      onTap: () => setState(() => selectedFilter = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.cyanAccent : Colors.black.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isSelected ? Colors.cyanAccent : Colors.white.withValues(alpha: 0.15),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.black : Colors.white70,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            fontSize: 12,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _metricCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required IconData icon,
+    required List<Color> gradientColors,
+    bool isHighlighted = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradientColors.map((c) => c.withValues(alpha: isHighlighted ? 0.25 : 0.15)).toList(),
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: gradientColors.first.withValues(alpha: isHighlighted ? 0.6 : 0.3),
+          width: isHighlighted ? 1.5 : 1.0,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: gradientColors.first.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: gradientColors.first.withValues(alpha: 0.4)),
+            ),
+            child: Icon(icon, color: gradientColors.first, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_outline_rounded, color: Colors.greenAccent, size: 64),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Wax baaqi ah laguma helin!",
+              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              "Ma jiraan arday buuxisa shuruudaha raadinta ee hadda.",
+              style: TextStyle(color: Colors.white54, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
