@@ -229,7 +229,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Expanded(
                 child: Padding(
                   padding: EdgeInsets.all(padding),
-                  child: _buildBodyContent(isDesktop: isDesktop),
+                  child: Column(
+                    children: [
+                      _buildHeader(isDesktop: isDesktop),
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: _buildBodyContent(isDesktop: isDesktop),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -267,7 +275,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildHeader(isDesktop: isDesktop),
+          if (normalizedRole == 'superadmin') ...[
           const SizedBox(height: 20),
           if (normalizedRole == 'superadmin') ...[
             _buildSuperAdminControlCenter(),

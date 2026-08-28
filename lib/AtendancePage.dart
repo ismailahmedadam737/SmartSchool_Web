@@ -94,10 +94,6 @@ class _AttendancePageState extends State<AttendancePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF3F6FF),
-      appBar: AppBar(
-        title: const Text("Attendance Management", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.indigo)),
-        backgroundColor: Colors.white, elevation: 0,
-      ),
       body: _isLoading 
         ? const Center(child: CircularProgressIndicator()) 
         : Column(

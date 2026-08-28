@@ -71,186 +71,201 @@ class _SchoolCommunicationsPageState extends State<SchoolCommunicationsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
-      body: SafeArea(
-        child: Row(
-          children: [
-            // BIDIX: Xogta xiriirka Dugsiga Iftiinshe
-            Expanded(
-              flex: 5,
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isDesktop = constraints.maxWidth >= 800;
+
+          final contactInfoWidget = Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "La Xidhiidh Maamulka",
+                    style: TextStyle(
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A237E),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Iftiinshe Primary and KG Schools. Haddii aad qabto wax su'aal, cabasho ama faallo ah, fadlan fariin toos ah noogu soo reeb.",
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  _buildContactCard(
+                    icon: Icons.phone_in_talk_rounded,
+                    title: "Taleefanka",
+                    subtitle: "+252 63 4868156",
+                    gradientColors: [const Color(0xFF6A11CB), const Color(0xFF2575FC)],
+                  ),
+                  const SizedBox(height: 12),
+                  _buildContactCard(
+                    icon: Icons.location_on_outlined,
+                    title: "Goobta / Cinwaanka",
+                    subtitle: "Hargeisa, Somaliland",
+                    gradientColors: [const Color(0xFFFF416C), const Color(0xFFFF4B2B)],
+                  ),
+                  
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.02),
+                          blurRadius: 15,
+                          offset: const Offset(0, 5),
+                        )
+                      ],
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.access_time_rounded, color: Color(0xFF1A237E), size: 26),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text("Xilliyada Shaqada", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              SizedBox(height: 4),
+                              Text("Sabti - Khamiis: 7:00 AM - 12:30 PM", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                            ],
+                          ),
+                        )
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+          );
+
+          final messageFormWidget = Container(
+            margin: EdgeInsets.all(isDesktop ? 20 : 8),
+            padding: EdgeInsets.all(isDesktop ? 30 : 20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(25),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6A11CB).withOpacity(0.06),
+                  blurRadius: 25,
+                  offset: const Offset(0, 10),
+                )
+              ],
+            ),
+            child: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "La Xidhiidh Maamulka",
+                      "Noo Soo Dir Fariin",
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1A237E),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      "Iftiinshe Primary and KG Schools. Haddii aad qabto wax su'aal, cabasho ama faallo ah, fadlan fariin toos ah noogu soo reeb.",
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+                    const SizedBox(height: 20),
+                    _buildFormTextField(
+                      label: "Magacaaga Buuxa",
+                      icon: Icons.person_outline_rounded,
+                      controller: _nameController,
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 14),
+                    _buildFormTextField(
+                      label: "Taleefankaaga",
+                      icon: Icons.phone_android_outlined,
+                      controller: _phoneController,
+                    ),
+                    const SizedBox(height: 14),
+                    _buildFormTextField(
+                      label: "Ujeedada Fariinta",
+                      icon: Icons.subject_rounded,
+                      controller: _subjectController,
+                    ),
+                    const SizedBox(height: 14),
+                    _buildFormTextField(
+                      label: "Fariintaada oo Faahfaahsan",
+                      icon: Icons.chat_bubble_outline_rounded,
+                      controller: _messageController,
+                      maxLines: 4,
+                    ),
+                    const SizedBox(height: 24),
                     
-                    _buildContactCard(
-                      icon: Icons.phone_in_talk_rounded,
-                      title: "Taleefanka",
-                      subtitle: "+252 63 4868156",
-                      gradientColors: [const Color(0xFF6A11CB), const Color(0xFF2575FC)],
-                    ),
-                    const SizedBox(height: 15),
-                    _buildContactCard(
-                      icon: Icons.location_on_outlined,
-                      title: "Goobta / Cinwaanka",
-                      subtitle: "Hargeisa, Somaliland",
-                      gradientColors: [const Color(0xFFFF416C), const Color(0xFFFF4B2B)],
-                    ),
-                    
-                    const SizedBox(height: 25),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
-                            blurRadius: 15,
-                            offset: const Offset(0, 5),
-                          )
-                        ],
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.access_time_rounded, color: Color(0xFF1A237E), size: 30),
-                          SizedBox(width: 15),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text("Xilliyada Shaqada", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                              SizedBox(height: 4),
-                              Text("Sabti - Khamiis: 7:00 AM - 12:30 PM", style: TextStyle(color: Colors.grey)),
-                            ],
-                          )
-                        ],
-                      ),
-                    )
-                  ],
-                ),
-              ),
-            ),
-
-            // MIDIG: Form-ka rasmiga ah ee Fariinta lagu soo dirayo
-            Expanded(
-              flex: 6,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                padding: const EdgeInsets.all(30),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF6A11CB).withOpacity(0.06),
-                      blurRadius: 25,
-                      offset: const Offset(0, 10),
-                    )
-                  ],
-                ),
-                child: Form(
-                  key: _formKey,
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Noo Soo Dir Fariin",
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF1A237E),
-                          ),
-                        ),
-                        const SizedBox(height: 25),
-                        _buildFormTextField(
-                          label: "Magacaaga Buuxa",
-                          icon: Icons.person_outline_rounded,
-                          controller: _nameController,
-                        ),
-                        const SizedBox(height: 18),
-                        _buildFormTextField(
-                          label: "Taleefankaaga",
-                          icon: Icons.phone_android_outlined,
-                          controller: _phoneController,
-                        ),
-                        const SizedBox(height: 18),
-                        _buildFormTextField(
-                          label: "Ujeedada Fariinta",
-                          icon: Icons.subject_rounded,
-                          controller: _subjectController,
-                        ),
-                        const SizedBox(height: 18),
-                        _buildFormTextField(
-                          label: "Fariintaada oo Faahfaahsan",
-                          icon: Icons.chat_bubble_outline_rounded,
-                          controller: _messageController,
-                          maxLines: 5,
-                        ),
-                        const SizedBox(height: 30),
-                        
-                        _isSending
-                            ? const Center(child: CircularProgressIndicator())
-                            : ElevatedButton(
-                                onPressed: _sendMessage,
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.all(0),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  elevation: 5,
-                                  shadowColor: const Color(0xFF6A11CB).withOpacity(0.3),
+                    _isSending
+                        ? const Center(child: CircularProgressIndicator())
+                        : ElevatedButton(
+                            onPressed: _sendMessage,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.all(0),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              elevation: 5,
+                              shadowColor: const Color(0xFF6A11CB).withOpacity(0.3),
+                            ),
+                            child: Ink(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
                                 ),
-                                child: Ink(
-                                  decoration: BoxDecoration(
-                                    gradient: const LinearGradient(
-                                      colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: Container(
+                                height: 55,
+                                alignment: Alignment.center,
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      "Dir Fariinta",
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
                                     ),
-                                    borderRadius: BorderRadius.circular(15),
-                                  ),
-                                  child: Container(
-                                    height: 55,
-                                    alignment: Alignment.center,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        const Icon(Icons.send_rounded, color: Colors.white, size: 20),
-                                        const SizedBox(width: 10),
-                                        const Text(
-                                          "Dir Fariinta",
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
+                                  ],
                                 ),
                               ),
-                      ],
-                    ),
-                  ),
+                            ),
+                          ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+          );
+
+          if (isDesktop) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 5, child: contactInfoWidget),
+                Expanded(flex: 6, child: messageFormWidget),
+              ],
+            );
+          } else {
+            return SingleChildScrollView(
+              child: Column(
+                children: [
+                  contactInfoWidget,
+                  messageFormWidget,
+                ],
+              ),
+            );
+          }
+        },
       ),
     );
   }

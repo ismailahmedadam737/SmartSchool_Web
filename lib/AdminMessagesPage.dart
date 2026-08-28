@@ -74,102 +74,235 @@ class _AdminMessagesPageState extends State<AdminMessagesPage> {
     return Scaffold(
       backgroundColor: Colors.transparent, 
       body: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              flex: 5,
-              child: Container(
-                margin: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(25),
-                  image: const DecorationImage(
-                    image: NetworkImage("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop"),
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(30.0),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(25),
-                    gradient: LinearGradient(
-                      colors: [
-                        const Color(0xFF1A237E).withOpacity(0.95),
-                        const Color(0xFF3949AB).withOpacity(0.6),
-                      ],
-                      begin: Alignment.bottomCenter,
-                      end: Alignment.topCenter,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                            child: const Row(
-                              children: [
-                                Icon(Icons.circle, color: Colors.greenAccent, size: 10),
-                                SizedBox(width: 8),
-                                Text("Live Messages", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                              ],
-                            ),
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
-                              shape: BoxShape.circle,
-                            ),
-                            child: IconButton(
-                              icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 24),
-                              onPressed: _fetchMessages,
-                            ),
-                          )
-                        ],
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            " Fariimaha tooska ah",
-                            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            "Halkan ka eeg fariimaha tooska ah ee ay soo qoreen waalidiinta iyo macaamiishu si aad uga jawaabto.",
-                            style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.8), height: 1.4),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final bool isDesktop = constraints.maxWidth >= 800;
+
+            final bannerWidget = Container(
+              margin: const EdgeInsets.all(12),
+              height: isDesktop ? null : 160,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(25),
+                image: const DecorationImage(
+                  image: NetworkImage("https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=600&auto=format&fit=crop"),
+                  fit: BoxFit.cover,
                 ),
               ),
-            ),
-            Expanded(
-              flex: 6,
-              child: Padding(
-                padding: const EdgeInsets.only(top: 20, bottom: 20, right: 20),
-                child: _isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : AdminMessagesPage.globalMessages.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.mail_outline_rounded, size: 70, color: subTextColor.withOpacity(0.4)),
-                                const SizedBox(height: 15),
-                                Text("Wax fariimo ah weli ma soo dhacin.", style: TextStyle(color: subTextColor, fontSize: 16, fontWeight: FontWeight.w500)),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
+              child: Container(
+                padding: const EdgeInsets.all(20.0),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(25),
+                  gradient: LinearGradient(
+                    colors: [
+                      const Color(0xFF1A237E).withOpacity(0.95),
+                      const Color(0xFF3949AB).withOpacity(0.6),
+                    ],
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                          child: const Row(
+                            children: [
+                              Icon(Icons.circle, color: Colors.greenAccent, size: 10),
+                              SizedBox(width: 8),
+                              Text("Live Messages", style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            shape: BoxShape.circle,
+                          ),
+                          child: IconButton(
+                            icon: const Icon(Icons.refresh_rounded, color: Colors.white, size: 24),
+                            onPressed: _fetchMessages,
+                          ),
+                        )
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Fariimaha tooska ah",
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "Halkan ka eeg fariimaha tooska ah ee ay soo qoreen waalidiinta.",
+                          style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8)),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+
+            final listWidget = Padding(
+              padding: EdgeInsets.all(isDesktop ? 20 : 10),
+              child: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : AdminMessagesPage.globalMessages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.mail_outline_rounded, size: 70, color: subTextColor.withOpacity(0.4)),
+                              const SizedBox(height: 15),
+                              Text("Wax fariimo ah weli ma soo dhacin.", style: TextStyle(color: subTextColor, fontSize: 16, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: AdminMessagesPage.globalMessages.length,
+                          physics: const BouncingScrollPhysics(),
+                          itemBuilder: (context, index) {
+                            final msg = AdminMessagesPage.globalMessages[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(18),
+                              decoration: BoxDecoration(
+                                color: cardColor,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(isDarkMode ? 0.3 : 0.03),
+                                    blurRadius: 15,
+                                    offset: const Offset(0, 6),
+                                  )
+                                ],
+                                border: Border.all(
+                                  color: isDarkMode ? Colors.white.withOpacity(0.05) : Colors.grey.shade200,
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Container(
+                                            height: 40,
+                                            width: 40,
+                                            decoration: BoxDecoration(
+                                              gradient: const LinearGradient(
+                                                colors: [Color(0xFF6A11CB), Color(0xFF2575FC)],
+                                              ),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            alignment: Alignment.center,
+                                            child: Text(
+                                              msg['name']?.isNotEmpty == true ? msg['name'][0].toUpperCase() : "?", 
+                                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(msg['name'] ?? '', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: textColor)),
+                                              const SizedBox(height: 2),
+                                              Row(
+                                                children: [
+                                                  Icon(Icons.phone_outlined, size: 13, color: subTextColor),
+                                                  const SizedBox(width: 4),
+                                                  Text(msg['phone'] ?? '', style: TextStyle(color: subTextColor, fontSize: 12, fontWeight: FontWeight.w500)),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: isDarkMode ? Colors.white.withOpacity(0.05) : const Color(0xFFF1F5F9),
+                                          borderRadius: BorderRadius.circular(30),
+                                        ),
+                                        child: Text(
+                                          msg['created_at']?.toString().substring(0, 10) ?? '', 
+                                          style: TextStyle(color: isDarkMode ? Colors.cyanAccent : const Color(0xFF1A237E), fontSize: 10, fontWeight: FontWeight.bold)
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const Divider(height: 20, thickness: 0.8),
+                                  Row(
+                                    children: [
+                                      Container(
+                                        width: 4,
+                                        height: 14,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF6A11CB),
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        msg['subject'] ?? '',
+                                        style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 14),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    msg['message'] ?? '',
+                                    style: TextStyle(color: isDarkMode ? Colors.white70 : const Color(0xFF334155), fontSize: 13, height: 1.4),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      IconButton(
+                                        style: IconButton.styleFrom(
+                                          backgroundColor: Colors.red.withOpacity(0.08),
+                                          padding: const EdgeInsets.all(8),
+                                        ),
+                                        icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 18),
+                                        onPressed: () {
+                                          _deleteMessage(msg['id'], index);
+                                        },
+                                      ),
+                                    ],
+                                  )
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+            );
+
+            if (isDesktop) {
+              return Row(
+                children: [
+                  Expanded(flex: 5, child: bannerWidget),
+                  Expanded(flex: 6, child: listWidget),
+                ],
+              );
+            } else {
+              return listWidget;
+            }
+          },
+        ),
+      ),
+    );
                             itemCount: AdminMessagesPage.globalMessages.length,
                             physics: const BouncingScrollPhysics(),
                             itemBuilder: (context, index) {
