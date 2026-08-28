@@ -815,23 +815,23 @@ pw.Text(
   }
 
   Widget _buildStudentView() {
-    var filteredResults = currentStudentResults.where((res) => res['exam_type'] == selectedExamType).toList();
     int maxPerSubject = examMaxMarks[selectedExamType] ?? 10;
     int examTotalMax = maxPerSubject * 7; 
     int currentTotalKept = _calculateCurrentExamTotal();
 
-    if (filteredResults.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text("Wax imtixaan ah lama soo galin", style: TextStyle(fontSize: 18, color: Colors.grey)),
-            const SizedBox(height: 20),
-            ElevatedButton(onPressed: () => setState(() => selectedStudent = null), child: const Text("Back"))
-          ],
-        ),
+    List<Map<String, dynamic>> displaySubjectList = subjects.map((subj) {
+      final match = currentStudentResults.firstWhere(
+        (res) => res['exam_type'] == selectedExamType && res['subject'].toString().toLowerCase() == subj.toLowerCase(),
+        orElse: () => <String, dynamic>{},
       );
-    }
+      bool hasRecord = match.isNotEmpty && match.containsKey('score') && match['score'] != null;
+      int score = hasRecord ? (match['score'] as int? ?? 0) : 0;
+      return {
+        'subject': subj,
+        'score': score,
+        'hasRecord': hasRecord,
+      };
+    }).toList();
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -903,30 +903,44 @@ pw.Text(
                     ],
                   ),
                   const SizedBox(height: 8),
-                  // Total Score Badge
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF11998E), Color(0xFF38EF7D)]),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Row(
+                  // Total Score Badge with Dynamic Status Color
+                  Builder(
+                    builder: (context) {
+                      double overallPct = examTotalMax > 0 ? (currentTotalKept / examTotalMax) : 0.0;
+                      List<Color> totalGradColors;
+                      if (overallPct >= 0.8) {
+                        totalGradColors = [const Color(0xFF11998E), const Color(0xFF38EF7D)]; // Green
+                      } else if (overallPct >= 0.5) {
+                        totalGradColors = [const Color(0xFFF2994A), const Color(0xFFF2C94C)]; // Yellow / Amber
+                      } else {
+                        totalGradColors = [const Color(0xFFFF416C), const Color(0xFFFF4B2B)]; // Red
+                      }
+
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 14),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: totalGradColors),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Icon(Icons.military_tech_rounded, color: Colors.amber, size: 18),
-                            SizedBox(width: 6),
-                            Text("Wadarta Dhibcaha:", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            const Row(
+                              children: [
+                                Icon(Icons.military_tech_rounded, color: Colors.amber, size: 18),
+                                SizedBox(width: 6),
+                                Text("Wadarta Dhibcaha:", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ],
+                            ),
+                            Text(
+                              "$currentTotalKept / $examTotalMax",
+                              style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
+                            ),
                           ],
                         ),
-                        Text(
-                          "$currentTotalKept / $examTotalMax",
-                          style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),
@@ -944,24 +958,30 @@ pw.Text(
                   mainAxisSpacing: 10,
                   childAspectRatio: isMobile ? 1.0 : (isTablet ? 0.82 : 0.78),     
                 ),
-                itemCount: filteredResults.length,
+                itemCount: displaySubjectList.length,
                 itemBuilder: (context, index) {
-                  final res = filteredResults[index];
-                  int score = res['score'] ?? 0;
+                  final res = displaySubjectList[index];
+                  bool hasRecord = res['hasRecord'] as bool;
+                  int score = res['score'] as int;
                   
                   Color statusColor;
                   String statusText;
-                  double percentage = (score / maxPerSubject);
 
-                  if (percentage >= 0.8) {
-                    statusColor = Colors.green; 
-                    statusText = "Guul (A)";
-                  } else if (percentage >= 0.5) {
-                    statusColor = Colors.orange; 
-                    statusText = "Dhexe (B/C)";
+                  if (!hasRecord) {
+                    statusColor = Colors.blueGrey;
+                    statusText = "Ma galin";
                   } else {
-                    statusColor = Colors.red; 
-                    statusText = "Dharbaaxo (F)";
+                    double percentage = (score / maxPerSubject);
+                    if (percentage >= 0.8) {
+                      statusColor = Colors.green; 
+                      statusText = "Baasey";
+                    } else if (percentage >= 0.5) {
+                      statusColor = Colors.amber.shade800; 
+                      statusText = "Dhexdhexaad";
+                    } else {
+                      statusColor = Colors.red; 
+                      statusText = "Dhacay";
+                    }
                   }
 
                   return Container(
@@ -1000,7 +1020,7 @@ pw.Text(
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                Text("$score", style: TextStyle(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold, color: statusColor)),
+                                Text(hasRecord ? "$score" : "-", style: TextStyle(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold, color: statusColor)),
                                 Text("/$maxPerSubject", style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500)),
                               ],
                             ),
@@ -1044,6 +1064,167 @@ pw.Text(
       case 'social': return Icons.public;
       default: return Icons.book;
     }
+  }
+
+  void _showStudentResultPopupDialog(StudentModel student) {
+    int maxPerSubject = examMaxMarks[selectedExamType] ?? 10;
+    int examTotalMax = maxPerSubject * 7;
+    int currentTotal = _calculateCurrentExamTotal();
+    double percentage = examTotalMax > 0 ? (currentTotal / examTotalMax) : 0.0;
+
+    Color primaryThemeColor;
+    List<Color> gradientColors;
+    IconData headerIcon;
+    String statusTitle;
+    String statusSubtitle;
+
+    if (percentage >= 0.8) {
+      primaryThemeColor = Colors.green.shade700;
+      gradientColors = [const Color(0xFF11998E), const Color(0xFF38EF7D)];
+      headerIcon = Icons.emoji_events_rounded;
+      statusTitle = "🎉 Hambalyo! Waad Baastey!";
+      statusSubtitle = "Waxaad keentay darajo sare oo heer sare ah (Distinction)!";
+    } else if (percentage >= 0.5) {
+      primaryThemeColor = Colors.amber.shade900;
+      gradientColors = [const Color(0xFFF2994A), const Color(0xFFF2C94C)];
+      headerIcon = Icons.thumb_up_alt_rounded;
+      statusTitle = "👏 Hambalyo! Waad Baastey!";
+      statusSubtitle = "Imtixaanka si caadi ah ayaad u gudubtay (Passed).";
+    } else {
+      primaryThemeColor = Colors.red.shade700;
+      gradientColors = [const Color(0xFFFF416C), const Color(0xFFFF4B2B)];
+      headerIcon = Icons.sentiment_very_dissatisfied_rounded;
+      statusTitle = "⚠️ Ka Xunnahey! Waad Dhacday!";
+      statusSubtitle = "Natiijadaadu waxay ka hooseysaa 50%. Fadlan dadaal dheeraad ah samee.";
+    }
+
+    int percentInt = (percentage * 100).round();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        elevation: 10,
+        child: Container(
+          width: 380,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header Badge with Icon
+              Container(
+                padding: const EdgeInsets.all(18),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: gradientColors),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(color: primaryThemeColor.withOpacity(0.3), blurRadius: 15, offset: const Offset(0, 6)),
+                  ],
+                ),
+                child: Icon(headerIcon, color: Colors.white, size: 44),
+              ),
+              const SizedBox(height: 16),
+              
+              // Status Title
+              Text(
+                statusTitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: primaryThemeColor,
+                ),
+              ),
+              const SizedBox(height: 6),
+              
+              Text(
+                statusSubtitle,
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 18),
+
+              // Student & Marks Summary Box
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: primaryThemeColor.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: primaryThemeColor.withOpacity(0.2)),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      student.name,
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1A237E)),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "Fasalka: ${student.className} | $selectedExamType",
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const Divider(height: 20, thickness: 0.8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        Column(
+                          children: [
+                            const Text("Wadarta Dhibcaha", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            const SizedBox(height: 4),
+                            Text(
+                              "$currentTotal / $examTotalMax",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryThemeColor),
+                            ),
+                          ],
+                        ),
+                        Container(height: 30, width: 1, color: Colors.grey.shade300),
+                        Column(
+                          children: [
+                            const Text("Boqolkiiba (%)", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            const SizedBox(height: 4),
+                            Text(
+                              "$percentInt%",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryThemeColor),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 22),
+
+              // CLOSE / VIEW DETAILS BUTTON
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.grid_view_rounded, size: 18),
+                  label: const Text(
+                    "Eeg Natiijada Maadooyinka (Close)",
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryThemeColor,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    elevation: 3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _studentLoginAccess(StudentModel student) {
@@ -1090,6 +1271,9 @@ pw.Text(
                   int studentId = student.id ?? int.tryParse(student.idString) ?? 0;
                   await _fetchResults(studentId);
                   setState(() => selectedStudent = student);
+                  if (mounted) {
+                    _showStudentResultPopupDialog(student);
+                  }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Code-ku waa khaldan yahay!"), backgroundColor: Colors.red),
