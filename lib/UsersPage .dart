@@ -23,8 +23,8 @@ class _UsersPageState extends State<UsersPage> {
   bool get isSuperAdmin => widget.currentRole.trim().toLowerCase().contains('super');
 
   List<String> get availableRoles => isSuperAdmin
-      ? ["SuperAdmin", "Admin", "Cashier", "User"]
-      : ["Admin", "Cashier", "User"];
+      ? ["SuperAdmin", "Admin", "Teacher", "Cashier", "User"]
+      : ["Admin", "Teacher", "Cashier", "User"];
 
   List get visibleUsers {
     if (isSuperAdmin) return users;

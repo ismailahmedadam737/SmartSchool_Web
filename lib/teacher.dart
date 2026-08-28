@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:iftiinshe/Service/api_service.dart';
 
 class TeachersPage extends StatefulWidget {
-  const TeachersPage({super.key});
+  final String userRole;
+  const TeachersPage({super.key, this.userRole = ''});
 
   @override
   State<TeachersPage> createState() => _TeachersPageState();
@@ -345,7 +346,8 @@ class _TeachersPageState extends State<TeachersPage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _editTeacher(index)),
-            IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteTeacher(index)),
+            if (widget.userRole.toLowerCase() != 'teacher')
+              IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteTeacher(index)),
           ],
         ),
       ),

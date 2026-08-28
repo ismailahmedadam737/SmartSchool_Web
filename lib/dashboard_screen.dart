@@ -152,6 +152,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         {"icon": Icons.note_alt_rounded, "title": "Note"},
         {"icon": Icons.mark_as_unread_rounded, "title": "Admin Messages"},
       ];
+    } else if (role == 'teacher') {
+      return [
+        {"icon": Icons.school_rounded, "title": "Teachers"},
+        {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.book, "title": "Exam & Results"},
+        {"icon": Icons.chat_rounded, "title": "Communications"},
+      ];
     } else {
       // User (Arday / Waalid): Attendance, Exam Results (View-Only), iyo Communications (Request)
       return [
@@ -165,9 +172,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Haddii uu yahay User (arday/waalid), dooro Attendance ama Exam
+    // Haddii uu yahay User (arday/waalid) ama Teacher
     if (normalizedRole == 'user') {
       selectedMenu = "Attendance";
+    } else if (normalizedRole == 'teacher') {
+      selectedMenu = "Teachers";
     } else {
       selectedMenu = "Dashboard";
     }
@@ -252,7 +261,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case "Dashboard": return _buildDashboardHome(isDesktop: isDesktop);
       case "Students": return const StudentRegistrationPage();
       case "Users": return UsersPage(currentRole: normalizedRole);
-      case "Teachers": return const TeachersPage();
+      case "Teachers": return TeachersPage(userRole: normalizedRole);
       case "Teacher Salary": return const TeacherSalaryPage();
       case "Attendance": return AttendancePage(userRole: normalizedRole);
       case "Fees & Accounting": return FinancePage();

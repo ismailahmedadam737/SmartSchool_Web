@@ -392,9 +392,51 @@ pw.Text(
       ),
     );
 
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => doc.save(),
-      name: 'Shahaado_${selectedStudent!.name}_$selectedExamType',
+    final pdfBytes = await doc.save();
+    final String filename = 'Shahaado_${selectedStudent!.name}_$selectedExamType.pdf';
+
+    if (!mounted) return;
+
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text("Dooro Habka Natiijada", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+            const SizedBox(height: 15),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
+                child: const Icon(Icons.download_rounded, color: Colors.blue, size: 24),
+              ),
+              title: const Text("Soo Dajiso PDF (Download to Mobile)", style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text("Faylka toos ugu kaydi taleefankaaga / gallery-ga"),
+              onTap: () async {
+                Navigator.pop(context);
+                await Printing.sharePdf(bytes: pdfBytes, filename: filename);
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(color: Colors.purple.shade50, shape: BoxShape.circle),
+                child: const Icon(Icons.print_rounded, color: Colors.purple, size: 24),
+              ),
+              title: const Text("Daabac Warqadda (Print)", style: TextStyle(fontWeight: FontWeight.bold)),
+              subtitle: const Text("U dir printer-ka ama eeg preview-ka"),
+              onTap: () async {
+                Navigator.pop(context);
+                await Printing.layoutPdf(onLayout: (format) async => pdfBytes, name: filename);
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 
