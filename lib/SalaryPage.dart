@@ -108,89 +108,117 @@ class _TeacherSalaryPageState extends State<TeacherSalaryPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FE),
-      body: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Container(
-              margin: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, spreadRadius: 5)],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(30),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    Image.network(
-                      "https://images.unsplash.com/photo-1580519542036-c47de6196ba5?q=80&w=1000",
-                      fit: BoxFit.cover,
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isDesktop = constraints.maxWidth >= 800;
+
+          final mainContent = Padding(
+            padding: EdgeInsets.all(isDesktop ? 20.0 : 12.0),
+            child: Column(
+              children: [
+                _buildTopStats(isDesktop: isDesktop),
+                const SizedBox(height: 16),
+                _buildSearchAndFilter(),
+                const SizedBox(height: 15),
+                Expanded(
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildEmployeeList(),
+                ),
+              ],
+            ),
+          );
+
+          if (isDesktop) {
+            return Row(
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: Container(
+                    margin: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, spreadRadius: 5)],
                     ),
-                    Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Colors.black.withOpacity(0.85), Colors.transparent],
-                          begin: Alignment.bottomCenter,
-                          end: Alignment.topCenter,
-                        ),
-                      ),
-                      padding: const EdgeInsets.all(35),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Icon(Icons.account_balance_wallet, color: Colors.amber, size: 40),
-                          SizedBox(height: 15),
-                          Text("HRM & Finance", style: TextStyle(color: Colors.white, fontSize: 35, fontWeight: FontWeight.bold)),
-                          SizedBox(height: 10),
-                          Text("Maamul mushaharka iyo xogta shaqaalaha si fudud oo ammaan ah.", style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.5)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(30),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            "https://images.unsplash.com/photo-1580519542036-c47de6196ba5?q=80&w=1000",
+                            fit: BoxFit.cover,
+                          ),
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Colors.black.withOpacity(0.85), Colors.transparent],
+                                begin: Alignment.bottomCenter,
+                                end: Alignment.topCenter,
+                              ),
+                            ),
+                            padding: const EdgeInsets.all(35),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: const [
+                                Icon(Icons.account_balance_wallet, color: Colors.amber, size: 40),
+                                SizedBox(height: 15),
+                                Text("HRM & Finance", style: TextStyle(color: Colors.white, fontSize: 35, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 10),
+                                Text("Maamul mushaharka iyo xogta shaqaalaha si fudud oo ammaan ah.", style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.5)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 6,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 20, right: 20, bottom: 20),
-              child: Column(
-                children: [
-                  _buildTopStats(),
-                  const SizedBox(height: 20),
-                  _buildSearchAndFilter(),
-                  const SizedBox(height: 15),
-                  Expanded(
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _buildEmployeeList(),
                   ),
-                ],
-              ),
-            ),
-          ),
-        ],
+                ),
+                Expanded(
+                  flex: 6,
+                  child: mainContent,
+                ),
+              ],
+            );
+          } else {
+            return mainContent;
+          }
+        },
       ),
     );
   }
 
-  Widget _buildTopStats() {
+  Widget _buildTopStats({required bool isDesktop}) {
     int totalEmployees = _employees.length;
     int paidCount = _employees.where((emp) => emp['status'] == "Paid").length;
     int remainingCount = totalEmployees - paidCount;
 
-    return Row(
-      children: [
-        _statCard("TOTAL EMPLOYEE", "$totalEmployees", Colors.blue.shade700, Icons.people_alt_rounded),
-        const SizedBox(width: 15),
-        _statCard("PAID TODAY", "$paidCount", Colors.green.shade700, Icons.check_circle),
-        const SizedBox(width: 15),
-        _statCard("REMAINING", "$remainingCount", Colors.orange.shade800, Icons.pending_actions),
-      ],
-    );
+    if (isDesktop) {
+      return Row(
+        children: [
+          _statCard("TOTAL EMPLOYEE", "$totalEmployees", Colors.blue.shade700, Icons.people_alt_rounded),
+          const SizedBox(width: 15),
+          _statCard("PAID TODAY", "$paidCount", Colors.green.shade700, Icons.check_circle),
+          const SizedBox(width: 15),
+          _statCard("REMAINING", "$remainingCount", Colors.orange.shade800, Icons.pending_actions),
+        ],
+      );
+    } else {
+      return Column(
+        children: [
+          Row(
+            children: [
+              _statCard("TOTAL EMPLOYEE", "$totalEmployees", Colors.blue.shade700, Icons.people_alt_rounded),
+              const SizedBox(width: 10),
+              _statCard("PAID TODAY", "$paidCount", Colors.green.shade700, Icons.check_circle),
+            ],
+          ),
+          const SizedBox(height: 10),
+          _statCard("REMAINING", "$remainingCount", Colors.orange.shade800, Icons.pending_actions),
+        ],
+      );
+    }
   }
 
   Widget _statCard(String title, String val, Color col, IconData icon) {

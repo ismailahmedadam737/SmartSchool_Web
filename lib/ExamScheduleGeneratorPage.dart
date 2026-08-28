@@ -150,12 +150,33 @@ class _ExamScheduleGeneratorPageState extends State<ExamScheduleGeneratorPage> {
               itemCount: 7,
               itemBuilder: (context, i) => Padding(
                 padding: const EdgeInsets.only(bottom: 8.0),
-                child: Row(children: [
-                  SizedBox(width: 80, child: Text(_days[i], style: const TextStyle(fontWeight: FontWeight.bold))),
-                  Expanded(child: TextField(controller: _subjectControllers[i], decoration: const InputDecoration(hintText: "Subject", border: OutlineInputBorder()))),
-                  const SizedBox(width: 10),
-                  SizedBox(width: 130, child: TextField(controller: _dateControllers[i], readOnly: true, onTap: () => _selectDate(context, i), decoration: const InputDecoration(hintText: "Date", border: OutlineInputBorder(), suffixIcon: Icon(Icons.calendar_today, size: 18)))),
-                ]),
+                child: LayoutBuilder(
+                  builder: (context, itemConstraints) {
+                    if (itemConstraints.maxWidth < 500) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(_days[i], style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Expanded(child: TextField(controller: _subjectControllers[i], decoration: const InputDecoration(hintText: "Subject", border: OutlineInputBorder()))),
+                              const SizedBox(width: 8),
+                              SizedBox(width: 120, child: TextField(controller: _dateControllers[i], readOnly: true, onTap: () => _selectDate(context, i), decoration: const InputDecoration(hintText: "Date", border: OutlineInputBorder(), suffixIcon: Icon(Icons.calendar_today, size: 16)))),
+                            ],
+                          ),
+                        ],
+                      );
+                    } else {
+                      return Row(children: [
+                        SizedBox(width: 80, child: Text(_days[i], style: const TextStyle(fontWeight: FontWeight.bold))),
+                        Expanded(child: TextField(controller: _subjectControllers[i], decoration: const InputDecoration(hintText: "Subject", border: OutlineInputBorder()))),
+                        const SizedBox(width: 10),
+                        SizedBox(width: 130, child: TextField(controller: _dateControllers[i], readOnly: true, onTap: () => _selectDate(context, i), decoration: const InputDecoration(hintText: "Date", border: OutlineInputBorder(), suffixIcon: Icon(Icons.calendar_today, size: 18)))),
+                      ]);
+                    }
+                  },
+                ),
               ),
             ),
             const SizedBox(height: 20),

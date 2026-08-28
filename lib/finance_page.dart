@@ -197,66 +197,78 @@ class _FinancePageState extends State<FinancePage> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    flex: 1,
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Image.network(
-                          'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVAmwrfy0UmZIlsgOXhljhBBXFmr7OtLzgIJG-D18pBg&s=10',
-                          fit: BoxFit.cover,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final bool isDesktop = constraints.maxWidth >= 800;
+
+                  final studentListWidget = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text("Student List",
+                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: const [
+                            Expanded(flex: 3, child: Text("Student Name", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                            Expanded(flex: 2, child: Text("Paid", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                            Expanded(flex: 2, child: Text("Dept", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                            Expanded(flex: 2, child: Text("Status", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+                            Text("Actions", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            SizedBox(width: 10),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
-                  Expanded(
-                    flex: 2,
-                    child: Column(
+                      const SizedBox(height: 5),
+                      Expanded(
+                        child: filteredStudents.isEmpty
+                            ? const Center(child: Text("No students found in this class"))
+                            : ListView.builder(
+                                itemCount: filteredStudents.length,
+                                itemBuilder: (context, index) {
+                                  return _buildStudentRow(filteredStudents[index]);
+                                },
+                              ),
+                      ),
+                    ],
+                  );
+
+                  if (isDesktop) {
+                    return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("Student List",
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blueGrey)),
-                        const SizedBox(height: 10),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Row(
-                            children: const [
-                              Expanded(flex: 3, child: Text("Student Name", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                              Expanded(flex: 2, child: Text("Paid", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                              Expanded(flex: 2, child: Text("Dept", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                              Expanded(flex: 2, child: Text("Status", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
-                              Text("Actions", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              SizedBox(width: 10),
-                            ],
+                        Expanded(
+                          flex: 1,
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Image.network(
+                                'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSVAmwrfy0UmZIlsgOXhljhBBXFmr7OtLzgIJG-D18pBg&s=10',
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 5),
                         Expanded(
-                          child: filteredStudents.isEmpty
-                              ? const Center(child: Text("No students found in this class"))
-                              : ListView.builder(
-                                  itemCount: filteredStudents.length,
-                                  itemBuilder: (context, index) {
-                                    return _buildStudentRow(filteredStudents[index]);
-                                  },
-                                ),
+                          flex: 2,
+                          child: studentListWidget,
                         ),
                       ],
-                    ),
-                  ),
-                ],
+                    );
+                  } else {
+                    return studentListWidget;
+                  }
+                },
               ),
             ),
           ],

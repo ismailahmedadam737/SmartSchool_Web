@@ -125,7 +125,7 @@ class _UsersPageState extends State<UsersPage> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
             child: Container(
-              width: 340,
+              width: double.infinity,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: [Color(0xFF6A11CB), Color(0xFF2575FC)]),

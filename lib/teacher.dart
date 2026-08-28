@@ -183,71 +183,103 @@ class _TeachersPageState extends State<TeachersPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FA),
-      body: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Qaybta Input-ka (Bidix)
-          Expanded(
-            flex: 5,
-            child: Container(
-              margin: const EdgeInsets.all(20),
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15)],
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      editingIndex == null ? "Diiwaangeli Macalin" : "Cusboonaysii Xogta", 
-                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))
-                    ),
-                    const SizedBox(height: 25),
-                    _inputField("Magaca Buuxa", Icons.person_add_alt_1, nameController),
-                    _inputField("Degmada (District)", Icons.location_city, districtController),
-                    _inputField("Taleefanka", Icons.phone_android, phoneController),
-                    _inputField("Heerka Waxbarasho", Icons.school, levelController),
-                    _inputField("Khibradda (Experience)", Icons.workspace_premium, expController),
-                    const SizedBox(height: 20),
-                    if (editingIndex != null)
-                      TextButton(onPressed: _clearFields, child: const Text("Jooji Wax ka bedelka", style: TextStyle(color: Colors.red))),
-                    const SizedBox(height: 10),
-                    _saveButton(),
-                  ],
-                ),
-              ),
-            ),
-          ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isDesktop = constraints.maxWidth >= 800;
 
-          // Qaybta Liiska (Midig)
-          Expanded(
-            flex: 7,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text("Liiska Macalimiinta", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 20),
-                  Expanded(
-                    child: isLoading 
-                    ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF512F)))
-                    : teachers.isEmpty 
-                      ? const Center(child: Text("Wax xog ah lama helin"))
-                      : ListView.builder(
-                          itemCount: teachers.length,
-                          itemBuilder: (context, index) => _teacherCard(teachers[index], index),
-                        ),
+          if (isDesktop) {
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: _buildTeacherForm(),
+                ),
+                Expanded(
+                  flex: 7,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: _buildTeacherList(isDesktop: true),
                   ),
+                ),
+              ],
+            );
+          } else {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                children: [
+                  _buildTeacherForm(),
+                  const SizedBox(height: 16),
+                  _buildTeacherList(isDesktop: false),
                 ],
               ),
-            ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildTeacherForm() {
+    return Container(
+      margin: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 15)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            editingIndex == null ? "Diiwaangeli Macalin" : "Cusboonaysii Xogta", 
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))
           ),
+          const SizedBox(height: 25),
+          _inputField("Magaca Buuxa", Icons.person_add_alt_1, nameController),
+          _inputField("Degmada (District)", Icons.location_city, districtController),
+          _inputField("Taleefanka", Icons.phone_android, phoneController),
+          _inputField("Heerka Waxbarasho", Icons.school, levelController),
+          _inputField("Khibradda (Experience)", Icons.workspace_premium, expController),
+          const SizedBox(height: 20),
+          if (editingIndex != null)
+            TextButton(onPressed: _clearFields, child: const Text("Jooji Wax ka bedelka", style: TextStyle(color: Colors.red))),
+          const SizedBox(height: 10),
+          _saveButton(),
         ],
       ),
+    );
+  }
+
+  Widget _buildTeacherList({required bool isDesktop}) {
+    final listWidget = isLoading 
+      ? const Center(child: CircularProgressIndicator(color: Color(0xFFFF512F)))
+      : teachers.isEmpty 
+        ? const Center(child: Padding(
+            padding: EdgeInsets.all(20.0),
+            child: Text("Wax xog ah lama helin"),
+          ))
+        : ListView.builder(
+            shrinkWrap: !isDesktop,
+            physics: isDesktop ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+            itemCount: teachers.length,
+            itemBuilder: (context, index) => _teacherCard(teachers[index], index),
+          );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Text("Liiska Macalimiinta", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 16),
+        if (isDesktop)
+          Expanded(child: listWidget)
+        else
+          listWidget,
+      ],
     );
   }
 

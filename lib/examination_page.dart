@@ -575,20 +575,43 @@ pw.Text(
   }
 
   Widget _buildClassGrid() {
-    return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6, crossAxisSpacing: 15, mainAxisSpacing: 15),
-      itemCount: dynamicClasses.length,
-      itemBuilder: (context, index) => InkWell(
-        onTap: () => _filterStudentsByClass(dynamicClasses[index]),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF2ECC71), Color(0xFF1B5E20)]),
-            borderRadius: BorderRadius.circular(15),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount = 6;
+        if (constraints.maxWidth < 600) {
+          crossAxisCount = 2;
+        } else if (constraints.maxWidth < 900) {
+          crossAxisCount = 4;
+        }
+
+        return GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            crossAxisSpacing: 15,
+            mainAxisSpacing: 15,
+            childAspectRatio: constraints.maxWidth < 600 ? 1.4 : 1.0,
           ),
-          alignment: Alignment.center,
-          child: Text(dynamicClasses[index], style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-        ),
-      ),
+          itemCount: dynamicClasses.length,
+          itemBuilder: (context, index) => InkWell(
+            onTap: () => _filterStudentsByClass(dynamicClasses[index]),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFF2ECC71), Color(0xFF1B5E20)]),
+                borderRadius: BorderRadius.circular(15),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                dynamicClasses[index],
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: constraints.maxWidth < 600 ? 18 : 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

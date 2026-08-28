@@ -185,218 +185,252 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
-      body: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Container(
-              margin: const EdgeInsets.all(8),
-              padding: const EdgeInsets.all(25),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)],
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_editingStudentId != null) ...[
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        margin: const EdgeInsets.only(bottom: 15),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade50,
-                          border: Border.all(color: Colors.amber.shade400),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.edit, color: Colors.orange, size: 20),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text(
-                                "Habka Wax-ka-bedelka (Edit Mode)",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.deepOrange),
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 18, color: Colors.red),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              onPressed: () => setState(() => _clearFields()),
-                              tooltip: "Ka noqo Edit",
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    Text(
-                      _editingStudentId != null ? "Cusboonaysii Ardayga" : "Add New Student", 
-                      style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
-                    ),
-                    const SizedBox(height: 25),
-                    _buildClassDropdown(),
-                    const SizedBox(height: 15),
-                    _buildInputField("Magaca Buuxa", Icons.person_outline, _nameController),
-                    _buildInputField("Taleefanka", Icons.phone_android_outlined, _phoneController),
-                    _buildInputField("Degmada", Icons.map_outlined, _districtController),
-                    _buildInputField("Xaafadda", Icons.home_work_outlined, _neighborController),
-                    const SizedBox(height: 30),
-                    _isSyncing 
-                    ? const Center(child: CircularProgressIndicator())
-                    : Column(
-                        children: [
-                          ElevatedButton(
-                            onPressed: _saveStudent,
-                            style: ElevatedButton.styleFrom(
-                              padding: const EdgeInsets.all(0), 
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                            ),
-                            child: Ink(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: _editingStudentId == null 
-                                      ? [const Color(0xFF6A11CB), const Color(0xFF2575FC)]
-                                      : [Colors.orange.shade700, Colors.deepOrange.shade600],
-                                ),
-                                borderRadius: BorderRadius.circular(15),
-                              ),
-                              child: Container(
-                                height: 55,
-                                alignment: Alignment.center,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(_editingStudentId == null ? Icons.save : Icons.check_circle_outline, color: Colors.white),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _editingStudentId == null ? "Kaydi Xogta" : "Cusboonaysii Xogta", 
-                                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (_editingStudentId != null) ...[
-                            const SizedBox(height: 10),
-                            OutlinedButton.icon(
-                              onPressed: () => setState(() => _clearFields()),
-                              icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                              label: const Text("Ka noqo Edit-ka", style: TextStyle(color: Colors.red)),
-                              style: OutlinedButton.styleFrom(
-                                side: const BorderSide(color: Colors.red),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                minimumSize: const Size.fromHeight(45),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                  ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isDesktop = constraints.maxWidth >= 800;
+
+          if (isDesktop) {
+            return Row(
+              children: [
+                Expanded(
+                  flex: 4,
+                  child: _buildFormCard(),
                 ),
-              ),
-            ),
-          ),
-
-          Expanded(
-            flex: 8,
-            child: Padding(
-              padding: const EdgeInsets.all(20),
+                Expanded(
+                  flex: 8,
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: _buildStudentSection(isDesktop: true),
+                  ),
+                ),
+              ],
+            );
+          } else {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(12),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Dooro Fasal si aad u aragto Ardayda", 
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
-                      IconButton.filled(
-                        onPressed: _addNewClassDialog, 
-                        icon: const Icon(Icons.add),
-                        style: IconButton.styleFrom(backgroundColor: const Color(0xFF6A11CB)),
-                        tooltip: "Add New Class",
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  Listener(
-                    onPointerSignal: (pointerSignal) {
-                      if (pointerSignal is PointerScrollEvent) {
-                        final newOffset = _classScrollController.offset + pointerSignal.scrollDelta.dy;
-                        _classScrollController.jumpTo(newOffset.clamp(0.0, _classScrollController.position.maxScrollExtent));
-                      }
-                    },
-                    child: RawScrollbar(
-                      controller: _classScrollController,
-                      thumbVisibility: true,
-                      thickness: 6,
-                      radius: const Radius.circular(10),
-                      thumbColor: const Color(0xFF6A11CB).withOpacity(0.3),
-                      child: Container(
-                        height: 130,
-                        padding: const EdgeInsets.only(bottom: 15),
-                        child: ListView.builder(
-                          controller: _classScrollController,
-                          scrollDirection: Axis.horizontal,
-                          physics: const BouncingScrollPhysics(),
-                          itemCount: _classes.length,
-                          itemBuilder: (context, index) {
-                            bool isSelected = _viewingClass == _classes[index];
-                            return GestureDetector(
-                              onTap: () => setState(() => _viewingClass = _classes[index]),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                width: 110,
-                                margin: const EdgeInsets.only(right: 15, top: 5, bottom: 5),
-                                decoration: BoxDecoration(
-                                  gradient: isSelected ? const LinearGradient(colors: [Color(0xFF6A11CB), Color(0xFF2575FC)]) : null,
-                                  color: isSelected ? null : Colors.white,
-                                  borderRadius: BorderRadius.circular(18),
-                                  boxShadow: [
-                                    if (isSelected) BoxShadow(color: const Color(0xFF6A11CB).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))
-                                    else BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 5)
-                                  ],
-                                  border: Border.all(color: isSelected ? Colors.transparent : Colors.grey.shade200),
-                                ),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.school, color: isSelected ? Colors.white : Colors.blueGrey, size: 28),
-                                    const SizedBox(height: 8),
-                                    Text(_classes[index], 
-                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: isSelected ? Colors.white : Colors.black87)),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                  _buildFormCard(),
+                  const SizedBox(height: 16),
+                  _buildStudentSection(isDesktop: false),
+                ],
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildFormCard() {
+    return Container(
+      margin: const EdgeInsets.all(8),
+      padding: const EdgeInsets.all(25),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20)],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_editingStudentId != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              margin: const EdgeInsets.only(bottom: 15),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                border: Border.all(color: Colors.amber.shade400),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.edit, color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      "Habka Wax-ka-bedelka (Edit Mode)",
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.deepOrange),
                     ),
                   ),
-
-                  const SizedBox(height: 20),
-
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
-                      child: _isSyncing 
-                        ? const Center(child: CircularProgressIndicator())
-                        : _viewingClass == null 
-                          ? const Center(child: Text("Fadlan doorto mid ka mid ah fasallada kore"))
-                          : _buildFilteredStudentList(),
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18, color: Colors.red),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => setState(() => _clearFields()),
+                    tooltip: "Ka noqo Edit",
                   ),
                 ],
               ),
             ),
+          ],
+          Text(
+            _editingStudentId != null ? "Cusboonaysii Ardayga" : "Add New Student", 
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
           ),
+          const SizedBox(height: 25),
+          _buildClassDropdown(),
+          const SizedBox(height: 15),
+          _buildInputField("Magaca Buuxa", Icons.person_outline, _nameController),
+          _buildInputField("Taleefanka", Icons.phone_android_outlined, _phoneController),
+          _buildInputField("Degmada", Icons.map_outlined, _districtController),
+          _buildInputField("Xaafadda", Icons.home_work_outlined, _neighborController),
+          const SizedBox(height: 30),
+          _isSyncing 
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                ElevatedButton(
+                  onPressed: _saveStudent,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.all(0), 
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  child: Ink(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: _editingStudentId == null 
+                            ? [const Color(0xFF6A11CB), const Color(0xFF2575FC)]
+                            : [Colors.orange.shade700, Colors.deepOrange.shade600],
+                      ),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Container(
+                      height: 55,
+                      alignment: Alignment.center,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(_editingStudentId == null ? Icons.save : Icons.check_circle_outline, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(
+                            _editingStudentId == null ? "Kaydi Xogta" : "Cusboonaysii Xogta", 
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                if (_editingStudentId != null) ...[
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => setState(() => _clearFields()),
+                    icon: const Icon(Icons.cancel_outlined, color: Colors.red),
+                    label: const Text("Ka noqo Edit-ka", style: TextStyle(color: Colors.red)),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      minimumSize: const Size.fromHeight(45),
+                    ),
+                  ),
+                ],
+              ],
+            ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStudentSection({required bool isDesktop}) {
+    final listWidget = Container(
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+      child: _isSyncing 
+        ? const Center(child: CircularProgressIndicator())
+        : _viewingClass == null 
+          ? const Center(child: Padding(
+              padding: EdgeInsets.all(20.0),
+              child: Text("Fadlan doorto mid ka mid ah fasallada kore"),
+            ))
+          : _buildFilteredStudentList(),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Expanded(
+              child: Text("Dooro Fasal si aad u aragto Ardayda", 
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+            ),
+            IconButton.filled(
+              onPressed: _addNewClassDialog, 
+              icon: const Icon(Icons.add),
+              style: IconButton.styleFrom(backgroundColor: const Color(0xFF6A11CB)),
+              tooltip: "Add New Class",
+            )
+          ],
+        ),
+        const SizedBox(height: 15),
+        
+        Listener(
+          onPointerSignal: (pointerSignal) {
+            if (pointerSignal is PointerScrollEvent) {
+              final newOffset = _classScrollController.offset + pointerSignal.scrollDelta.dy;
+              _classScrollController.jumpTo(newOffset.clamp(0.0, _classScrollController.position.maxScrollExtent));
+            }
+          },
+          child: RawScrollbar(
+            controller: _classScrollController,
+            thumbVisibility: true,
+            thickness: 6,
+            radius: const Radius.circular(10),
+            thumbColor: const Color(0xFF6A11CB).withOpacity(0.3),
+            child: Container(
+              height: 110,
+              padding: const EdgeInsets.only(bottom: 15),
+              child: ListView.builder(
+                controller: _classScrollController,
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                itemCount: _classes.length,
+                itemBuilder: (context, index) {
+                  bool isSelected = _viewingClass == _classes[index];
+                  return GestureDetector(
+                    onTap: () => setState(() => _viewingClass = _classes[index]),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      width: 100,
+                      margin: const EdgeInsets.only(right: 12, top: 4, bottom: 4),
+                      decoration: BoxDecoration(
+                        gradient: isSelected ? const LinearGradient(colors: [Color(0xFF6A11CB), Color(0xFF2575FC)]) : null,
+                        color: isSelected ? null : Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: [
+                          if (isSelected) BoxShadow(color: const Color(0xFF6A11CB).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))
+                          else BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 5)
+                        ],
+                        border: Border.all(color: isSelected ? Colors.transparent : Colors.grey.shade200),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.school, color: isSelected ? Colors.white : Colors.blueGrey, size: 24),
+                          const SizedBox(height: 6),
+                          Text(_classes[index], 
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: isSelected ? Colors.white : Colors.black87)),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+
+        const SizedBox(height: 15),
+
+        if (isDesktop)
+          Expanded(child: listWidget)
+        else
+          SizedBox(height: 400, child: listWidget),
+      ],
     );
   }
 
