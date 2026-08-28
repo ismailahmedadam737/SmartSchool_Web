@@ -545,28 +545,77 @@ class _NotesPageState extends State<NotesPage> {
                         ],
                       ),
                       TextButton.icon(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.close_rounded, size: 16, color: Colors.white54),
-                        label: const Text("Close the Window", style: TextStyle(color: Colors.white54)),
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-              ],
+                    ),
+                ],
+              );
+            }),
+            const SizedBox(width: 12),
+            ElevatedButton.icon(
+              onPressed: _showAddNewDebtDialog,
+              icon: const Icon(Icons.add_card_rounded, color: Colors.black, size: 18),
+              label: const Text("+ Geli Baaqi Arday"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amberAccent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
-          ),
+            const SizedBox(width: 10),
+            ElevatedButton.icon(
+              onPressed: _fetchData,
+              icon: const Icon(Icons.refresh, color: Colors.white, size: 18),
+              label: const Text("Refresh"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6366F1),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
         ),
-      ),
+      ],
     );
   }
 
-  Widget _buildMetricsRow() {
+  Widget _buildMetricsRow({required bool isMobile}) {
+    if (isMobile) {
+      return Column(
+        children: [
+          _metricCard(
+            title: "Ardayda Baaqiga lagu leeyahay",
+            value: "${allDebtorStudents.length}",
+            subtitle: "Wadarta ardayda baaqi lagu leeyahay",
+            icon: Icons.people_outline_rounded,
+            gradientColors: [const Color(0xFFF59E0B), const Color(0xFFD97706)],
+          ),
+          const SizedBox(height: 10),
+          _metricCard(
+            title: "Wadarta Baaqiga (\$)",
+            value: "\$${totalOutstandingDebt.toStringAsFixed(1)}",
+            subtitle: "Total Outstanding Debt",
+            icon: Icons.account_balance_wallet_outlined,
+            gradientColors: [const Color(0xFFEF4444), const Color(0xFFB91C1C)],
+            isHighlighted: true,
+          ),
+        ],
+      );
+    }
+
     return Row(
       children: [
         Expanded(
           child: _metricCard(
             title: "Ardayda Baaqiga lagu leeyahay",
-            // Use allDebtorStudents so count is not affected by search/class filters
             value: "${allDebtorStudents.length}",
             subtitle: "Wadarta ardayda baaqi lagu leeyahay",
             icon: Icons.people_outline_rounded,
@@ -577,7 +626,6 @@ class _NotesPageState extends State<NotesPage> {
         Expanded(
           child: _metricCard(
             title: "Wadarta Baaqiga (\$)",
-            // totalOutstandingDebt now uses allDebtorStudents — full total always shown
             value: "\$${totalOutstandingDebt.toStringAsFixed(1)}",
             subtitle: "Total Outstanding Debt",
             icon: Icons.account_balance_wallet_outlined,
@@ -589,75 +637,68 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 
-  Widget _metricCard({
-    required String title,
-    required String value,
-    required String subtitle,
-    required IconData icon,
-    required List<Color> gradientColors,
-    bool isHighlighted = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isHighlighted ? const Color(0xFFEF4444).withValues(alpha: 0.15) : Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isHighlighted ? const Color(0xFFEF4444) : Colors.white.withValues(alpha: 0.1),
-          width: isHighlighted ? 2.0 : 1.0,
+  Widget _buildFilterControls({required bool isMobile}) {
+    if (isMobile) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: isHighlighted ? const Color(0xFFEF4444).withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.2),
-            blurRadius: isHighlighted ? 20 : 15,
-          )
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: gradientColors),
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                if (isHighlighted)
-                  BoxShadow(color: gradientColors.first.withValues(alpha: 0.5), blurRadius: 10, offset: const Offset(0, 4)),
-              ],
+        child: Column(
+          children: [
+            TextField(
+              onChanged: (val) => setState(() => searchQuery = val),
+              style: const TextStyle(color: Colors.white, fontSize: 13),
+              decoration: InputDecoration(
+                hintText: "Raadi magaca ama taleefanka...",
+                hintStyle: const TextStyle(color: Colors.white38, fontSize: 12),
+                prefixIcon: const Icon(Icons.search, color: Colors.cyanAccent, size: 20),
+                filled: true,
+                fillColor: Colors.black.withValues(alpha: 0.3),
+                isDense: true,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+              ),
             ),
-            child: Icon(icon, color: Colors.white, size: isHighlighted ? 32 : 28),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            const SizedBox(height: 10),
+            Row(
               children: [
-                Text(title, style: TextStyle(color: isHighlighted ? Colors.redAccent : Colors.white70, fontSize: 13, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 4),
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    value,
-                    style: TextStyle(
-                      color: isHighlighted ? Colors.redAccent : Colors.white,
-                      fontSize: isHighlighted ? 28 : 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
+                Expanded(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: selectedClass,
+                        dropdownColor: const Color(0xFF1E1B4B),
+                        isExpanded: true,
+                        hint: const Text("Dhammaan Fasallada", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        icon: const Icon(Icons.keyboard_arrow_down, color: Colors.cyanAccent, size: 18),
+                        items: [
+                          const DropdownMenuItem(value: null, child: Text("Dhammaan Fasallada", style: TextStyle(color: Colors.white, fontSize: 12))),
+                          ...classes.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white, fontSize: 12)))),
+                        ],
+                        onChanged: (val) => setState(() => selectedClass = val),
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(color: Colors.white38, fontSize: 11)),
+                const SizedBox(width: 8),
+                _filterChip("Dhammaan", "All"),
+                const SizedBox(width: 6),
+                _filterChip("Unpaid", "Unpaid"),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          ],
+        ),
+      );
+    }
 
-  Widget _buildFilterControls() {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -716,45 +757,17 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 
-  Widget _filterChip(String label, String key) {
-    bool isSelected = selectedFilter == key;
-    return ChoiceChip(
-      label: Text(label, style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-      selected: isSelected,
-      selectedColor: Colors.cyanAccent,
-      backgroundColor: Colors.black.withValues(alpha: 0.3),
-      onSelected: (val) => setState(() => selectedFilter = key),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.check_circle_outline_rounded, color: Colors.greenAccent.withValues(alpha: 0.6), size: 70),
-          const SizedBox(height: 15),
-          const Text(
-            "Majiraan arday baaqi lagu leeyahay ama la raadinayo!",
-            style: TextStyle(color: Colors.white70, fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 5),
-          const Text("Waqti kasta oo baaqi la galsho halkan ayuu ka soo muuqan doonaa.", style: TextStyle(color: Colors.white38, fontSize: 13)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStudentNotesList() {
+  Widget _buildStudentNotesList({bool isMobile = false, bool shrinkWrap = false}) {
     return RawScrollbar(
       controller: _listScrollController,
       thumbColor: Colors.cyanAccent.withValues(alpha: 0.6),
       thickness: 6.0,
       radius: const Radius.circular(10),
-      thumbVisibility: true,
+      thumbVisibility: !shrinkWrap,
       child: ListView.builder(
         controller: _listScrollController,
-        physics: const BouncingScrollPhysics(),
+        shrinkWrap: shrinkWrap,
+        physics: shrinkWrap ? const NeverScrollableScrollPhysics() : const BouncingScrollPhysics(),
         itemCount: filteredDebtorStudents.length,
         itemBuilder: (context, index) {
         final s = filteredDebtorStudents[index];
@@ -765,6 +778,103 @@ class _NotesPageState extends State<NotesPage> {
         bool isUnpaid = paid == 0;
         Color badgeColor = isUnpaid ? Colors.redAccent : Colors.amberAccent;
         String badgeText = isUnpaid ? "UNPAID (0 Paid)" : "PENDING DEBT";
+
+        if (isMobile) {
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.indigo.withValues(alpha: 0.5),
+                      child: Text(
+                        s.name.isNotEmpty ? s.name[0].toUpperCase() : "S",
+                        style: const TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 14),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(s.name, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14), overflow: TextOverflow.ellipsis),
+                          Text("${s.className} | ${s.phone}", style: const TextStyle(color: Colors.white60, fontSize: 11)),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: badgeColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
+                      ),
+                      child: Text(badgeText, style: TextStyle(color: badgeColor, fontSize: 9, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Lagu leeyahay: \$${debt.toStringAsFixed(1)}", style: const TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold, fontSize: 14)),
+                    Text("La bixiyey: \$${paid.toStringAsFixed(1)}", style: const TextStyle(color: Colors.greenAccent, fontSize: 11)),
+                  ],
+                ),
+                if (customNote.isNotEmpty) ...[
+                  const SizedBox(height: 6),
+                  Text("Note: $customNote", style: const TextStyle(color: Colors.amber, fontSize: 11), overflow: TextOverflow.ellipsis),
+                ],
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => _showPayDebtDialog(s, debt),
+                      icon: const Icon(Icons.payments_rounded, size: 14, color: Colors.black),
+                      label: const Text("Bix", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.greenAccent,
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      icon: const Icon(Icons.edit_note_rounded, color: Colors.cyanAccent, size: 20),
+                      onPressed: () => _showAddNoteDialog(s),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.send_rounded, color: Colors.greenAccent, size: 20),
+                      onPressed: () => _showSmsModal(s, debt),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.print_outlined, color: Colors.amberAccent, size: 20),
+                      onPressed: () => _printReminderNote(s, paid, debt),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          );
+        }
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -1012,30 +1122,38 @@ class _NotesPageState extends State<NotesPage> {
               ElevatedButton.icon(
                 onPressed: payAmount <= 0
                     ? null
-                    : () {
-                        setState(() {
-                          double newDebt = (currentDebt - payAmount).clamp(0.0, double.infinity);
-                          double prevPaid = studentPaidMap[student.idString] ?? 0;
-                          studentPaidMap[student.idString] = prevPaid + payAmount;
-                          if (newDebt <= 0) {
-                            // Fully paid — remove from debt map
-                            studentDebtMap.remove(student.idString);
-                            studentNotesMap.remove(student.idString);
-                          } else {
-                            studentDebtMap[student.idString] = newDebt;
+                    : () async {
+                        int studentId = student.id ?? int.tryParse(student.idString) ?? 0;
+                        if (studentId != 0) {
+                          try {
+                            double newDebt = (currentDebt - payAmount).clamp(0.0, double.infinity);
+                            // Send payment and debt adjustment to backend DB
+                            await PaymentApiService.addPayment(
+                              studentId: studentId,
+                              amount: payAmount,
+                              debt: newDebt - currentDebt,
+                              month: DateTime.now().month.toString(),
+                              transport: 'Fee Payment',
+                            );
+                          } catch (e) {
+                            debugPrint("Error saving payment to DB: $e");
                           }
-                        });
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            backgroundColor: Colors.green.shade700,
-                            content: Text(
-                              payAmount >= currentDebt
-                                  ? "✅ ${student.name} — Baaqiga si buuxda ayaa loo bixiyey!"
-                                  : "💰 ${student.name} — \$${payAmount.toStringAsFixed(1)} la bixiyey. Waxaa hadhay \$${(currentDebt - payAmount).toStringAsFixed(1)}",
+                        }
+
+                        if (mounted) {
+                          Navigator.pop(context);
+                          await _fetchData(); // Permanently reload from database
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              backgroundColor: Colors.green.shade700,
+                              content: Text(
+                                payAmount >= currentDebt
+                                    ? "✅ ${student.name} — Baaqiga si buuxda ayaa loo bixiyey database-ka!"
+                                    : "💰 ${student.name} — \$${payAmount.toStringAsFixed(1)} la bixiyey. Waxaa hadhay \$${(currentDebt - payAmount).toStringAsFixed(1)}",
+                              ),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       },
                 icon: const Icon(Icons.check_circle_rounded, size: 18),
                 label: const Text("Xaqiiji Lacag Bixinta", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -1217,19 +1335,40 @@ class _NotesPageState extends State<NotesPage> {
                 child: const Text("Ka noqo", style: TextStyle(color: Colors.white54)),
               ),
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (selectedStudentForDebt != null) {
                     double debtVal = double.tryParse(debtController.text) ?? 0;
-                    setState(() {
-                      studentDebtMap[selectedStudentForDebt!.idString] = debtVal;
-                      if (noteController.text.isNotEmpty) {
-                        studentNotesMap[selectedStudentForDebt!.idString] = noteController.text.trim();
+                    int studentId = selectedStudentForDebt!.id ?? int.tryParse(selectedStudentForDebt!.idString) ?? 0;
+                    
+                    if (studentId != 0 && debtVal > 0) {
+                      try {
+                        double existingDebt = studentDebtMap[selectedStudentForDebt!.idString] ?? 0;
+                        double debtToAdd = debtVal - existingDebt;
+                        if (debtToAdd != 0) {
+                          await PaymentApiService.addPayment(
+                            studentId: studentId,
+                            amount: 0.0,
+                            debt: debtToAdd,
+                            month: DateTime.now().month.toString(),
+                            transport: noteController.text.trim().isNotEmpty ? noteController.text.trim() : 'Fee Note',
+                          );
+                        }
+                      } catch (e) {
+                        debugPrint("Error saving debt to database: $e");
                       }
-                    });
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("✅ Baaqiga ardayga ${selectedStudentForDebt!.name} waa la kaydiyey (\$${debtVal.toStringAsFixed(1)})")),
-                    );
+                    }
+
+                    if (noteController.text.isNotEmpty) {
+                      studentNotesMap[selectedStudentForDebt!.idString] = noteController.text.trim();
+                    }
+
+                    if (mounted) {
+                      Navigator.pop(context);
+                      await _fetchData(); // Permanently reload from database
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("✅ Baaqiga ardayga ${selectedStudentForDebt!.name} waa la kaydiyey database-ka (\$${debtVal.toStringAsFixed(1)})")),
+                      );
+                    }
                   }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.amberAccent, foregroundColor: Colors.black),
@@ -1310,16 +1449,39 @@ class _NotesPageState extends State<NotesPage> {
             child: const Text("Ka noqo", style: TextStyle(color: Colors.white54)),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               double newDebt = double.tryParse(debtController.text) ?? (studentDebtMap[student.idString] ?? 0);
-              setState(() {
-                studentDebtMap[student.idString] = newDebt;
+              int studentId = student.id ?? int.tryParse(student.idString) ?? 0;
+              
+              if (studentId != 0) {
+                try {
+                  double currentDebt = studentDebtMap[student.idString] ?? 0;
+                  double diff = newDebt - currentDebt;
+                  if (diff != 0) {
+                    await PaymentApiService.addPayment(
+                      studentId: studentId,
+                      amount: 0.0,
+                      debt: diff,
+                      month: DateTime.now().month.toString(),
+                      transport: noteController.text.trim().isNotEmpty ? noteController.text.trim() : 'Note Update',
+                    );
+                  }
+                } catch (e) {
+                  debugPrint("Error updating note/debt in DB: $e");
+                }
+              }
+
+              if (noteController.text.isNotEmpty) {
                 studentNotesMap[student.idString] = noteController.text.trim();
-              });
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("✅ Baaqiga iyo Note-ka waa la kaydiyey!")),
-              );
+              }
+
+              if (mounted) {
+                Navigator.pop(context);
+                await _fetchData(); // Permanently reload from database
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("✅ Baaqiga iyo Note-ka waa la kaydiyey database-ka!")),
+                );
+              }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.cyanAccent, foregroundColor: Colors.black),
             child: const Text("Kaydi Xogta", style: TextStyle(fontWeight: FontWeight.bold)),
