@@ -276,8 +276,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (normalizedRole == 'superadmin') ...[
-          const SizedBox(height: 20),
-          if (normalizedRole == 'superadmin') ...[
             _buildSuperAdminControlCenter(),
             const SizedBox(height: 25),
           ],
