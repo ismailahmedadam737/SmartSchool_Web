@@ -967,9 +967,9 @@ pw.Text(
                   Color statusColor;
                   String statusText;
 
-                  if (!hasRecord) {
+                  if (!hasRecord || score == 0) {
                     statusColor = Colors.blueGrey;
-                    statusText = "Ma galin";
+                    statusText = "No exam";
                   } else {
                     double percentage = (score / maxPerSubject);
                     if (percentage >= 0.8) {
@@ -1020,7 +1020,7 @@ pw.Text(
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                Text(hasRecord ? "$score" : "-", style: TextStyle(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold, color: statusColor)),
+                                Text(hasRecord && score > 0 ? "$score" : "-", style: TextStyle(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold, color: statusColor)),
                                 Text("/$maxPerSubject", style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500)),
                               ],
                             ),
