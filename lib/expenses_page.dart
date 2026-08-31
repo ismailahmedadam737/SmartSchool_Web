@@ -31,11 +31,18 @@ class _ExpensesPageState extends State<ExpensesPage> {
     });
   }
 
-  void _deleteExpense(int id) async {
+  void _deleteExpense(dynamic id) async {
+    if (id == null) {
+      _showSnackBar("Khalad: ID-ga kharashka lama helin!", Colors.red);
+      return;
+    }
     bool success = await ExpenseService.deleteExpense(id);
     if (success) {
       setState(() {
-        _registeredExpenses.removeWhere((item) => item['id'] == id);
+        _registeredExpenses.removeWhere((item) {
+          final itemId = item['_id'] ?? item['id'] ?? item['expense_id'] ?? item['ID'];
+          return itemId != null && itemId.toString() == id.toString();
+        });
       });
       _showSnackBar("Kharashka si guul leh ayaa loo tirtiray!", Colors.green);
     } else {
@@ -43,7 +50,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
     }
   }
 
-  void _confirmDelete(int id) {
+  void _confirmDelete(dynamic id) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -71,7 +78,8 @@ class _ExpensesPageState extends State<ExpensesPage> {
       
       final Map<String, dynamic> kharashData = {
         'category': _selectedTitle,
-        'amount': double.parse(_amountController.text),
+        'amount': double.tryParse(_amountController.text) ?? 0.0,
+        'note': _noteController.text.trim(),
         'is_paid': true,
       };
 
@@ -172,6 +180,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
   Widget _buildEmptyState() { return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.receipt_long_outlined, size: 70, color: Colors.grey[200]), const SizedBox(height: 15), Text("Ma jiraan xog la diwaangaliyay", style: TextStyle(color: Colors.grey[400], fontSize: 15))])); }
 
   Widget _buildExpenseItem(Map<String, dynamic> item, int index) {
+    final dynamic expenseId = item['_id'] ?? item['id'] ?? item['expense_id'] ?? item['ID'];
     return Container(
       margin: const EdgeInsets.only(bottom: 15), padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(color: const Color(0xFFF9FAFB), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.grey.shade100)),
@@ -185,7 +194,7 @@ class _ExpensesPageState extends State<ExpensesPage> {
           Row(
             children: [
               IconButton(
-                onPressed: () => _confirmDelete(item['id']),
+                onPressed: () => _confirmDelete(expenseId),
                 icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),

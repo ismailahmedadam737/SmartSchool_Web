@@ -175,7 +175,7 @@ class _ExaminationPageState extends State<ExaminationPage> {
                               crossAxisAlignment: pw.CrossAxisAlignment.center, 
                               mainAxisAlignment: pw.MainAxisAlignment.center,
                               children: [
-                          pw.Text( "IFTIINSHE EXAMINATION CENTER",
+                          pw.Text( "SCHOOL EXAMINATION CENTER",
   style: pw.TextStyle(
     fontSize: 24, 
     fontWeight: pw.FontWeight.bold, 

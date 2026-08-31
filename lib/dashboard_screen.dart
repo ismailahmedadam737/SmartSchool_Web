@@ -1,9 +1,7 @@
 import 'dart:async'; // Kani waa muhiim si loo maareeyo auto-scroll-ka
 import 'dart:convert';
 import 'dart:typed_data';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
-import 'package:iftiinshe/Service/api_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:iftiinshe/AdminMessagesPage.dart';
 import 'package:iftiinshe/AtendancePage.dart';
@@ -19,176 +17,24 @@ import 'package:iftiinshe/login_page.dart';
 import 'package:iftiinshe/reports_page.dart' hide UsersPage;
 import 'package:iftiinshe/student_registration.dart';
 import 'package:iftiinshe/teacher.dart';
-import 'package:iftiinshe/notes_page.dart';
 
 class DashboardScreen extends StatefulWidget {
-  final String userRole;
-  final String role;
-  const DashboardScreen({super.key, required this.userRole, required this.role});
+  const DashboardScreen({super.key, required String userRole, required String role});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
-  String selectedMenu = "Dashboard";
+  String selectedMenu = "Dashboard ";
   bool isDarkMode = false;
   final ScrollController _sidebarController = ScrollController();
   final ScrollController _imageScrollController = ScrollController();
   Timer? _timer;
 
-  // SuperAdmin Realtime Statistics
-  int _totalStudentsCount = 0;
-  int _totalTeachersCount = 0;
-  int _totalAdminsCount = 0;
-  List<dynamic> _adminsList = [];
-  bool _isLoadingSuperAdminStats = false;
-
-  String get normalizedRole {
-    String r = (widget.userRole.isNotEmpty ? widget.userRole : widget.role).trim().toLowerCase();
-    if (r.contains('super')) return 'superadmin';
-    if (r.contains('admin')) return 'admin';
-    if (r.contains('teacher') || r.contains('macalin')) return 'teacher';
-    if (r.contains('cashier') || r.contains('qasnaji')) return 'cashier';
-    return 'user'; // student / parent / user
-  }
-
-  String get roleDisplayName {
-    switch (normalizedRole) {
-      case 'superadmin': return 'Super Admin';
-      case 'admin': return 'Admin (School)';
-      case 'teacher': return 'Teacher (Macalin)';
-      case 'cashier': return 'Cashier (Finance)';
-      case 'user': return 'User (Arday/Waalid)';
-      default: return 'User';
-    }
-  }
-
-  Color get roleBadgeColor {
-    switch (normalizedRole) {
-      case 'superadmin': return const Color(0xFF6A11CB);
-      case 'admin': return Colors.blueAccent;
-      case 'teacher': return Colors.orangeAccent;
-      case 'cashier': return Colors.teal;
-      default: return Colors.green;
-    }
-  }
-
-  Future<void> _fetchSuperAdminStats() async {
-    if (normalizedRole != 'superadmin') return;
-    setState(() => _isLoadingSuperAdminStats = true);
-    try {
-      final students = await ApiService.getAllStudents(page: 1, limit: 100);
-      final teachers = await ApiService.getAllTeachers();
-      
-      List users = [];
-      try {
-        final res = await http.get(Uri.parse(ApiService.userUrl));
-        if (res.statusCode == 200) {
-          final dynamic data = jsonDecode(res.body);
-          users = data is List ? data : (data['users'] ?? []);
-        }
-      } catch (e) {
-        debugPrint("User fetch error: $e");
-      }
-
-      if (mounted) {
-        setState(() {
-          _totalStudentsCount = students.length;
-          _totalTeachersCount = teachers.length;
-          _adminsList = users.where((u) {
-            final r = (u['role'] ?? '').toString().toLowerCase();
-            return r.contains('admin') || r.contains('cashier') || r.contains('super');
-          }).toList();
-          _totalAdminsCount = _adminsList.where((u) => !(u['role'] ?? '').toString().toLowerCase().contains('super')).length;
-          _isLoadingSuperAdminStats = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _isLoadingSuperAdminStats = false);
-    }
-  }
-
-  List<Map<String, dynamic>> get _availableNavItems {
-    final role = normalizedRole;
-    if (role == 'superadmin') {
-      return [
-        {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
-        {"icon": Icons.people_alt_rounded, "title": "Students"},
-        {"icon": Icons.school_rounded, "title": "Teachers"},
-        {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
-        {"icon": Icons.how_to_reg, "title": "Attendance"},
-        {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
-        {"icon": Icons.note_alt_rounded, "title": "Note"},
-        {"icon": Icons.bus_alert, "title": "Buses"},
-        {"icon": Icons.book, "title": "Exam & Results"},
-        {"icon": Icons.edit_calendar_rounded, "title": "Exam Schedule"},
-        {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
-        {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
-        {"icon": Icons.chat_rounded, "title": "Communications"},
-        {"icon": Icons.mark_as_unread_rounded, "title": "Admin Messages"},
-        {"icon": Icons.manage_accounts, "title": "Users"},
-      ];
-    } else if (role == 'admin') {
-      return [
-        {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
-        {"icon": Icons.people_alt_rounded, "title": "Students"},
-        {"icon": Icons.school_rounded, "title": "Teachers"},
-        {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
-        {"icon": Icons.how_to_reg, "title": "Attendance"},
-        {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
-        {"icon": Icons.note_alt_rounded, "title": "Note"},
-        {"icon": Icons.bus_alert, "title": "Buses"},
-        {"icon": Icons.book, "title": "Exam & Results"},
-        {"icon": Icons.edit_calendar_rounded, "title": "Exam Schedule"},
-        {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
-        {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
-        {"icon": Icons.chat_rounded, "title": "Communications"},
-        {"icon": Icons.mark_as_unread_rounded, "title": "Admin Messages"},
-        {"icon": Icons.manage_accounts, "title": "Users"},
-      ];
-    } else if (role == 'cashier') {
-      return [
-        {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
-        {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
-        {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
-        {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
-        {"icon": Icons.note_alt_rounded, "title": "Note"},
-        {"icon": Icons.mark_as_unread_rounded, "title": "Admin Messages"},
-      ];
-    } else if (role == 'teacher') {
-      return [
-        {"icon": Icons.school_rounded, "title": "Teachers"},
-        {"icon": Icons.how_to_reg, "title": "Attendance"},
-        {"icon": Icons.book, "title": "Exam & Results"},
-        {"icon": Icons.chat_rounded, "title": "Communications"},
-      ];
-    } else {
-      // User (Arday / Waalid): Attendance, Exam Results (View-Only), iyo Communications (Request)
-      return [
-        {"icon": Icons.how_to_reg, "title": "Attendance"},
-        {"icon": Icons.book, "title": "Exam & Results"},
-        {"icon": Icons.chat_rounded, "title": "Communications"},
-      ];
-    }
-  }
-
   @override
   void initState() {
     super.initState();
-    // Haddii uu yahay User (arday/waalid) ama Teacher
-    if (normalizedRole == 'user') {
-      selectedMenu = "Attendance";
-    } else if (normalizedRole == 'teacher') {
-      selectedMenu = "Teachers";
-    } else {
-      selectedMenu = "Dashboard";
-    }
-
-    _fetchSuperAdminStats();
-    _fetchAdminMessageCount();
-
     // Auto-scroll logic
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_imageScrollController.hasClients) {
@@ -223,505 +69,52 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isDesktop = constraints.maxWidth >= 900;
-        final double padding = constraints.maxWidth < 600 ? 12.0 : 25.0;
-
-        return Scaffold(
-          key: _scaffoldKey,
-          backgroundColor: bgColor,
-          drawer: !isDesktop
-              ? Drawer(
-                  width: 260,
-                  child: _buildSidebar(),
-                )
-              : null,
-          body: Row(
-            children: [
-              if (isDesktop) SizedBox(width: 260, child: _buildSidebar()),
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.all(padding),
-                  child: Column(
-                    children: [
-                      _buildHeader(isDesktop: isDesktop),
-                      const SizedBox(height: 12),
-                      Expanded(
-                        child: _buildBodyContent(isDesktop: isDesktop),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    return Scaffold(
+      backgroundColor: bgColor,
+      body: Row(
+        children: [
+          SizedBox(width: 260, child: _buildSidebar()),
+          Expanded(child: Padding(padding: const EdgeInsets.all(30.0), child: _buildBodyContent())),
+        ],
+      ),
     );
   }
 
-  Widget _buildBodyContent({required bool isDesktop}) {
+  Widget _buildBodyContent() {
     switch (selectedMenu) {
-      case "Dashboard": return _buildDashboardHome(isDesktop: isDesktop);
+      case "Dashboard": return _buildDashboardHome();
       case "Students": return const StudentRegistrationPage();
-      case "Users": return UsersPage(currentRole: normalizedRole);
-      case "Teachers": return TeachersPage(userRole: normalizedRole);
+      case "Users": return const UsersPage(currentRole: '',);
+      case "Teachers": return const TeachersPage();
       case "Teacher Salary": return const TeacherSalaryPage();
-      case "Attendance": return AttendancePage(userRole: normalizedRole);
+      case "Attendance": return const AttendancePage();
       case "Fees & Accounting": return FinancePage();
-      case "Note":
-      case "Notes":
-      case "Fee Notes": return const NotesPage();
       case "Income & Outcome": return IncomePage();
       case "Buses": return const BusesPage();
-      case "Exam & Results": return ExaminationPage(userRole: normalizedRole);
+      case "Exam & Results": return const ExaminationPage();
       case "Exam Schedule": return const ExamScheduleGeneratorPage();
       case "Communications": return const SchoolCommunicationsPage();
       case "Admin Messages": return const AdminMessagesPage();
       case "General Reports": return const ReportsPage();
-      default: return normalizedRole == 'user' ? ExaminationPage(userRole: normalizedRole) : _buildDashboardHome(isDesktop: isDesktop);
+      default: return _buildDashboardHome();
     }
   }
 
-  Widget _buildDashboardHome({required bool isDesktop}) {
+  Widget _buildDashboardHome() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (normalizedRole == 'superadmin') ...[
-            _buildSuperAdminControlCenter(),
-            const SizedBox(height: 25),
-          ],
+          _buildHeader(),
+          const SizedBox(height: 20),
           _buildScrollingImagesRow(),
           const SizedBox(height: 20),
-          if (isDesktop)
-            Row(
-              children: [
-                Expanded(flex: 6, child: _lineChartCard()),
-                const SizedBox(width: 30),
-                Expanded(flex: 4, child: _buildPieChart()),
-              ],
-            )
-          else
-            Column(
-              children: [
-                _lineChartCard(),
-                const SizedBox(height: 20),
-                _buildPieChart(),
-              ],
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuperAdminControlCenter() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isWide = constraints.maxWidth >= 900;
-        final bool isMedium = constraints.maxWidth >= 600;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 👑 Executive Command Hub Header Banner
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF4A00E0), Color(0xFF8E2DE2)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF4A00E0).withOpacity(0.35),
-                    blurRadius: 15,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Row(
-                          children: [
-                            const Icon(Icons.stars_rounded, color: Colors.amberAccent, size: 28),
-                            const SizedBox(width: 10),
-                            Flexible(
-                              child: Text(
-                                "SuperAdmin Executive Control Hub",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: isWide ? 22 : 16,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 0.5,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: _fetchSuperAdminStats,
-                        icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
-                        tooltip: "Cusboonaysii Xogta",
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    "Xarunta Maamulka Sare & Dusha-kala-socodka Adminka School-ka",
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
-                  ),
-                  const SizedBox(height: 16),
-                  // Live Status Pills
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 8,
-                    children: [
-                      _buildStatusPill(Icons.cloud_done, "Server: Online 🟢", Colors.greenAccent),
-                      _buildStatusPill(Icons.storage, "Database: Connected 🟢", Colors.cyanAccent),
-                      _buildStatusPill(Icons.security, "Privilege: Master SuperAdmin (Level 5)", Colors.amberAccent),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // 4 Action Stat Cards
-            if (isWide)
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSuperAdminStatCard(
-                      title: "School Admins",
-                      count: "$_totalAdminsCount",
-                      icon: Icons.admin_panel_settings,
-                      gradient: const [Color(0xFF11998E), Color(0xFF38EF7D)],
-                      actionText: "Maamul Adminka",
-                      onTap: () => setState(() => selectedMenu = "Users"),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSuperAdminStatCard(
-                      title: "Total Students",
-                      count: "$_totalStudentsCount",
-                      icon: Icons.people_alt,
-                      gradient: const [Color(0xFF2193B0), Color(0xFF6DD5ED)],
-                      actionText: "Eeg Ardayda",
-                      onTap: () => setState(() => selectedMenu = "Students"),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSuperAdminStatCard(
-                      title: "Total Teachers",
-                      count: "$_totalTeachersCount",
-                      icon: Icons.school,
-                      gradient: const [Color(0xFFF2994A), Color(0xFFF2C94C)],
-                      actionText: "Eeg Macallimiinta",
-                      onTap: () => setState(() => selectedMenu = "Teachers"),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSuperAdminStatCard(
-                      title: "Finance & Balance",
-                      count: "Active",
-                      icon: Icons.account_balance_wallet,
-                      gradient: const [Color(0xFFEB3349), Color(0xFFF45C43)],
-                      actionText: "Xisaabaadka",
-                      onTap: () => setState(() => selectedMenu = "Fees & Accounting"),
-                    ),
-                  ),
-                ],
-              )
-            else if (isMedium)
-              Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSuperAdminStatCard(
-                          title: "School Admins",
-                          count: "$_totalAdminsCount",
-                          icon: Icons.admin_panel_settings,
-                          gradient: const [Color(0xFF11998E), Color(0xFF38EF7D)],
-                          actionText: "Maamul Adminka",
-                          onTap: () => setState(() => selectedMenu = "Users"),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildSuperAdminStatCard(
-                          title: "Total Students",
-                          count: "$_totalStudentsCount",
-                          icon: Icons.people_alt,
-                          gradient: const [Color(0xFF2193B0), Color(0xFF6DD5ED)],
-                          actionText: "Eeg Ardayda",
-                          onTap: () => setState(() => selectedMenu = "Students"),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildSuperAdminStatCard(
-                          title: "Total Teachers",
-                          count: "$_totalTeachersCount",
-                          icon: Icons.school,
-                          gradient: const [Color(0xFFF2994A), Color(0xFFF2C94C)],
-                          actionText: "Eeg Macallimiinta",
-                          onTap: () => setState(() => selectedMenu = "Teachers"),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildSuperAdminStatCard(
-                          title: "Finance & Balance",
-                          count: "Active",
-                          icon: Icons.account_balance_wallet,
-                          gradient: const [Color(0xFFEB3349), Color(0xFFF45C43)],
-                          actionText: "Xisaabaadka",
-                          onTap: () => setState(() => selectedMenu = "Fees & Accounting"),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              )
-            else
-              Column(
-                children: [
-                  _buildSuperAdminStatCard(
-                    title: "School Admins",
-                    count: "$_totalAdminsCount",
-                    icon: Icons.admin_panel_settings,
-                    gradient: const [Color(0xFF11998E), Color(0xFF38EF7D)],
-                    actionText: "Maamul Adminka",
-                    onTap: () => setState(() => selectedMenu = "Users"),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSuperAdminStatCard(
-                    title: "Total Students",
-                    count: "$_totalStudentsCount",
-                    icon: Icons.people_alt,
-                    gradient: const [Color(0xFF2193B0), Color(0xFF6DD5ED)],
-                    actionText: "Eeg Ardayda",
-                    onTap: () => setState(() => selectedMenu = "Students"),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSuperAdminStatCard(
-                    title: "Total Teachers",
-                    count: "$_totalTeachersCount",
-                    icon: Icons.school,
-                    gradient: const [Color(0xFFF2994A), Color(0xFFF2C94C)],
-                    actionText: "Eeg Macallimiinta",
-                    onTap: () => setState(() => selectedMenu = "Teachers"),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildSuperAdminStatCard(
-                    title: "Finance & Balance",
-                    count: "Active",
-                    icon: Icons.account_balance_wallet,
-                    gradient: const [Color(0xFFEB3349), Color(0xFFF45C43)],
-                    actionText: "Xisaabaadka",
-                    onTap: () => setState(() => selectedMenu = "Fees & Accounting"),
-                  ),
-                ],
-              ),
-        const SizedBox(height: 20),
-
-        // Admins Oversight & Activity Table (Maamulka Adminka)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: cardColor,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4))],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF6A11CB).withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: const Icon(Icons.manage_accounts, color: Color(0xFF6A11CB), size: 22),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        "Kormeerka & Maamulka Adminka Dugsiga",
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor),
-                      ),
-                    ],
-                  ),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6A11CB),
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    ),
-                    onPressed: () => setState(() => selectedMenu = "Users"),
-                    icon: const Icon(Icons.add_moderator, size: 18),
-                    label: const Text("Abuur / Maamul Admin", style: TextStyle(fontWeight: FontWeight.bold)),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              if (_adminsList.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(
-                    child: Text(
-                      "Wax admin ah oo kale lama helin ama xogta ayaa load-garaynaysa...",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _adminsList.length > 5 ? 5 : _adminsList.length,
-                  separatorBuilder: (context, index) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final admin = _adminsList[index];
-                    final String name = admin['username'] ?? 'Admin';
-                    final String role = admin['role'] ?? 'Admin';
-                    final bool isSuper = role.toLowerCase().contains('super');
-
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                      leading: CircleAvatar(
-                        backgroundColor: isSuper ? const Color(0xFF6A11CB).withOpacity(0.15) : Colors.blue.withOpacity(0.15),
-                        child: Icon(
-                          isSuper ? Icons.stars : Icons.admin_panel_settings,
-                          color: isSuper ? const Color(0xFF6A11CB) : Colors.blue,
-                        ),
-                      ),
-                      title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      subtitle: Text("Status: Active 🟢 | Role: $role", style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: isSuper ? const Color(0xFF6A11CB).withOpacity(0.1) : Colors.blue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: isSuper ? const Color(0xFF6A11CB) : Colors.blue, width: 0.8),
-                        ),
-                        child: Text(
-                          isSuper ? "SuperAdmin (You)" : "Admin (Full Control)",
-                          style: TextStyle(
-                            color: isSuper ? const Color(0xFF6A11CB) : Colors.blue,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-            ],
-          ),
-        ),
-      ],
-    );
-  },
-);
-}
-
-  Widget _buildStatusPill(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuperAdminStatCard({
-    required String title,
-    required String count,
-    required IconData icon,
-    required List<Color> gradient,
-    required String actionText,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradient, begin: Alignment.topLeft, end: Alignment.bottomRight),
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [
-          BoxShadow(color: gradient.first.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: const TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600)),
-              Icon(icon, color: Colors.white70, size: 22),
+               Expanded(flex: 6, child: _lineChartCard()),
+              const SizedBox(width: 30),
+              Expanded(flex: 4, child: _buildPieChart()),
             ],
-          ),
-          const SizedBox(height: 10),
-          Text(count, style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          InkWell(
-            onTap: onTap,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(actionText, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold)),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 10),
-                ],
-              ),
-            ),
           ),
         ],
       ),
@@ -759,39 +152,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHeader({required bool isDesktop}) {
+  Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            if (!isDesktop) ...[
-              IconButton(
-                icon: Icon(Icons.menu, color: textColor, size: 28),
-                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-              ),
-              const SizedBox(width: 8),
-            ],
-            Text(
-              selectedMenu,
-              style: TextStyle(
-                fontSize: isDesktop ? 32 : 22,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            IconButton(
-              icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor),
-              onPressed: () => setState(() => isDarkMode = !isDarkMode),
-            ),
-            SizedBox(width: isDesktop ? 20 : 8),
-            _profileMenu(),
-          ],
-        ),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(selectedMenu, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: textColor)),
+        ]),
+        Row(children: [
+          IconButton(icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor), onPressed: () => setState(() => isDarkMode = !isDarkMode)),
+          const SizedBox(width: 20),
+          _profileMenu(),
+        ]),
       ],
     );
   }
@@ -802,7 +174,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       onSelected: (value) { if (value == 'logout') _performLogout(); },
       itemBuilder: (context) => [
-        PopupMenuItem(value: 'profile', child: Row(children: [const Icon(Icons.person_outline, size: 20), const SizedBox(width: 10), Text(roleDisplayName)])),
+        const PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person_outline, size: 20), SizedBox(width: 10), Text("Profile")])),
         const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, size: 20, color: Colors.red), SizedBox(width: 10), Text("Log Out", style: TextStyle(color: Colors.red))])),
       ],
       child: Container(
@@ -810,23 +182,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)]),
         child: Row(
           children: [
-            CircleAvatar(backgroundColor: roleBadgeColor, radius: 18, child: const Icon(Icons.person, color: Colors.white, size: 20)),
+            const CircleAvatar(backgroundColor: Colors.blueAccent, radius: 18, child: Icon(Icons.person, color: Colors.white, size: 20)),
             const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text("Profile", style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
-                Text(roleDisplayName, style: TextStyle(color: Colors.grey, fontSize: 11)),
-              ],
-            ),
+            Text("Profile", style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
             const Icon(Icons.arrow_drop_down, color: Colors.grey),
           ],
         ),
       ),
     );
   }
-
  Widget _lineChartCard() {
     return Container(
       height: 255,
@@ -923,48 +287,37 @@ Widget _buildPieChart() {
 }
 
 Widget _buildSidebar() {
-  final navItems = _availableNavItems;
   return Container(
     decoration: const BoxDecoration(color: Color(0xFF1E1E2C)),
     child: Column(children: [
-      const SizedBox(height: 35),
+      const SizedBox(height: 50),
       _buildSidebarLogo(),
-      const SizedBox(height: 12),
-      // Role Badge
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-        decoration: BoxDecoration(
-          color: roleBadgeColor.withOpacity(0.15),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: roleBadgeColor.withOpacity(0.6)),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.shield, color: roleBadgeColor, size: 14),
-            const SizedBox(width: 6),
-            Text(
-              roleDisplayName,
-              style: TextStyle(color: roleBadgeColor, fontSize: 11, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-      const SizedBox(height: 25),
+      const SizedBox(height: 40),
       Expanded(
         child: RawScrollbar(
           controller: _sidebarScrollController,
-          thumbColor: Colors.amber,
+          thumbColor: Colors.amber, // Midabka cad ee aad rabtay
           thickness: 6.0,
           thumbVisibility: true,
           radius: const Radius.circular(10),
           child: SingleChildScrollView(
-            controller: _sidebarScrollController,
-            child: Column(
-              children: navItems.map((item) {
-                return _navItem(item["icon"] as IconData, item["title"] as String);
-              }).toList(),
-            ),
+            controller: _sidebarScrollController, // Ku xir controller-ka
+            child: Column(children: [
+              _navItem(Icons.grid_view_rounded, "Dashboard"),
+              _navItem(Icons.people_alt_rounded, "Students"),
+              _navItem(Icons.school_rounded, "Teachers"),
+              _navItem(Icons.payments_rounded, "Teacher Salary"),
+              _navItem(Icons.how_to_reg, "Attendance"),
+              _navItem(Icons.account_balance_wallet_rounded, "Fees & Accounting"),
+              _navItem(Icons.bus_alert, "Buses"),
+              _navItem(Icons.book, "Exam & Results"),
+              _navItem(Icons.edit_calendar_rounded, "Exam Schedule"),
+              _navItem(Icons.account_balance_wallet_rounded, "Income & Outcome"),
+              _navItem(Icons.bar_chart_rounded, "General Reports"),
+              _navItem(Icons.chat_rounded, "Communications"),
+              _navItem(Icons.mark_as_unread_rounded, "Admin Messages"),
+              _navItem(Icons.person, "Users")
+            ]),
           ),
         ),
       ),
@@ -979,82 +332,20 @@ Widget _buildSidebarLogo() {
   return Container(
     padding: const EdgeInsets.all(10),
     decoration: BoxDecoration(border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)), borderRadius: BorderRadius.circular(10)),
-    child: const Text("IFTIINSHE BILE SCHOOLS", style: TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold))
+    child: const Text(" eSAHAL SCHOOL SYSTEM", style: TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold))
   );
 }
 
-Future<void> _fetchAdminMessageCount() async {
-  try {
-    final response = await http.get(
-      Uri.parse('https://smartschool-web.onrender.com/api/communications/all'),
-    );
-    if (response.statusCode == 200) {
-      final List msgs = json.decode(response.body);
-      int unread = msgs.length - AdminMessagesPage.seenMessageCount;
-      if (unread < 0) unread = 0;
-      AdminMessagesPage.unreadCountNotifier.value = unread;
-    }
-  } catch (e) {
-    debugPrint("Message count fetch error: $e");
-  }
+Widget _navItem(IconData icon, String title) {
+  bool isActive = selectedMenu == title;
+  return ListTile(
+    onTap: () {
+      if (title == "Log Out") _performLogout();
+      else setState(() => selectedMenu = title);
+    },
+    leading: Icon(icon, color: isActive ? Colors.cyanAccent : Colors.white60),
+    title: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.white60)),
+    tileColor: isActive ? Colors.white.withOpacity(0.05) : Colors.transparent
+  );
 }
-
-  Widget _navItem(IconData icon, String title) {
-    bool isActive = selectedMenu == title;
-
-    void handleNav() {
-      if (_scaffoldKey.currentState?.isDrawerOpen == true) {
-        Navigator.pop(context);
-      }
-      if (title == "Log Out") {
-        _performLogout();
-      } else {
-        if (title == "Admin Messages") {
-          AdminMessagesPage.seenMessageCount = AdminMessagesPage.globalMessages.length;
-          AdminMessagesPage.unreadCountNotifier.value = 0;
-        }
-        setState(() => selectedMenu = title);
-      }
-    }
-
-    // Admin Messages badge
-    if (title == "Admin Messages") {
-      return ValueListenableBuilder<int>(
-        valueListenable: AdminMessagesPage.unreadCountNotifier,
-        builder: (context, count, _) {
-          return ListTile(
-            onTap: handleNav,
-            leading: Icon(icon, color: isActive ? Colors.cyanAccent : Colors.white60),
-            title: Row(
-              children: [
-                Expanded(
-                  child: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.white60)),
-                ),
-                if (count > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '$count',
-                      style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-              ],
-            ),
-            tileColor: isActive ? Colors.white.withOpacity(0.05) : Colors.transparent,
-          );
-        },
-      );
-    }
-
-    return ListTile(
-      onTap: handleNav,
-      leading: Icon(icon, color: isActive ? Colors.cyanAccent : Colors.white60),
-      title: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.white60)),
-      tileColor: isActive ? Colors.white.withOpacity(0.05) : Colors.transparent,
-    );
-  }
 }
