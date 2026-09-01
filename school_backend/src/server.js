@@ -60,13 +60,39 @@ app.use('/api/teachers', teacherRoutes);
 app.use('/api/buses', busRoutes);
 app.use('/api/exam', examRoutes);
 app.use('/api/users', userRoutes);
+
+// ✅ DIRECT DELETE ROUTES - BEFORE expenseRoutes (priority routes)
+app.delete('/api/expenses/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🗑️ Direct DELETE /api/expenses/${id}`);
+    const result = await pool.query('DELETE FROM expenses WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Kharashka lama helin' });
+    res.status(200).json({ message: 'Si guul leh ayaa loo tirtiray', data: result.rows[0] });
+  } catch (err) {
+    console.error('Delete error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/expenses/delete/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`🗑️ Direct POST /api/expenses/delete/${id}`);
+    const result = await pool.query('DELETE FROM expenses WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Kharashka lama helin' });
+    res.status(200).json({ message: 'Si guul leh ayaa loo tirtiray', data: result.rows[0] });
+  } catch (err) {
+    console.error('Delete error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/incomes', incomeRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/salary', salaryRoutes);
-// Halkan waxaa laga maamuli doonaa dhammaan communications routes, 
-// oo ay ku jirto tan delete-ka ahayd.
 app.use('/api/communications', communicationRoutes);
 
 // --- Error Handling ---
