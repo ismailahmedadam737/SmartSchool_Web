@@ -28,8 +28,16 @@ const pool = new Pool({
 });
 
 // --- Middleware ---
-app.use(helmet()); 
-app.use(cors()); 
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  optionsSuccessStatus: 200,
+}));
+app.options('*', cors()); // Preflight
 app.use(morgan('dev')); 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

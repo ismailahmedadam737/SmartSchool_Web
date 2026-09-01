@@ -42,4 +42,22 @@ const getTotalExpenses = async (req, res) => {
     }
 };
 
-module.exports = { getExpenses, createExpense, getTotalExpenses };
+// 4. Tirtir kharash gaar ah
+const deleteExpense = async (req, res) => {
+    const { id } = req.params;
+    if (!id) {
+        return res.status(400).json({ error: "ID-ga kharashka lama bixin" });
+    }
+    try {
+        const deleted = await Expense.deleteById(id);
+        if (!deleted) {
+            return res.status(404).json({ error: "Kharashka lama helin" });
+        }
+        res.status(200).json({ message: "Kharashka si guul leh ayaa loo tirtiray", data: deleted });
+    } catch (err) {
+        console.error("Error in deleteExpense:", err.message);
+        res.status(500).json({ error: "Tirtirku wuu fashilmay: " + err.message });
+    }
+};
+
+module.exports = { getExpenses, createExpense, getTotalExpenses, deleteExpense };

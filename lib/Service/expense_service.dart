@@ -41,39 +41,28 @@ class ExpenseService {
       final String idStr = id.toString().trim();
       debugPrint("🔄 Deleting expense with ID: $idStr");
 
-      // 1. Standard REST DELETE: /api/expenses/:id
-      var response = await http.delete(Uri.parse("$expenseUrl/$idStr"), headers: _headers);
-      debugPrint("DELETE $expenseUrl/$idStr -> ${response.statusCode}: ${response.body}");
-      if (response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 201) {
-        return true;
+      // 1. Isku day DELETE REST standard
+      try {
+        final deleteResponse = await http.delete(
+          Uri.parse("$expenseUrl/$idStr"),
+          headers: _headers,
+        );
+        debugPrint("DELETE $expenseUrl/$idStr -> ${deleteResponse.statusCode}: ${deleteResponse.body}");
+        if (deleteResponse.statusCode == 200 || deleteResponse.statusCode == 204) {
+          return true;
+        }
+      } catch (_) {
+        debugPrint("⚠️ DELETE failed (CORS), trying POST fallback...");
       }
 
-      // 2. Custom route DELETE: /api/expenses/delete/:id (used in students/teachers)
-      response = await http.delete(Uri.parse("$expenseUrl/delete/$idStr"), headers: _headers);
-      debugPrint("DELETE $expenseUrl/delete/$idStr -> ${response.statusCode}: ${response.body}");
-      if (response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 201) {
-        return true;
-      }
-
-      // 3. POST route: /api/expenses/delete/:id
-      response = await http.post(Uri.parse("$expenseUrl/delete/$idStr"), headers: _headers);
-      debugPrint("POST $expenseUrl/delete/$idStr -> ${response.statusCode}: ${response.body}");
-      if (response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 201) {
-        return true;
-      }
-
-      // 4. POST body route: /api/expenses/delete
-      response = await http.post(
-        Uri.parse("$expenseUrl/delete"),
+      // 2. Fallback: POST /delete/:id (Flutter Web browser CORS workaround)
+      final postResponse = await http.post(
+        Uri.parse("$expenseUrl/delete/$idStr"),
         headers: _headers,
-        body: jsonEncode({"id": idStr, "_id": idStr}),
       );
-      debugPrint("POST $expenseUrl/delete (body) -> ${response.statusCode}: ${response.body}");
-      if (response.statusCode == 200 || response.statusCode == 204 || response.statusCode == 201) {
-        return true;
-      }
+      debugPrint("POST $expenseUrl/delete/$idStr -> ${postResponse.statusCode}: ${postResponse.body}");
+      return postResponse.statusCode == 200 || postResponse.statusCode == 204;
 
-      return false;
     } catch (e) {
       debugPrint("❌ Error in deleteExpense: $e");
       return false;

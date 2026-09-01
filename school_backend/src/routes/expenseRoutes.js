@@ -5,7 +5,10 @@ const controller = require('../controllers/expenseController');
 // Endpoint-yada
 router.get('/', controller.getExpenses);
 router.post('/', controller.createExpense);
-// Kan ayaa xallinaya ciladii 404-ta
 router.get('/total-expenses', controller.getTotalExpenses);
+// DELETE route - standard REST
+router.delete('/:id', controller.deleteExpense);
+// POST fallback - Flutter Web browser (CORS preflight xaaladda)
+router.post('/delete/:id', controller.deleteExpense);
 
 module.exports = router;

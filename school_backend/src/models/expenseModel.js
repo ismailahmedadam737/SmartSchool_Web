@@ -22,6 +22,12 @@ const Expense = {
         const query = 'SELECT SUM(amount) as total FROM expenses';
         const { rows } = await pool.query(query);
         return rows[0].total || 0;
+    },
+
+    deleteById: async (id) => {
+        const query = 'DELETE FROM expenses WHERE id = $1 RETURNING *';
+        const { rows } = await pool.query(query, [id]);
+        return rows[0];
     }
 };
 
