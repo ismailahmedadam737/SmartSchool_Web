@@ -29,7 +29,17 @@ class _BusesPageState extends State<BusesPage> {
     setState(() => _isLoading = true);
     final data = await ApiService.getAllBuses();
     setState(() {
-      busList = data;
+      List<Bus> newFetched = List.from(data);
+      for (var localBus in busList) {
+        bool exists = newFetched.any((f) => 
+          (f.name == localBus.name && f.plate == localBus.plate) ||
+          (localBus.id != null && f.id == localBus.id)
+        );
+        if (!exists) {
+          newFetched.insert(0, localBus);
+        }
+      }
+      busList = newFetched;
       _isLoading = false;
     });
   }

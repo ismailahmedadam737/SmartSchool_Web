@@ -35,7 +35,7 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
     try {
       final List<StudentModel> fetched = await ApiService.getAllStudents();
       setState(() {
-        students = fetched.map((s) => {
+        List<Map<String, String>> newFetched = fetched.map((s) => {
           "id": s.idString,
           "name": s.name,
           "phone": s.phone,
@@ -44,8 +44,20 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
           "class": s.className,
         }).toList();
 
-        _classes = fetched
-            .map((s) => s.className)
+        for (var localStudent in students) {
+          bool exists = newFetched.any((f) => 
+            (f['name'] == localStudent['name'] && f['phone'] == localStudent['phone']) ||
+            (localStudent['id'] != null && localStudent['id']!.isNotEmpty && f['id'] == localStudent['id'])
+          );
+          if (!exists) {
+            newFetched.insert(0, localStudent);
+          }
+        }
+
+        students = newFetched;
+
+        _classes = students
+            .map((s) => s['class'] ?? '')
             .where((c) => c.isNotEmpty)
             .toSet()
             .toList();

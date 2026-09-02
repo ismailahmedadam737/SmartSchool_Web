@@ -32,7 +32,17 @@ class _TeachersPageState extends State<TeachersPage> {
     try {
       final data = await ApiService.getAllTeachers();
       setState(() {
-        teachers = data;
+        List<Map<String, String>> newFetched = List.from(data);
+        for (var localTeacher in teachers) {
+          bool exists = newFetched.any((f) => 
+            (f['name'] == localTeacher['name'] && f['phone'] == localTeacher['phone']) ||
+            (localTeacher['id'] != null && localTeacher['id']!.isNotEmpty && f['id'] == localTeacher['id'])
+          );
+          if (!exists) {
+            newFetched.insert(0, localTeacher);
+          }
+        }
+        teachers = newFetched;
         isLoading = false;
       });
     } catch (e) {

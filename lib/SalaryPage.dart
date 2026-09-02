@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:iftiinshe/Service/api_service.dart';
 import 'package:iftiinshe/Service/teacher_ai_service.dart';
 import 'package:intl/intl.dart';
 
@@ -24,16 +25,27 @@ class _TeacherSalaryPageState extends State<TeacherSalaryPage> {
     _fetchData();
   }
 
-  // Soo xarinta xogta iyo sifaynta duplicates-ka haddii server-ku soo celiyo
+  // Soo xarinta xogta macalimiinta diiwaangashan uun
   Future<void> _fetchData() async {
     try {
-      final data = await TeacherService.getAllTeachers();
+      final teachersList = await ApiService.getAllTeachers();
       
-      // Kahortagga Duplicate: Hubinta inaysan hal macallin laba jeer liiska uga muuqan ID-giisa awgeed
       final Map<String, dynamic> uniqueMap = {};
-      for (var emp in data) {
-        String empId = emp['id'].toString();
-        uniqueMap[empId] = emp;
+      for (var emp in teachersList) {
+        String empName = emp['name']?.toString().trim() ?? '';
+        if (empName.isNotEmpty) {
+          String empId = emp['id']?.toString().isNotEmpty == true ? emp['id']! : empName;
+          uniqueMap[empName.toLowerCase()] = {
+            "id": empId,
+            "name": empName,
+            "phone": emp['phone'] ?? '',
+            "district": emp['district'] ?? '',
+            "level": emp['level'] ?? '',
+            "role": "Teacher",
+            "status": emp['status'] ?? "Pending",
+            "amount": emp['amount'] ?? "0.00",
+          };
+        }
       }
 
       setState(() {
