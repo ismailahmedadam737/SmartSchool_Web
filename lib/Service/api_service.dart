@@ -18,7 +18,6 @@ class ApiService {
 
   static const Map<String, String> _headers = {
     "Content-Type": "application/json",
-    "Cache-Control": "no-cache",
   };
 
   static final List<StudentModel> _localStudents = [];

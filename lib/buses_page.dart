@@ -136,25 +136,47 @@ class _BusesPageState extends State<BusesPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Maareynta Basaska Dugsiga", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-        const SizedBox(height: 30),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(flex: 4, child: _buildAddBusForm()),
-            const SizedBox(width: 30),
-            Expanded(
-              flex: 6, 
-              child: _isLoading 
-                ? const Center(child: CircularProgressIndicator()) 
-                : _buildBusList(),
-            ),
-          ],
-        ),
-      ],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      physics: const BouncingScrollPhysics(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Maareynta Basaska Dugsiga", style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 20),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isDesktop = constraints.maxWidth >= 800;
+
+              if (isDesktop) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(flex: 4, child: _buildAddBusForm()),
+                    const SizedBox(width: 20),
+                    Expanded(
+                      flex: 6, 
+                      child: _isLoading 
+                        ? const Center(child: CircularProgressIndicator()) 
+                        : _buildBusList(),
+                    ),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _buildAddBusForm(),
+                    const SizedBox(height: 20),
+                    _isLoading 
+                      ? const Center(child: CircularProgressIndicator()) 
+                      : _buildBusList(),
+                  ],
+                );
+              }
+            },
+          ),
+        ],
+      ),
     );
   }
 

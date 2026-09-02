@@ -34,7 +34,7 @@ app.use(helmet({
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'cache-control', 'Pragma', 'pragma'],
   optionsSuccessStatus: 200,
 }));
 app.options('*', cors()); // Preflight
