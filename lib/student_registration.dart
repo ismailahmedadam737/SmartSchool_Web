@@ -51,6 +51,10 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
             .toList();
         
         _classes.sort(); 
+
+        if (_classes.isNotEmpty && (_viewingClass == null || !_classes.contains(_viewingClass))) {
+          _viewingClass = _classes.first;
+        }
       });
     } catch (e) {
       debugPrint("Error loading students: $e");
@@ -110,6 +114,34 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
     bool isEditing = _editingStudentId != null && _editingStudentId!.isNotEmpty;
     debugPrint("🔍 _saveStudent called | isEditing: $isEditing | editingStudentId: $_editingStudentId");
 
+    String newId = isEditing ? _editingStudentId! : DateTime.now().millisecondsSinceEpoch.toString();
+    Map<String, String> newStudentMap = {
+      "id": newId,
+      "name": name,
+      "phone": phone,
+      "district": district,
+      "neighbor": neighbor,
+      "class": _selectedClass!,
+    };
+
+    String targetClass = _selectedClass!;
+
+    setState(() {
+      _viewingClass = targetClass;
+      if (!_classes.contains(targetClass)) {
+        _classes.add(targetClass);
+        _classes.sort();
+      }
+      if (!isEditing) {
+        students.insert(0, newStudentMap);
+      } else {
+        int idx = students.indexWhere((s) => s['id'] == _editingStudentId);
+        if (idx != -1) {
+          students[idx] = newStudentMap;
+        }
+      }
+    });
+
     StudentModel studentObj = StudentModel(
       id: isEditing ? int.tryParse(_editingStudentId!) : null,
       stringId: isEditing ? _editingStudentId : null,
@@ -117,11 +149,9 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
       phone: phone,
       district: district,
       neighbor: neighbor,
-      className: _selectedClass!,
+      className: targetClass,
       fullName: name,
     );
-
-    setState(() => _isSyncing = true);
 
     bool success = false;
     if (isEditing) {
@@ -132,26 +162,21 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
 
     if (!mounted) return;
 
-    setState(() => _isSyncing = false);
-
+    _clearFields();
     if (success) {
-      _clearFields();
       await _loadDataFromDatabase(); 
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isEditing ? "✅ Ardayga si guul leh ayaa loo cusboonaysiiyey!" : "✅ Ardayga cusub si guul leh ayaa loo diiwaangeliyey!"),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isEditing ? "❌ Cusboonaysiinta ardayga ma suurtagelin!" : "❌ Diiwaangelinta ardayga ma suurtagelin!"),
-          backgroundColor: Colors.red,
-        ),
-      );
+      setState(() {
+        _viewingClass = targetClass;
+      });
     }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(isEditing ? "✅ Ardayga si guul leh ayaa loo cusboonaysiiyey!" : "✅ Ardayga cusub si guul leh ayaa loo diiwaangeliyey!"),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   void _deleteStudentFromDb(String id) async {

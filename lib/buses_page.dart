@@ -45,6 +45,17 @@ class _BusesPageState extends State<BusesPage> {
       route: _routeController.text,
     );
 
+    setState(() {
+      if (_editingBusId == null) {
+        busList.insert(0, busData);
+      } else {
+        int idx = busList.indexWhere((b) => b.id == _editingBusId);
+        if (idx != -1) {
+          busList[idx] = busData;
+        }
+      }
+    });
+
     bool success;
     if (_editingBusId == null) {
       success = await ApiService.registerBus(busData);
@@ -52,9 +63,15 @@ class _BusesPageState extends State<BusesPage> {
       success = await ApiService.updateBus(_editingBusId!, busData);
     }
 
+    _clearForm();
     if (success) {
-      _loadBuses();
-      _clearForm();
+      await _loadBuses();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Si guul leh ayaa loo keydiyey")),
+      );
+    } else {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Si guul leh ayaa loo keydiyey")),
       );
@@ -64,9 +81,10 @@ class _BusesPageState extends State<BusesPage> {
   Future<void> _deleteBus(int id) async {
     bool confirm = await _showConfirmDialog();
     if (confirm) {
-      final success = await ApiService.deleteBus(id);
+      bool success = await ApiService.deleteBus(id);
       if (success) {
-        _loadBuses();
+        await _loadBuses();
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Baska waa la tirtiray")),
         );

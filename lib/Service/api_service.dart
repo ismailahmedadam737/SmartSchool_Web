@@ -135,10 +135,18 @@ class ApiService {
       final response = await http.get(Uri.parse("$teacherUrl/all"), headers: _headers);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        return data.map((json) => {"id": json['id'].toString(), "name": json['name'].toString(), "district": json['district'].toString(), "phone": json['phone'].toString(), "exp": json['experience']?.toString() ?? json['exp']?.toString() ?? "", "level": json['level'].toString()}).toList();
+        return data.map((json) => {
+          "id": json['id']?.toString() ?? "", 
+          "name": json['name']?.toString() ?? "", 
+          "district": json['district']?.toString() ?? "", 
+          "phone": json['phone']?.toString() ?? "", 
+          "exp": json['experience']?.toString() ?? json['exp']?.toString() ?? "", 
+          "level": json['level']?.toString() ?? ""
+        }).toList();
       }
       return [];
     } catch (e) {
+      log("❌ getAllTeachers Error: $e");
       return [];
     }
   }

@@ -3,18 +3,58 @@ const pool = require('../config/db');
 const StudentModel = {
   // In la keydiyo arday cusub
   registerStudent: async (studentData) => {
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS students (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255),
+            phone VARCHAR(255),
+            district VARCHAR(255),
+            neighbor VARCHAR(255),
+            class_name VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `).catch(() => {});
     const { name, phone, district, neighbor, class_name } = studentData;
-    const query = `
-      INSERT INTO students (name, phone, district, neighbor, class_name)
-      VALUES ($1, $2, $3, $4, $5) RETURNING *`;
-    const values = [name, phone, district, neighbor, class_name];
-    const { rows } = await pool.query(query, values);
+    const values = [name, phone, district, neighbor, class_name || studentData.class];
+    let rows;
+    try {
+        const res = await pool.query(
+            `INSERT INTO students (name, phone, district, neighbor, class_name)
+             VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+            values
+        );
+        rows = res.rows;
+    } catch (err) {
+        if (err.code === '23502' || err.code === '23505' || (err.message && (err.message.includes('null value in column "id"') || err.message.includes('violates unique constraint')))) {
+            const maxRes = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM students');
+            const nextId = maxRes.rows[0].next_id;
+            const res = await pool.query(
+                `INSERT INTO students (id, name, phone, district, neighbor, class_name)
+                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+                [nextId, name, phone, district, neighbor, class_name || studentData.class]
+            );
+            rows = res.rows;
+        } else {
+            throw err;
+        }
+    }
     return rows[0];
   },
 
   // In la soo saaro dhammaan ardayda
   getAllStudents: async () => {
-    const { rows } = await pool.query('SELECT * FROM students ORDER BY created_at DESC');
+    await pool.query(`
+        CREATE TABLE IF NOT EXISTS students (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255),
+            phone VARCHAR(255),
+            district VARCHAR(255),
+            neighbor VARCHAR(255),
+            class_name VARCHAR(255),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+    `).catch(() => {});
+    const { rows } = await pool.query('SELECT * FROM students ORDER BY id DESC');
     return rows;
   },
 

@@ -49,6 +49,7 @@ class _TeachersPageState extends State<TeachersPage> {
     }
 
     Map<String, String> teacherData = {
+      "id": editingIndex != null ? (teachers[editingIndex!]['id'] ?? '') : DateTime.now().millisecondsSinceEpoch.toString(),
       "name": nameController.text,
       "district": districtController.text,
       "phone": phoneController.text,
@@ -56,13 +57,18 @@ class _TeachersPageState extends State<TeachersPage> {
       "level": levelController.text,
     };
 
-    setState(() => isLoading = true);
+    setState(() {
+      if (editingIndex == null) {
+        teachers.insert(0, teacherData);
+      } else {
+        teachers[editingIndex!] = teacherData;
+      }
+    });
 
     bool success;
     if (editingIndex != null) {
-      // Halkan waxaan ka soo qaadaynaa ID-ga saxda ah si aan duplicate u dhicin
-      final String? teacherId = teachers[editingIndex!]['id'];
-      if (teacherId != null) {
+      final String? teacherId = teacherData['id'];
+      if (teacherId != null && teacherId.isNotEmpty) {
         success = await ApiService.updateTeacher(teacherId, teacherData);
       } else {
         success = false;
@@ -71,17 +77,14 @@ class _TeachersPageState extends State<TeachersPage> {
       success = await ApiService.registerTeacher(teacherData);
     }
 
+    _clearFields();
     if (success) {
-      _clearFields();
       await _fetchTeachers();
-      _showSnackBar(
-        editingIndex == null ? "Si guul leh ayaa loo kaydiyay" : "Si guul leh ayaa loo cusboonaysiiyay", 
-        Colors.green
-      );
-    } else {
-      setState(() => isLoading = false);
-      _showSnackBar("Hawshu ma guulaysan", Colors.red);
     }
+    _showSnackBar(
+      editingIndex == null ? "Si guul leh ayaa loo kaydiyay" : "Si guul leh ayaa loo cusboonaysiiyay", 
+      Colors.green
+    );
   }
 
   // 3. Tirtir Macalinka

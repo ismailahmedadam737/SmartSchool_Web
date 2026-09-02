@@ -9,12 +9,21 @@ class Bus {
 
   // U bedel xogta ka timaada Database-ka (JSON) una bedel Object
   factory Bus.fromJson(Map<String, dynamic> json) {
+    var rawId = json['id'] ?? json['_id'];
+    int? parsedId;
+    if (rawId != null) {
+      if (rawId is int) {
+        parsedId = rawId;
+      } else {
+        parsedId = int.tryParse(rawId.toString());
+      }
+    }
     return Bus(
-      id: json['id'],
-      name: json['name'],
-      phone: json['phone'],
-      plate: json['plate'],
-      route: json['route'],
+      id: parsedId,
+      name: json['name']?.toString() ?? '',
+      phone: json['phone']?.toString() ?? '',
+      plate: json['plate']?.toString() ?? '',
+      route: json['route']?.toString() ?? '',
     );
   }
 
