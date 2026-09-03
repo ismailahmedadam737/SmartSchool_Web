@@ -18,11 +18,20 @@ import 'package:iftiinshe/notes_page.dart';
 import 'package:iftiinshe/reports_page.dart' hide UsersPage;
 import 'package:iftiinshe/student_registration.dart';
 import 'package:iftiinshe/teacher.dart';
+import 'package:iftiinshe/super_admin_dashboard.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userRole;
   final String role;
-  const DashboardScreen({super.key, this.userRole = '', this.role = ''});
+  final bool isImpersonating;
+  final String impersonatedTenantName;
+  const DashboardScreen({
+    super.key, 
+    this.userRole = '', 
+    this.role = '',
+    this.isImpersonating = false,
+    this.impersonatedTenantName = '',
+  });
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -79,7 +88,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Color get textColor => isDarkMode ? Colors.white : Colors.black87;
 
   void _performLogout() {
-    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthPage()), (route) => false);
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthPage(userRole: '',)), (route) => false);
   }
 
   @override
@@ -217,11 +226,62 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Widget _buildImpersonationBanner() {
+    if (!widget.isImpersonating) return const SizedBox.shrink();
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(colors: [Color(0xFFFF512F), Color(0xFFDD2476)]),
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.redAccent.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.security, color: Colors.white, size: 22),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              "⚠️ IMPERSONATION MODE: Waxaad si toos ah uga dhex shaqaynaysaa (${widget.impersonatedTenantName.isNotEmpty ? widget.impersonatedTenantName : 'Iskuulka'})",
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+            ),
+          ),
+          const SizedBox(width: 10),
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: Colors.redAccent,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () {
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (_) => SuperAdminDashboard()),
+                (route) => false,
+              );
+            },
+            icon: const Icon(Icons.exit_to_app_rounded, size: 16),
+            label: const Text("Exit Impersonation", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDashboardHome() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildImpersonationBanner(),
           _buildHeader(),
           const SizedBox(height: 20),
           _buildScrollingImagesRow(),

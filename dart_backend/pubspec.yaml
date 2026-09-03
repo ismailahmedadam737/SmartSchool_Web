@@ -1,0 +1,16 @@
+name: dart_backend
+description: A Database-per-Tenant Multi-Tenant SaaS School Management System Backend in Dart & PostgreSQL.
+version: 1.0.0
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  shelf: ^1.4.1
+  shelf_router: ^1.1.4
+  postgres: ^3.4.3
+  dart_jsonwebtoken: ^2.14.0
+  dotenv: ^4.2.0
+
+dev_dependencies:
+  lints: ^3.0.0
+  test: ^1.24.0

@@ -99,7 +99,7 @@ app.use('/api/communications', communicationRoutes);
 // 🔑 SUPER ADMIN ROUTES – /admin/tenants
 // ============================================================
 
-// Ensure tenants table exists (run once on startup)
+// Ensure tenants table & multi-tenant isolation columns exist
 async function ensureTenantsTable() {
   try {
     await pool.query(`
@@ -112,6 +112,7 @@ async function ensureTenantsTable() {
         admin_password          TEXT,
         subscription_status     TEXT NOT NULL DEFAULT 'active',
         subscription_plan       TEXT NOT NULL DEFAULT 'basic',
+        monthly_fee             NUMERIC(10,2) DEFAULT 50.00,
         subscription_expires_at TIMESTAMPTZ,
         created_at              TIMESTAMPTZ DEFAULT NOW()
       )
@@ -119,19 +120,72 @@ async function ensureTenantsTable() {
     // Add columns if upgrading from old schema
     await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS admin_username TEXT`).catch(() => {});
     await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS admin_password TEXT`).catch(() => {});
-    console.log('✅ Tenants table ready');
+    await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS monthly_fee NUMERIC(10,2) DEFAULT 50.00`).catch(() => {});
+
+    // Ensure tenant_id exists across core tables for Shared DB Shared Schema Isolation
+    const tables = ['users', 'students', 'teachers', 'buses', 'expenses', 'incomes', 'payments'];
+    for (const tbl of tables) {
+      await pool.query(`ALTER TABLE ${tbl} ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id) ON DELETE CASCADE`).catch(() => {});
+      await pool.query(`CREATE INDEX IF NOT EXISTS idx_${tbl}_tenant_id ON ${tbl}(tenant_id)`).catch(() => {});
+    }
+
+    console.log('✅ Multi-Tenant Database Isolation Schema Ready');
   } catch (err) {
-    console.error('❌ Failed to create tenants table:', err.message);
+    console.error('❌ Failed to prepare multi-tenant schema:', err.message);
   }
 }
 ensureTenantsTable();
+
+// Automated Daily Cron Job (Runs at 00:00 every midnight) to suspend expired subscriptions
+const cron = require('node-cron');
+cron.schedule('0 0 * * *', async () => {
+  try {
+    const result = await pool.query(
+      `UPDATE tenants 
+       SET subscription_status = 'suspended' 
+       WHERE subscription_expires_at < NOW() AND subscription_status = 'active' 
+       RETURNING id, name`
+    );
+    if (result.rows.length > 0) {
+      console.log(`⏰ Cron Job: Auto-suspended ${result.rows.length} expired tenants:`, result.rows.map(r => r.name));
+    }
+  } catch (err) {
+    console.error('Cron job error:', err.message);
+  }
+});
+
+// GET /admin/stats – Platform-wide Overview Metrics
+app.get('/admin/stats', async (req, res) => {
+  try {
+    const tenantsRes = await pool.query(`
+      SELECT 
+        COUNT(*) as total_schools,
+        COUNT(CASE WHEN subscription_status = 'active' THEN 1 END) as active_schools,
+        COUNT(CASE WHEN subscription_status = 'suspended' THEN 1 END) as suspended_schools,
+        COUNT(CASE WHEN subscription_expires_at < NOW() THEN 1 END) as expired_schools,
+        COALESCE(SUM(monthly_fee), 0) as estimated_mrr
+      FROM tenants
+    `);
+    const stats = tenantsRes.rows[0];
+    res.json({
+      totalSchools: parseInt(stats.total_schools, 10),
+      activeSchools: parseInt(stats.active_schools, 10),
+      suspendedSchools: parseInt(stats.suspended_schools, 10),
+      expiredSchools: parseInt(stats.expired_schools, 10),
+      estimatedMrr: parseFloat(stats.estimated_mrr || 0),
+    });
+  } catch (err) {
+    console.error('Get admin stats error:', err.message);
+    res.status(500).json({ error: 'Failed to fetch platform stats' });
+  }
+});
 
 // GET /admin/tenants – list all schools
 app.get('/admin/tenants', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, schema_name, admin_email, admin_username, admin_password,
-              subscription_status, subscription_plan, subscription_expires_at, created_at
+              subscription_status, subscription_plan, monthly_fee, subscription_expires_at, created_at
        FROM tenants ORDER BY id`
     );
     res.json(result.rows);
@@ -146,7 +200,7 @@ app.get('/admin/tenants/:id', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT id, name, schema_name, admin_email, admin_username, admin_password,
-              subscription_status, subscription_plan, subscription_expires_at, created_at
+              subscription_status, subscription_plan, monthly_fee, subscription_expires_at, created_at
        FROM tenants WHERE id = $1`, [req.params.id]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
@@ -164,7 +218,8 @@ app.post('/admin/tenants', async (req, res) => {
     admin_username,
     admin_password,
     subscription_plan = 'basic',
-    billing_cycle_days = 30
+    billing_cycle_days = 30,
+    monthly_fee = 50.00
   } = req.body;
   if (!name)           return res.status(400).json({ error: 'name is required' });
   if (!admin_username) return res.status(400).json({ error: 'admin_username is required' });
@@ -175,25 +230,79 @@ app.post('/admin/tenants', async (req, res) => {
   try {
     const result = await pool.query(
       `INSERT INTO tenants
-         (name, schema_name, admin_email, admin_username, admin_password, subscription_plan, subscription_expires_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-      [name, schemaName, admin_email, admin_username, admin_password, subscription_plan, expiresAt]
+         (name, schema_name, admin_email, admin_username, admin_password, subscription_plan, monthly_fee, subscription_expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [name, schemaName, admin_email, admin_username, admin_password, subscription_plan, monthly_fee, expiresAt]
     );
-    // Also register the admin in the users table so they can log in
+    const newTenant = result.rows[0];
+
+    // Also register the admin in the users table scoped with tenant_id
     try {
-      await pool.query(
-        `INSERT INTO users (username, password, role)
-         VALUES ($1, $2, 'Admin')
-         ON CONFLICT (username) DO UPDATE SET password = $2, role = 'Admin'`,
-        [admin_username, admin_password]
-      );
+      const existingUser = await pool.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [admin_username]);
+      if (existingUser.rows.length > 0) {
+        await pool.query('UPDATE users SET password = $1, role = \'Admin\', tenant_id = $2 WHERE id = $3', [admin_password, newTenant.id, existingUser.rows[0].id]);
+      } else {
+        await pool.query('INSERT INTO users (username, password, role, tenant_id) VALUES ($1, $2, \'Admin\', $3)', [admin_username, admin_password, newTenant.id]);
+      }
     } catch (uErr) {
-      console.log('Note: users table insert skipped:', uErr.message);
+      console.log('Note: users table insert log:', uErr.message);
     }
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(newTenant);
   } catch (err) {
     console.error('Create tenant error:', err.message);
     res.status(500).json({ error: 'Failed to create tenant' });
+  }
+});
+
+// POST /admin/tenants/:id/renew – 1-Click Subscription Renewal
+app.post('/admin/tenants/:id/renew', async (req, res) => {
+  const { id } = req.params;
+  const { days = 30 } = req.body;
+  try {
+    const tenantRes = await pool.query('SELECT subscription_expires_at FROM tenants WHERE id = $1', [id]);
+    if (tenantRes.rows.length === 0) return res.status(404).json({ error: 'Tenant not found' });
+
+    let currentExpiry = new Date(tenantRes.rows[0].subscription_expires_at || Date.now());
+    if (currentExpiry < new Date()) {
+      currentExpiry = new Date(); // Reset from today if expired
+    }
+    const newExpiry = new Date(currentExpiry.getTime() + days * 86400000);
+
+    const result = await pool.query(
+      `UPDATE tenants 
+       SET subscription_status = 'active', subscription_expires_at = $1 
+       WHERE id = $2 RETURNING *`,
+      [newExpiry, id]
+    );
+    res.json({ message: `Successfully renewed subscription for ${days} days!`, tenant: result.rows[0] });
+  } catch (err) {
+    console.error('Renew tenant error:', err.message);
+    res.status(500).json({ error: 'Failed to renew subscription' });
+  }
+});
+
+// POST /admin/tenants/:id/impersonate – Login As School
+app.post('/admin/tenants/:id/impersonate', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('SELECT * FROM tenants WHERE id = $1', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'School not found' });
+
+    const tenant = result.rows[0];
+    res.json({
+      message: `Successfully logged in as ${tenant.name}`,
+      impersonation: {
+        isImpersonating: true,
+        originalRole: 'SuperAdmin',
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        adminUsername: tenant.admin_username || 'Admin',
+        assignedRole: 'Admin'
+      }
+    });
+  } catch (err) {
+    console.error('Impersonate error:', err.message);
+    res.status(500).json({ error: 'Failed to impersonate school' });
   }
 });
 

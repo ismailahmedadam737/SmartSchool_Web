@@ -5,7 +5,8 @@ import 'package:iftiinshe/dashboard_screen.dart';
 import 'package:iftiinshe/super_admin_dashboard.dart';
 
 class AuthPage extends StatefulWidget {
-  const AuthPage({super.key});
+  final String? userRole;
+  const AuthPage({super.key, this.userRole});
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -58,6 +59,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
     String pass = _passController.text.trim();
     String lowerUser = user.toLowerCase();
 
+    // Fast-path SuperAdmin local check
     if (lowerUser == 'superadmin' &&
         (pass == 'superadmin123' || pass == 'admin123' || pass == '123456')) {
       if (!mounted) return;
@@ -67,46 +69,84 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
       return;
     }
 
-    if ((pass == 'admin123' || pass == '123456' || pass == 'password') &&
-        (lowerUser == 'admin' || lowerUser == 'cashier' || lowerUser == 'teacher' || lowerUser == 'user' || lowerUser == 'student' || lowerUser == 'parent')) {
-      String assignedRole = lowerUser == 'admin'
-          ? 'Admin'
-          : lowerUser == 'cashier'
-              ? 'Cashier'
-              : lowerUser == 'teacher'
-                  ? 'Teacher'
-                  : 'User';
-      if (!mounted) return;
-      Navigator.pushReplacement(context,
-          MaterialPageRoute(builder: (_) => DashboardScreen(userRole: assignedRole, role: assignedRole)));
-      setState(() => _isLoading = false);
-      return;
-    }
-
     try {
       final response = await http.post(
         Uri.parse("https://smartschool-web.onrender.com/api/users/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"username": user, "password": pass}),
-      );
+      ).timeout(const Duration(seconds: 15));
+
       final data = jsonDecode(response.body);
+
       if (response.statusCode == 200) {
-        String role = data['user']?['role'] ?? 'User';
+        // Normalize role — cover both lowercase and mixed case from DB
+        String rawRole = (data['user']?['role'] ?? 'Admin').toString();
+        String role = rawRole[0].toUpperCase() + rawRole.substring(1);
+        // Normalize variations: "school admin", "schooladmin" → "Admin"
+        if (role.toLowerCase() == 'schooladmin' || role.toLowerCase() == 'school admin') {
+          role = 'Admin';
+        }
+        final String tenantName = data['user']?['tenantName'] ?? '';
+
         if (!mounted) return;
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => DashboardScreen(userRole: role, role: role)));
-      } else {
+        if (role == 'SuperAdmin') {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
+        } else {
+          // All school roles (Admin, Teacher, Cashier, User, etc.) go to DashboardScreen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DashboardScreen(
+                userRole: role,
+                role: role,
+                impersonatedTenantName: tenantName,
+              ),
+            ),
+          );
+        }
+        setState(() => _isLoading = false);
+        return;
+      } else if (response.statusCode == 402) {
+        _showSnack(
+          data['message'] ?? "Nidaamka iskuulkan waa ka dhacay waqtigii (Subscription Expired)!",
+          Colors.orangeAccent,
+        );
+        setState(() => _isLoading = false);
+        return;
+      } else if (response.statusCode == 401) {
         _showSnack("Username ama Password waa khalad!", Colors.redAccent);
+        setState(() => _isLoading = false);
+        return;
       }
     } catch (e) {
+
+      // Offline fallback for demo roles
+      if ((pass == 'admin123' || pass == '123456' || pass == 'password') &&
+          (lowerUser == 'admin' || lowerUser == 'cashier' || lowerUser == 'teacher' || lowerUser == 'user' || lowerUser == 'student' || lowerUser == 'parent')) {
+        String assignedRole = lowerUser == 'admin'
+            ? 'Admin'
+            : lowerUser == 'cashier'
+                ? 'Cashier'
+                : lowerUser == 'teacher'
+                    ? 'Teacher'
+                    : 'User';
+        if (!mounted) return;
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => DashboardScreen(userRole: assignedRole, role: assignedRole)));
+        setState(() => _isLoading = false);
+        return;
+      }
       if (lowerUser == 'superadmin') {
         if (!mounted) return;
         Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const DashboardScreen(userRole: 'SuperAdmin', role: 'SuperAdmin')));
+            MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
+        setState(() => _isLoading = false);
         return;
       }
-      _showSnack("Server error ama xiriirka internetka!", Colors.redAccent);
     }
+
+    _showSnack("Username ama Password waa khalad!", Colors.redAccent);
     setState(() => _isLoading = false);
   }
 
@@ -140,20 +180,23 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
           children: [
             // Floating orbs
             ..._buildOrbs(),
-            // Main content
-            Center(
+            // Main scrollable content
+            SafeArea(
               child: SingleChildScrollView(
-                child: FadeTransition(
-                  opacity: _cardFade,
-                  child: SlideTransition(
-                    position: _cardSlide,
-                    child: AnimatedBuilder(
-                      animation: _floatAnim,
-                      builder: (context, child) => Transform.translate(
-                        offset: Offset(0, _floatAnim.value * 0.3),
-                        child: child,
+                physics: const BouncingScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: MediaQuery.of(context).size.height -
+                        MediaQuery.of(context).padding.top -
+                        MediaQuery.of(context).padding.bottom,
+                  ),
+                  child: Center(
+                    child: FadeTransition(
+                      opacity: _cardFade,
+                      child: SlideTransition(
+                        position: _cardSlide,
+                        child: _buildCard(),
                       ),
-                      child: _buildCard(),
                     ),
                   ),
                 ),
@@ -192,76 +235,90 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
   }
 
   Widget _buildCard() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isSmallScreen = MediaQuery.of(context).size.width < 450;
-        return Container(
-          constraints: const BoxConstraints(maxWidth: 420),
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          padding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 22 : 40,
-            vertical: isSmallScreen ? 30 : 45,
-          ),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.07),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 60, offset: const Offset(0, 20)),
-              BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.15), blurRadius: 40),
-            ],
-          ),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Logo
-                Container(
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
-                    boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.5), blurRadius: 30, spreadRadius: 2)],
-                  ),
-                  child: const Icon(Icons.school_rounded, size: 40, color: Colors.white),
-                ),
-                const SizedBox(height: 20),
-                const Text("IFTIINSHE SYSTEM",
-                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 2)),
-                const SizedBox(height: 8),
-                Text("Ku soo dhowow nidaamka",
-                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
-                const SizedBox(height: 36),
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isSmallHeight = screenHeight < 620;
+    final bool isSmallScreen = screenWidth < 450;
 
-                // Username
-                _buildInput(
-                  controller: _usernameController,
-                  label: "Username",
-                  icon: Icons.person_outline_rounded,
-                  validator: (v) => v!.isEmpty ? "Geli username" : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Password
-                _buildInput(
-                  controller: _passController,
-                  label: "Password",
-                  icon: Icons.lock_outline_rounded,
-                  isPassword: true,
-                  validator: (v) => v!.isEmpty ? "Geli password" : null,
-                ),
-                const SizedBox(height: 32),
-
-                // Login Button
-                _buildLoginButton(),
-              ],
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 420),
+      margin: EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: isSmallHeight ? 12 : 24,
+      ),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 20 : 36,
+        vertical: isSmallHeight ? 18 : 36,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.07),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 60, offset: const Offset(0, 20)),
+          BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.15), blurRadius: 40),
+        ],
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // Logo
+            Container(
+              padding: EdgeInsets.all(isSmallHeight ? 12 : 16),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
+                boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.5), blurRadius: 25, spreadRadius: 2)],
+              ),
+              child: Icon(Icons.school_rounded, size: isSmallHeight ? 28 : 36, color: Colors.white),
             ),
-          ),
-        );
-      },
+            SizedBox(height: isSmallHeight ? 8 : 14),
+            Text(
+              "IFTIINSHE SYSTEM",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: isSmallHeight ? 17 : 22,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Ku soo dhowow nidaamka",
+              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+            ),
+            SizedBox(height: isSmallHeight ? 16 : 26),
+
+            // Username
+            _buildInput(
+              controller: _usernameController,
+              label: "Username",
+              icon: Icons.person_outline_rounded,
+              validator: (v) => v!.isEmpty ? "Geli username" : null,
+            ),
+            SizedBox(height: isSmallHeight ? 10 : 14),
+
+            // Password
+            _buildInput(
+              controller: _passController,
+              label: "Password",
+              icon: Icons.lock_outline_rounded,
+              isPassword: true,
+              validator: (v) => v!.isEmpty ? "Geli password" : null,
+            ),
+            SizedBox(height: isSmallHeight ? 20 : 28),
+
+            // Login Button
+            _buildLoginButton(),
+          ],
+        ),
+      ),
     );
   }
+
 
   Widget _buildInput({
     required TextEditingController controller,
