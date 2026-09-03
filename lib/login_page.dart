@@ -196,16 +196,12 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
           children: [
             // Floating orbs
             ..._buildOrbs(),
-            // Main scrollable content
-            SafeArea(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minHeight: MediaQuery.of(context).size.height -
-                        MediaQuery.of(context).padding.top -
-                        MediaQuery.of(context).padding.bottom,
-                  ),
+            // Main scrollable content — single scroll, no nested constraints
+            Positioned.fill(
+              child: SafeArea(
+                child: SingleChildScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
                   child: Center(
                     child: FadeTransition(
                       opacity: _cardFade,
@@ -258,10 +254,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
 
     return Container(
       constraints: const BoxConstraints(maxWidth: 420),
-      margin: EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: isSmallHeight ? 12 : 24,
-      ),
+      // No margin needed — padding lives on the parent SingleChildScrollView
       padding: EdgeInsets.symmetric(
         horizontal: isSmallScreen ? 20 : 36,
         vertical: isSmallHeight ? 18 : 36,
@@ -278,7 +271,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
       child: Form(
         key: _formKey,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize: MainAxisSize.max,
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Logo
