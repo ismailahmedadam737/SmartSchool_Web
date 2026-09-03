@@ -114,11 +114,6 @@ class _UsersPageState extends State<UsersPage> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FA),
-      appBar: AppBar(
-        title: const Text("Users & Roles Management", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

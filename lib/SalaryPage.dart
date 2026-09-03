@@ -374,47 +374,103 @@ class _TeacherSalaryPageState extends State<TeacherSalaryPage> {
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: Colors.grey.withOpacity(0.1)),
           ),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 25,
-                backgroundColor: isPaid ? Colors.green.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
-                child: Text(emp['name'][0], style: TextStyle(color: isPaid ? Colors.green : Colors.blue, fontWeight: FontWeight.bold, fontSize: 18)),
-              ),
-              const SizedBox(width: 15),
-              Expanded(
-                child: Column(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final bool isMobile = constraints.maxWidth < 500;
+              if (isMobile) {
+                return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(emp['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    Text(emp['role'] ?? "Teacher", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                    Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: isPaid ? Colors.green.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                          child: Text(emp['name'][0], style: TextStyle(color: isPaid ? Colors.green : Colors.blue, fontWeight: FontWeight.bold, fontSize: 15)),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(emp['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                              Text(emp['role'] ?? "Teacher", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          "\$$salaryDisplay", 
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold, 
+                            fontSize: 16, 
+                            color: isPaid ? Colors.green : Colors.blueGrey
+                          ),
+                        ),
+                        ElevatedButton(
+                          onPressed: isPaid ? null : () => _showPayDialog(emp),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isPaid ? Colors.grey.shade100 : Colors.blue.shade700,
+                            foregroundColor: isPaid ? Colors.green : Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          child: Text(isPaid ? "Paid" : "Pay"),
+                        ),
+                      ],
+                    ),
                   ],
-                ),
-              ),
-              // Halkaan waxaa lacagta lagu soo bandhigayaa haddii uu Paid yahay (midabka cagaaran)
-              Text(
-                isPaid ? "\$$salaryDisplay" : "\$$salaryDisplay", 
-                style: TextStyle(
-                  fontWeight: FontWeight.bold, 
-                  fontSize: 18, 
-                  color: isPaid ? Colors.green : Colors.blueGrey
-                ),
-              ),
-              const SizedBox(width: 20),
-              SizedBox(
-                width: 90,
-                child: ElevatedButton(
-                  onPressed: isPaid ? null : () => _showPayDialog(emp),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isPaid ? Colors.grey.shade100 : Colors.blue.shade700,
-                    foregroundColor: isPaid ? Colors.green : Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                );
+              }
+
+              return Row(
+                children: [
+                  CircleAvatar(
+                    radius: 25,
+                    backgroundColor: isPaid ? Colors.green.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                    child: Text(emp['name'][0], style: TextStyle(color: isPaid ? Colors.green : Colors.blue, fontWeight: FontWeight.bold, fontSize: 18)),
                   ),
-                  child: Text(isPaid ? "Paid" : "Pay"),
-                ),
-              ),
-            ],
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(emp['name'], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                        Text(emp['role'] ?? "Teacher", style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    "\$$salaryDisplay", 
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 18, 
+                      color: isPaid ? Colors.green : Colors.blueGrey
+                    ),
+                  ),
+                  const SizedBox(width: 20),
+                  SizedBox(
+                    width: 90,
+                    child: ElevatedButton(
+                      onPressed: isPaid ? null : () => _showPayDialog(emp),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isPaid ? Colors.grey.shade100 : Colors.blue.shade700,
+                        foregroundColor: isPaid ? Colors.green : Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: Text(isPaid ? "Paid" : "Pay"),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         );
       },

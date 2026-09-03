@@ -84,42 +84,110 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isDesktop = constraints.maxWidth >= 900;
-        final double paddingVal = constraints.maxWidth < 600 ? 12.0 : 25.0;
-
-        if (isDesktop) {
-          return Scaffold(
-            backgroundColor: bgColor,
-            body: Row(
-              children: [
-                SizedBox(width: 260, child: _buildSidebar()),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.all(paddingVal),
-                    child: _buildBodyContent(),
-                  ),
-                ),
-              ],
-            ),
-          );
-        } else {
-          return Scaffold(
-            backgroundColor: bgColor,
-            drawer: Drawer(
-              width: 260,
-              child: _buildSidebar(),
-            ),
-            body: SafeArea(
-              child: Padding(
-                padding: EdgeInsets.all(paddingVal),
-                child: _buildBodyContent(),
-              ),
-            ),
-          );
+    return PopScope(
+      canPop: selectedMenu == "Dashboard",
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && selectedMenu != "Dashboard") {
+          setState(() => selectedMenu = "Dashboard");
         }
       },
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final bool isDesktop = constraints.maxWidth >= 900;
+          final double paddingVal = constraints.maxWidth < 600 ? 12.0 : 25.0;
+
+          Widget content;
+          if (selectedMenu == "Dashboard") {
+            content = _buildDashboardHome();
+          } else {
+            content = Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildTopNavHeader(isDesktop),
+                const SizedBox(height: 10),
+                Expanded(child: _buildBodyContent()),
+              ],
+            );
+          }
+
+          if (isDesktop) {
+            return Scaffold(
+              backgroundColor: bgColor,
+              body: Row(
+                children: [
+                  SizedBox(width: 260, child: _buildSidebar()),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.all(paddingVal),
+                      child: content,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            return Scaffold(
+              backgroundColor: bgColor,
+              drawer: Drawer(
+                width: 260,
+                child: _buildSidebar(),
+              ),
+              body: SafeArea(
+                child: Padding(
+                  padding: EdgeInsets.all(paddingVal),
+                  child: content,
+                ),
+              ),
+            );
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _buildTopNavHeader(bool isDesktop) {
+    bool isNotDashboard = selectedMenu != "Dashboard";
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            if (!isDesktop)
+              Builder(
+                builder: (ctx) => IconButton(
+                  icon: Icon(Icons.menu, color: textColor, size: 26),
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                  tooltip: "Open Drawer",
+                ),
+              ),
+            if (isNotDashboard)
+              IconButton(
+                icon: Icon(Icons.arrow_back, color: textColor, size: 24),
+                onPressed: () => setState(() => selectedMenu = "Dashboard"),
+                tooltip: "Dib u noqo Dashboard",
+              ),
+            if (!isDesktop || isNotDashboard) const SizedBox(width: 4),
+            Text(
+              selectedMenu,
+              style: TextStyle(
+                fontSize: !isDesktop ? 20 : 28,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
+            ),
+          ],
+        ),
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor),
+              onPressed: () => setState(() => isDarkMode = !isDarkMode),
+            ),
+            SizedBox(width: !isDesktop ? 4 : 15),
+            _profileMenu(),
+          ],
+        ),
+      ],
     );
   }
 
@@ -236,7 +304,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 if (isNotDashboard)
                   IconButton(
-                    icon: Icon(Icons.arrow_back_rounded, color: textColor),
+                    icon: Icon(Icons.arrow_back, color: textColor),
                     onPressed: () => setState(() => selectedMenu = "Dashboard"),
                     tooltip: "Dib u noqo Dashboard",
                   ),
