@@ -557,7 +557,7 @@ pw.Text(
         final bool isMobile = constraints.maxWidth < 600;
         return Wrap(
           alignment: WrapAlignment.spaceBetween,
-          crossAlignment: WrapCrossAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           runSpacing: 10,
           children: [
             Text(
