@@ -555,38 +555,37 @@ pw.Text(
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool isMobile = constraints.maxWidth < 600;
-        return Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          runSpacing: 10,
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               "Exam Management",
               style: TextStyle(
-                fontSize: isMobile ? 24 : 35,
+                fontSize: isMobile ? 20 : 35,
                 fontWeight: FontWeight.bold,
                 color: Colors.red,
               ),
             ),
             Column(
-              crossAxisAlignment: isMobile ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (isUserRole) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    padding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 16, vertical: isMobile ? 6 : 8),
                     decoration: BoxDecoration(
                       color: Colors.blue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
                     ),
-                    child: const Row(
+                    child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.lock_outline, color: Colors.blueAccent, size: 16),
-                        SizedBox(width: 6),
+                        Icon(Icons.lock_outline, color: Colors.blueAccent, size: isMobile ? 14 : 18),
+                        const SizedBox(width: 6),
                         Text(
                           "Natiijada (Read-Only)",
-                          style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                          style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: isMobile ? 11 : 13),
                         ),
                       ],
                     ),
@@ -600,7 +599,7 @@ pw.Text(
                           icon: const Icon(Icons.settings, color: Colors.grey), 
                           onPressed: _showSettings
                         ),
-                      const SizedBox(width: 6),
+                      SizedBox(width: isMobile ? 4 : 10),
                       ToggleButtons(
                         isSelected: [isTeacherView, !isTeacherView],
                         onPressed: (index) => setState(() {
@@ -611,9 +610,9 @@ pw.Text(
                         borderRadius: BorderRadius.circular(10),
                         fillColor: Colors.black,
                         selectedColor: Colors.white,
-                        children: const [
-                          Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Text("Teacher")),
-                          Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Text("Student"))
+                        children: [
+                          Padding(padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 20), child: const Text("Teacher")),
+                          Padding(padding: EdgeInsets.symmetric(horizontal: isMobile ? 8 : 20), child: const Text("Student"))
                         ],
                       ),
                     ],

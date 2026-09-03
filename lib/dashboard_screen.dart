@@ -220,6 +220,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final bool showDrawerBtn = MediaQuery.of(context).size.width < 900;
+        final bool isNotDashboard = selectedMenu != "Dashboard";
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -230,13 +231,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     builder: (ctx) => IconButton(
                       icon: Icon(Icons.menu, color: textColor),
                       onPressed: () => Scaffold.of(ctx).openDrawer(),
+                      tooltip: "Open Menu",
                     ),
                   ),
-                if (showDrawerBtn) const SizedBox(width: 8),
+                if (isNotDashboard)
+                  IconButton(
+                    icon: Icon(Icons.arrow_back_rounded, color: textColor),
+                    onPressed: () => setState(() => selectedMenu = "Dashboard"),
+                    tooltip: "Dib u noqo Dashboard",
+                  ),
+                if (showDrawerBtn || isNotDashboard) const SizedBox(width: 4),
                 Text(
                   selectedMenu,
                   style: TextStyle(
-                    fontSize: showDrawerBtn ? 22 : 32,
+                    fontSize: showDrawerBtn ? 20 : 32,
                     fontWeight: FontWeight.bold,
                     color: textColor,
                   ),
@@ -249,7 +257,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor),
                   onPressed: () => setState(() => isDarkMode = !isDarkMode),
                 ),
-                SizedBox(width: showDrawerBtn ? 8 : 20),
+                SizedBox(width: showDrawerBtn ? 4 : 20),
                 _profileMenu(),
               ],
             ),
