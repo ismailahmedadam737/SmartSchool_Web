@@ -524,16 +524,21 @@ pw.Text(
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD),
-      body: Padding(
-        padding: const EdgeInsets.all(25.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 20),
-            Expanded(child: isLoading ? const Center(child: CircularProgressIndicator()) : _buildMainFlow()),
-          ],
-        ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final double paddingVal = constraints.maxWidth < 600 ? 12.0 : 25.0;
+          return Padding(
+            padding: EdgeInsets.all(paddingVal),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(),
+                const SizedBox(height: 16),
+                Expanded(child: isLoading ? const Center(child: CircularProgressIndicator()) : _buildMainFlow()),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -547,78 +552,92 @@ pw.Text(
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text("Exam Management", style: TextStyle(fontSize: 35, fontWeight: FontWeight.bold, color: Colors.red)),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isMobile = constraints.maxWidth < 600;
+        return Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAlignment: WrapCrossAlignment.center,
+          runSpacing: 10,
           children: [
-            if (isUserRole) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.lock_outline, color: Colors.blueAccent, size: 18),
-                    SizedBox(width: 8),
-                    Text(
-                      "Natiijada (Read-Only)",
-                      style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                  ],
-                ),
+            Text(
+              "Exam Management",
+              style: TextStyle(
+                fontSize: isMobile ? 24 : 35,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
               ),
-            ] else ...[
-              Row(
-                children: [
-                  if (isTeacherView) 
-                    IconButton(
-                      icon: const Icon(Icons.settings, color: Colors.grey), 
-                      onPressed: _showSettings
+            ),
+            Column(
+              crossAxisAlignment: isMobile ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+              children: [
+                if (isUserRole) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blueAccent.withOpacity(0.4)),
                     ),
-                  const SizedBox(width: 10),
-                  ToggleButtons(
-                    isSelected: [isTeacherView, !isTeacherView],
-                    onPressed: (index) => setState(() {
-                      isTeacherView = index == 0;
-                      selectedClass = null;
-                      selectedStudent = null;
-                    }),
-                    borderRadius: BorderRadius.circular(10),
-                    fillColor: Colors.black,
-                    selectedColor: Colors.white,
-                    children: const [
-                      Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text("Teacher")),
-                      Padding(padding: EdgeInsets.symmetric(horizontal: 20), child: Text("Student"))
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.lock_outline, color: Colors.blueAccent, size: 16),
+                        SizedBox(width: 6),
+                        Text(
+                          "Natiijada (Read-Only)",
+                          style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                ] else ...[
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isTeacherView) 
+                        IconButton(
+                          icon: const Icon(Icons.settings, color: Colors.grey), 
+                          onPressed: _showSettings
+                        ),
+                      const SizedBox(width: 6),
+                      ToggleButtons(
+                        isSelected: [isTeacherView, !isTeacherView],
+                        onPressed: (index) => setState(() {
+                          isTeacherView = index == 0;
+                          selectedClass = null;
+                          selectedStudent = null;
+                        }),
+                        borderRadius: BorderRadius.circular(10),
+                        fillColor: Colors.black,
+                        selectedColor: Colors.white,
+                        children: const [
+                          Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Text("Teacher")),
+                          Padding(padding: EdgeInsets.symmetric(horizontal: 14), child: Text("Student"))
+                        ],
+                      ),
                     ],
                   ),
                 ],
-              ),
-            ],
-            if (!isTeacherView && selectedStudent != null && selectedExamType == "Final Exam")
-               Container(
-                 margin: const EdgeInsets.only(top: 10),
-                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 15),
-                 decoration: BoxDecoration(
-                   color: Colors.green.withOpacity(0.1),
-                   borderRadius: BorderRadius.circular(10),
-                   border: Border.all(color: Colors.green)
-                 ),
-                 child: Text(
-                   " Total: ${_calculateGrandTotal()} / 700",
-                   style: const TextStyle(color: Colors.green, fontSize: 16, fontWeight: FontWeight.bold),
-                 ),
-               ),
+                if (!isTeacherView && selectedStudent != null && selectedExamType == "Final Exam")
+                   Container(
+                     margin: const EdgeInsets.only(top: 8),
+                     padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                     decoration: BoxDecoration(
+                       color: Colors.green.withOpacity(0.1),
+                       borderRadius: BorderRadius.circular(10),
+                       border: Border.all(color: Colors.green)
+                     ),
+                     child: Text(
+                       " Total: ${_calculateGrandTotal()} / 700",
+                       style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
+                     ),
+                   ),
+              ],
+            ),
           ],
-        ),
-      ],
+        );
+      },
     );
   }
 
@@ -680,12 +699,10 @@ pw.Text(
               title: Text(filteredStudents[index].name),
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () async {
-                int studentId = filteredStudents[index].id ?? int.tryParse(filteredStudents[index].idString) ?? 0;
                 if (isUserRole) {
-                  await _fetchResults(studentId);
-                  setState(() => selectedStudent = filteredStudents[index]);
-                  if (mounted) _showStudentResultPopupDialog(filteredStudents[index]);
+                  _studentLoginAccess(filteredStudents[index]);
                 } else {
+                  int studentId = filteredStudents[index].id ?? int.tryParse(filteredStudents[index].idString) ?? 0;
                   await _fetchResults(studentId);
                   setState(() => selectedStudent = filteredStudents[index]);
                 }
@@ -1242,18 +1259,33 @@ pw.Text(
       barrierDismissible: true, 
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text("Enter Code"),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: const Text("Doorashada Imtixaanka & Code-ka", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Select Exam Type:"),
-              DropdownButton<String>(
-                isExpanded: true,
+              const Text("Dooro Nooca Imtixaanka:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 5),
+              DropdownButtonFormField<String>(
                 value: selectedExamType,
+                decoration: InputDecoration(
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                ),
                 items: examTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                onChanged: (val) => setDialogState(() => selectedExamType = val!),
+                onChanged: (val) {
+                  if (val != null) {
+                    setDialogState(() => selectedExamType = val);
+                    setState(() => selectedExamType = val);
+                  }
+                },
               ),
               const SizedBox(height: 15),
+              const Text("Geli Code-ka (4 digits):", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              const SizedBox(height: 5),
               TextField(
                 maxLength: 4, 
                 obscureText: true, 
@@ -1263,15 +1295,27 @@ pw.Text(
                 enableSuggestions: false, 
                 enableInteractiveSelection: false, 
                 onChanged: (val) => inputId = val,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: "****",
-                  counterText: "", 
+                  counterText: "",
+                  filled: true,
+                  fillColor: Colors.grey.shade100,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
                 ),
               ),
             ],
           ),
           actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Ka noqo", style: TextStyle(color: Colors.grey)),
+            ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1A237E),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
               onPressed: () async {
                 String lastFour = student.phone.length >= 4 ? student.phone.substring(student.phone.length - 4) : student.phone;
                 if (lastFour == inputId) {
@@ -1288,8 +1332,8 @@ pw.Text(
                   );
                 }
               },
-              child: const Text("Enter password"),
-            )
+              child: const Text("Xaqiiji"),
+            ),
           ],
         ),
       ),

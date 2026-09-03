@@ -191,66 +191,74 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
   }
 
   Widget _buildCard() {
-    return Container(
-      width: 420,
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 45),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 60, offset: const Offset(0, 20)),
-          BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.15), blurRadius: 40),
-        ],
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Logo
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
-                boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.5), blurRadius: 30, spreadRadius: 2)],
-              ),
-              child: const Icon(Icons.school_rounded, size: 40, color: Colors.white),
-            ),
-            const SizedBox(height: 20),
-            const Text("IFTIINSHE SYSTEM",
-                style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 2)),
-            const SizedBox(height: 8),
-            Text("Ku soo dhowow nidaamka",
-                style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
-            const SizedBox(height: 36),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isSmallScreen = MediaQuery.of(context).size.width < 450;
+        return Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 22 : 40,
+            vertical: isSmallScreen ? 30 : 45,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 60, offset: const Offset(0, 20)),
+              BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.15), blurRadius: 40),
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
+                    boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.5), blurRadius: 30, spreadRadius: 2)],
+                  ),
+                  child: const Icon(Icons.school_rounded, size: 40, color: Colors.white),
+                ),
+                const SizedBox(height: 20),
+                const Text("IFTIINSHE SYSTEM",
+                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                const SizedBox(height: 8),
+                Text("Ku soo dhowow nidaamka",
+                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+                const SizedBox(height: 36),
 
-            // Username
-            _buildInput(
-              controller: _usernameController,
-              label: "Username",
-              icon: Icons.person_outline_rounded,
-              validator: (v) => v!.isEmpty ? "Geli username" : null,
-            ),
-            const SizedBox(height: 16),
+                // Username
+                _buildInput(
+                  controller: _usernameController,
+                  label: "Username",
+                  icon: Icons.person_outline_rounded,
+                  validator: (v) => v!.isEmpty ? "Geli username" : null,
+                ),
+                const SizedBox(height: 16),
 
-            // Password
-            _buildInput(
-              controller: _passController,
-              label: "Password",
-              icon: Icons.lock_outline_rounded,
-              isPassword: true,
-              validator: (v) => v!.isEmpty ? "Geli password" : null,
-            ),
-            const SizedBox(height: 32),
+                // Password
+                _buildInput(
+                  controller: _passController,
+                  label: "Password",
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: true,
+                  validator: (v) => v!.isEmpty ? "Geli password" : null,
+                ),
+                const SizedBox(height: 32),
 
-            // Login Button
-            _buildLoginButton(),
-          ],
-        ),
-      ),
+                // Login Button
+                _buildLoginButton(),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

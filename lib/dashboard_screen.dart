@@ -84,14 +84,42 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: bgColor,
-      body: Row(
-        children: [
-          SizedBox(width: 260, child: _buildSidebar()),
-          Expanded(child: Padding(padding: const EdgeInsets.all(30.0), child: _buildBodyContent())),
-        ],
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isDesktop = constraints.maxWidth >= 900;
+        final double paddingVal = constraints.maxWidth < 600 ? 12.0 : 25.0;
+
+        if (isDesktop) {
+          return Scaffold(
+            backgroundColor: bgColor,
+            body: Row(
+              children: [
+                SizedBox(width: 260, child: _buildSidebar()),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.all(paddingVal),
+                    child: _buildBodyContent(),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else {
+          return Scaffold(
+            backgroundColor: bgColor,
+            drawer: Drawer(
+              width: 260,
+              child: _buildSidebar(),
+            ),
+            body: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(paddingVal),
+                child: _buildBodyContent(),
+              ),
+            ),
+          );
+        }
+      },
     );
   }
 
@@ -130,12 +158,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 20),
           _buildScrollingImagesRow(),
           const SizedBox(height: 20),
-          Row(
-            children: [
-               Expanded(flex: 6, child: _lineChartCard()),
-              const SizedBox(width: 30),
-              Expanded(flex: 4, child: _buildPieChart()),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              if (constraints.maxWidth >= 900) {
+                return Row(
+                  children: [
+                    Expanded(flex: 6, child: _lineChartCard()),
+                    const SizedBox(width: 30),
+                    Expanded(flex: 4, child: _buildPieChart()),
+                  ],
+                );
+              } else {
+                return Column(
+                  children: [
+                    _lineChartCard(),
+                    const SizedBox(height: 20),
+                    _buildPieChart(),
+                  ],
+                );
+              }
+            },
           ),
         ],
       ),
@@ -175,18 +217,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildHeader() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(selectedMenu, style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: textColor)),
-        ]),
-        Row(children: [
-          IconButton(icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor), onPressed: () => setState(() => isDarkMode = !isDarkMode)),
-          const SizedBox(width: 20),
-          _profileMenu(),
-        ]),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool showDrawerBtn = MediaQuery.of(context).size.width < 900;
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                if (showDrawerBtn)
+                  Builder(
+                    builder: (ctx) => IconButton(
+                      icon: Icon(Icons.menu, color: textColor),
+                      onPressed: () => Scaffold.of(ctx).openDrawer(),
+                    ),
+                  ),
+                if (showDrawerBtn) const SizedBox(width: 8),
+                Text(
+                  selectedMenu,
+                  style: TextStyle(
+                    fontSize: showDrawerBtn ? 22 : 32,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor),
+                  onPressed: () => setState(() => isDarkMode = !isDarkMode),
+                ),
+                SizedBox(width: showDrawerBtn ? 8 : 20),
+                _profileMenu(),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -434,6 +503,9 @@ Widget _navItem(IconData icon, String title) {
   bool isActive = selectedMenu == title;
   return ListTile(
     onTap: () {
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
       if (title == "Log Out") _performLogout();
       else setState(() => selectedMenu = title);
     },
