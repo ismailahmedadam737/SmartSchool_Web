@@ -95,6 +95,99 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/salary', salaryRoutes);
 app.use('/api/communications', communicationRoutes);
 
+// ============================================================
+// 🔑 SUPER ADMIN ROUTES – /admin/tenants
+// ============================================================
+
+// Ensure tenants table exists (run once on startup)
+async function ensureTenantsTable() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS tenants (
+        id                      SERIAL PRIMARY KEY,
+        name                    TEXT NOT NULL,
+        schema_name             TEXT UNIQUE NOT NULL,
+        admin_email             TEXT,
+        subscription_status     TEXT NOT NULL DEFAULT 'active',
+        subscription_plan       TEXT NOT NULL DEFAULT 'basic',
+        subscription_expires_at TIMESTAMPTZ,
+        created_at              TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('✅ Tenants table ready');
+  } catch (err) {
+    console.error('❌ Failed to create tenants table:', err.message);
+  }
+}
+ensureTenantsTable();
+
+// GET /admin/tenants – list all schools
+app.get('/admin/tenants', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT id, name, schema_name, admin_email, subscription_status, subscription_plan, subscription_expires_at, created_at FROM tenants ORDER BY id'
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('List tenants error:', err.message);
+    res.status(500).json({ error: 'Failed to list tenants' });
+  }
+});
+
+// POST /admin/tenants – register a new school
+app.post('/admin/tenants', async (req, res) => {
+  const { name, admin_email, subscription_plan = 'basic', billing_cycle_days = 30 } = req.body;
+  if (!name) return res.status(400).json({ error: 'name is required' });
+  const schemaName = 'tenant_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+  const expiresAt = new Date(Date.now() + billing_cycle_days * 86400000);
+  try {
+    const result = await pool.query(
+      `INSERT INTO tenants (name, schema_name, admin_email, subscription_plan, subscription_expires_at)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [name, schemaName, admin_email, subscription_plan, expiresAt]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Create tenant error:', err.message);
+    res.status(500).json({ error: 'Failed to create tenant' });
+  }
+});
+
+// PATCH /admin/tenants/:id/status – activate / suspend / cancel
+app.patch('/admin/tenants/:id/status', async (req, res) => {
+  const { id } = req.params;
+  const { status } = req.body;
+  if (!['active', 'suspended', 'cancelled'].includes(status)) {
+    return res.status(400).json({ error: 'Invalid status. Use: active | suspended | cancelled' });
+  }
+  try {
+    const result = await pool.query(
+      'UPDATE tenants SET subscription_status = $1 WHERE id = $2 RETURNING *',
+      [status, id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('Update tenant status error:', err.message);
+    res.status(500).json({ error: 'Failed to update status' });
+  }
+});
+
+// DELETE /admin/tenants/:id – remove a school record
+app.delete('/admin/tenants/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query('DELETE FROM tenants WHERE id = $1 RETURNING *', [id]);
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Tenant not found' });
+    res.json({ message: 'Tenant deleted', data: result.rows[0] });
+  } catch (err) {
+    console.error('Delete tenant error:', err.message);
+    res.status(500).json({ error: 'Failed to delete tenant' });
+  }
+});
+
+
+
 // --- Error Handling ---
 app.use((err, req, res, next) => {
   console.error(err.stack);
