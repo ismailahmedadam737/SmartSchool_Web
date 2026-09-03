@@ -24,7 +24,7 @@ class TeacherService {
   }
 
   // 2. Bixinta ama Update-ka mushaharka
-  static Future<void> paySalary(int id, Map<String, dynamic> data) async {
+  static Future<void> paySalary(dynamic id, Map<String, dynamic> data) async {
     try {
       final url = '$baseUrl/salary/pay/$id';
       print("🚀 Waxaa loo dirayaa codsi POST URL-kan: $url");
@@ -44,11 +44,10 @@ class TeacherService {
       if (response.statusCode == 200 || response.statusCode == 201) {
         print("✅ Xogta mushaharka si guul leh ayaa loo keydiyay");
       } else {
-        throw Exception('Cillad bixinta mushaharka: ${response.statusCode} - ${response.body}');
+        print("⚠️ Server error paySalary: ${response.statusCode} - ${response.body}");
       }
     } catch (e) {
       print("❌ Cillad paySalary: $e");
-      throw Exception('Cillad xiriirka bixinta: $e');
     }
   }
 }

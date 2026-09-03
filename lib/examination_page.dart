@@ -21,6 +21,7 @@ class _ExaminationPageState extends State<ExaminationPage> {
   StudentModel? selectedStudent;
   
   bool get isUserRole => widget.userRole.trim().toLowerCase() == 'user';
+  bool get isTeacherRole => widget.userRole.trim().toLowerCase() == 'teacher';
   
   String selectedExamType = "Monthly Exam";
   final List<String> examTypes = ["Monthly Exam", "Term 1", "Pre-Final", "Final Exam"];
@@ -44,8 +45,11 @@ class _ExaminationPageState extends State<ExaminationPage> {
   @override
   void initState() {
     super.initState();
+    // User (Arday/Waalid) uun baa ku bilaabanaya Student view-ka (Read-Only)
     if (isUserRole) {
       isTeacherView = false;
+    } else {
+      isTeacherView = true;
     }
     _loadInitialData();
   }
@@ -537,7 +541,9 @@ pw.Text(
   Widget _buildMainFlow() {
     if (selectedClass == null) return _buildClassGrid();
     if (selectedStudent == null) return _buildStudentList();
-    return (isTeacherView && !isUserRole) ? _buildGradeEntryForm() : _buildStudentView();
+    // User-ka (Arday/Waalid) weligii Student view uun ayuu arki karaa (Read-Only)
+    if (isUserRole) return _buildStudentView();
+    return (isTeacherView) ? _buildGradeEntryForm() : _buildStudentView();
   }
 
   Widget _buildHeader() {
@@ -560,10 +566,10 @@ pw.Text(
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.visibility, color: Colors.blueAccent, size: 18),
+                    Icon(Icons.lock_outline, color: Colors.blueAccent, size: 18),
                     SizedBox(width: 8),
                     Text(
-                      "Student Results (Read-Only)",
+                      "Natiijada (Read-Only)",
                       style: TextStyle(color: Colors.blueAccent, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ],
@@ -664,7 +670,7 @@ pw.Text(
           IconButton(onPressed: () => setState(() => selectedClass = null), icon: const Icon(Icons.arrow_back_ios)),
           Text("Students $selectedClass", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const Spacer(),
-          if(isTeacherView) _buildExamTypeDropdown(),
+          if(isTeacherView && !isUserRole) _buildExamTypeDropdown(),
         ]),
         Expanded(
           child: ListView.builder(
@@ -675,11 +681,13 @@ pw.Text(
               trailing: const Icon(Icons.arrow_forward_ios),
               onTap: () async {
                 int studentId = filteredStudents[index].id ?? int.tryParse(filteredStudents[index].idString) ?? 0;
-                if (isTeacherView) {
+                if (isUserRole) {
                   await _fetchResults(studentId);
                   setState(() => selectedStudent = filteredStudents[index]);
+                  if (mounted) _showStudentResultPopupDialog(filteredStudents[index]);
                 } else {
-                  _studentLoginAccess(filteredStudents[index]);
+                  await _fetchResults(studentId);
+                  setState(() => selectedStudent = filteredStudents[index]);
                 }
               },
             ),

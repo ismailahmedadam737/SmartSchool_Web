@@ -4,8 +4,7 @@ import 'package:iftiinshe/Income%20&%20Outcome.dart';
 import 'package:iftiinshe/student_registration.dart';
 import 'package:iftiinshe/teacher.dart';
 import 'package:iftiinshe/Service/api_service.dart';
-import 'package:iftiinshe/Service/payment_api_service.dart'; // Hubi inuu sax yahay
-import 'finance_page.dart' hide PaymentApiService;
+import 'package:iftiinshe/Service/payment_api_service.dart';
 
 class ReportsPage extends StatefulWidget {
   const ReportsPage({super.key});

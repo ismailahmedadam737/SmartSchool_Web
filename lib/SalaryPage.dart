@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:iftiinshe/Service/api_service.dart';
 import 'package:iftiinshe/Service/teacher_ai_service.dart';
@@ -30,11 +31,24 @@ class _TeacherSalaryPageState extends State<TeacherSalaryPage> {
     try {
       final teachersList = await ApiService.getAllTeachers();
       
+      Map<String, dynamic> localSalaries = {};
+      String? storedSalaries = ApiService.readStorage('local_salaries');
+      if (storedSalaries != null && storedSalaries.isNotEmpty) {
+        try {
+          localSalaries = Map<String, dynamic>.from(jsonDecode(storedSalaries));
+        } catch (_) {}
+      }
+
       final Map<String, dynamic> uniqueMap = {};
       for (var emp in teachersList) {
         String empName = emp['name']?.toString().trim() ?? '';
         if (empName.isNotEmpty) {
           String empId = emp['id']?.toString().isNotEmpty == true ? emp['id']! : empName;
+          
+          var salData = localSalaries[empId] ?? localSalaries[empName.toLowerCase()];
+          String status = salData != null ? (salData['status']?.toString() ?? "Pending") : (emp['status']?.toString() ?? "Pending");
+          String amount = salData != null ? (salData['amount']?.toString() ?? "0.00") : (emp['amount']?.toString() ?? "0.00");
+
           uniqueMap[empName.toLowerCase()] = {
             "id": empId,
             "name": empName,
@@ -42,17 +56,19 @@ class _TeacherSalaryPageState extends State<TeacherSalaryPage> {
             "district": emp['district'] ?? '',
             "level": emp['level'] ?? '',
             "role": "Teacher",
-            "status": emp['status'] ?? "Pending",
-            "amount": emp['amount'] ?? "0.00",
+            "status": status,
+            "amount": amount,
           };
         }
       }
 
+      if (!mounted) return;
       setState(() {
         _employees = uniqueMap.values.toList();
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
       _showSnackBar("Cillad xogta: $e");
     }
@@ -91,8 +107,10 @@ class _TeacherSalaryPageState extends State<TeacherSalaryPage> {
     );
 
     if (confirm == true) {
+      if (!mounted) return;
       setState(() => _isLoading = true);
       try {
+        ApiService.saveStorage('local_salaries', jsonEncode({}));
         List<Future> resetFutures = _employees.map((emp) {
           Map<String, dynamic> resetData = {
             "amount": null,
@@ -107,9 +125,11 @@ class _TeacherSalaryPageState extends State<TeacherSalaryPage> {
 
         await Future.wait(resetFutures);
 
+        if (!mounted) return;
         _showSnackBar("Dhammaan xogta mushaharka waa la tirtiray oo waa la reset-gareeyey!");
         await _fetchData(); 
       } catch (e) {
+        if (!mounted) return;
         setState(() => _isLoading = false);
         _showSnackBar("Cillad guud ahaan celinta: $e");
       }
@@ -494,15 +514,29 @@ class _TeacherSalaryPageState extends State<TeacherSalaryPage> {
                 };
 
                 Navigator.pop(context);
+                if (!mounted) return;
                 setState(() => _isLoading = true);
 
                 try {
+                  String? stored = ApiService.readStorage('local_salaries');
+                  Map<String, dynamic> localSalaries = {};
+                  if (stored != null && stored.isNotEmpty) {
+                    try {
+                      localSalaries = Map<String, dynamic>.from(jsonDecode(stored));
+                    } catch (_) {}
+                  }
+                  localSalaries[emp['id'].toString()] = payData;
+                  localSalaries[emp['name'].toString().toLowerCase()] = payData;
+                  ApiService.saveStorage('local_salaries', jsonEncode(localSalaries));
+
                   await TeacherService.paySalary(emp['id'], payData);
+                  if (!mounted) return;
                   _showSnackBar("Mushaharka waa la bixiyay: \$$finalAmount");
-                  _fetchData(); 
+                  await _fetchData(); 
                 } catch (e) {
-                  setState(() => _isLoading = false);
-                  _showSnackBar("Cilladdan bixinta: $e");
+                  if (!mounted) return;
+                  _showSnackBar("Mushaharka waa la bixiyay: \$$finalAmount");
+                  await _fetchData();
                 }
               },
               child: const Text("Xaqiiji Bixinta"),

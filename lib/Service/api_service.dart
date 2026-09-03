@@ -24,6 +24,9 @@ class ApiService {
   static final List<Map<String, String>> _localTeachers = [];
   static final List<Bus> _localBuses = [];
 
+  static void saveStorage(String key, String data) => _saveToStorage(key, data);
+  static String? readStorage(String key) => _readFromStorage(key);
+
   static void _saveToStorage(String key, String data) {
     if (kIsWeb) {
       try {

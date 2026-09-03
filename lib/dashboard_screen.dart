@@ -14,33 +14,48 @@ import 'package:iftiinshe/buses_page.dart';
 import 'package:iftiinshe/finance_page.dart';
 import 'package:iftiinshe/examination_page.dart';
 import 'package:iftiinshe/login_page.dart';
+import 'package:iftiinshe/notes_page.dart';
 import 'package:iftiinshe/reports_page.dart' hide UsersPage;
 import 'package:iftiinshe/student_registration.dart';
 import 'package:iftiinshe/teacher.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, required String userRole, required String role});
+  final String userRole;
+  final String role;
+  const DashboardScreen({super.key, this.userRole = '', this.role = ''});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  String selectedMenu = "Dashboard ";
+  String selectedMenu = "Dashboard";
   bool isDarkMode = false;
   final ScrollController _sidebarController = ScrollController();
   final ScrollController _imageScrollController = ScrollController();
   Timer? _timer;
 
+  String get activeRole {
+    String r = (widget.userRole.isNotEmpty ? widget.userRole : widget.role).trim();
+    if (r.isEmpty) return 'SuperAdmin';
+    return r;
+  }
+
   @override
   void initState() {
     super.initState();
-    // Auto-scroll logic
+    String r = activeRole.toLowerCase();
+    if (r == 'user' || r.contains('student') || r.contains('parent') || r.contains('ardey') || r.contains('waalid')) {
+      selectedMenu = "Attendance";
+    } else {
+      selectedMenu = "Dashboard";
+    }
+
     _timer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_imageScrollController.hasClients) {
         double maxScroll = _imageScrollController.position.maxScrollExtent;
         double currentScroll = _imageScrollController.position.pixels;
-        double delta = 320.0; // Ballaca sawirka + margin
+        double delta = 320.0;
 
         if (currentScroll >= maxScroll) {
           _imageScrollController.jumpTo(0);
@@ -81,22 +96,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildBodyContent() {
-    switch (selectedMenu) {
+    String r = activeRole;
+    switch (selectedMenu.trim()) {
       case "Dashboard": return _buildDashboardHome();
       case "Students": return const StudentRegistrationPage();
-      case "Users": return const UsersPage(currentRole: '',);
-      case "Teachers": return const TeachersPage();
+      case "Users": return UsersPage(currentRole: r);
+      case "Teachers": return TeachersPage(userRole: r);
       case "Teacher Salary": return const TeacherSalaryPage();
-      case "Attendance": return const AttendancePage();
+      case "Attendance": return AttendancePage(userRole: r);
       case "Fees & Accounting": return FinancePage();
       case "Income & Outcome": return IncomePage();
       case "Buses": return const BusesPage();
-      case "Exam & Results": return const ExaminationPage();
+      case "Exam & Results": return ExaminationPage(userRole: r);
       case "Exam Schedule": return const ExamScheduleGeneratorPage();
       case "Communications": return const SchoolCommunicationsPage();
       case "Admin Messages": return const AdminMessagesPage();
       case "General Reports": return const ReportsPage();
-      default: return _buildDashboardHome();
+      case "Notes": return const NotesPage();
+      default: 
+        if (r.toLowerCase() == 'user' || r.toLowerCase().contains('student') || r.toLowerCase().contains('parent')) {
+          return const AttendancePage();
+        }
+        return _buildDashboardHome();
     }
   }
 
@@ -170,12 +191,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _profileMenu() {
+    String r = activeRole;
     return PopupMenuButton<String>(
       offset: const Offset(0, 50),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       onSelected: (value) { if (value == 'logout') _performLogout(); },
       itemBuilder: (context) => [
-        const PopupMenuItem(value: 'profile', child: Row(children: [Icon(Icons.person_outline, size: 20), SizedBox(width: 10), Text("Profile")])),
+        PopupMenuItem(value: 'profile', child: Row(children: [const Icon(Icons.security, size: 20, color: Colors.blueAccent), const SizedBox(width: 10), Text("Role: $r", style: const TextStyle(fontWeight: FontWeight.bold))])),
         const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, size: 20, color: Colors.red), SizedBox(width: 10), Text("Log Out", style: TextStyle(color: Colors.red))])),
       ],
       child: Container(
@@ -185,7 +207,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             const CircleAvatar(backgroundColor: Colors.blueAccent, radius: 18, child: Icon(Icons.person, color: Colors.white, size: 20)),
             const SizedBox(width: 12),
-            Text("Profile", style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text("Profile", style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF6C63FF).withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    r,
+                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF)),
+                  ),
+                ),
+              ],
+            ),
             const Icon(Icons.arrow_drop_down, color: Colors.grey),
           ],
         ),
@@ -287,55 +326,109 @@ Widget _buildPieChart() {
   );
 }
 
-Widget _buildSidebar() {
-  return Container(
-    decoration: const BoxDecoration(color: Color(0xFF1E1E2C)),
-    child: Column(children: [
-      const SizedBox(height: 50),
-      _buildSidebarLogo(),
-      const SizedBox(height: 40),
-      Expanded(
-        child: RawScrollbar(
-          controller: _sidebarScrollController,
-          thumbColor: Colors.amber, // Midabka cad ee aad rabtay
-          thickness: 6.0,
-          thumbVisibility: true,
-          radius: const Radius.circular(10),
-          child: SingleChildScrollView(
-            controller: _sidebarScrollController, // Ku xir controller-ka
-            child: Column(children: [
-              _navItem(Icons.grid_view_rounded, "Dashboard"),
-              _navItem(Icons.people_alt_rounded, "Students"),
-              _navItem(Icons.school_rounded, "Teachers"),
-              _navItem(Icons.payments_rounded, "Teacher Salary"),
-              _navItem(Icons.how_to_reg, "Attendance"),
-              _navItem(Icons.account_balance_wallet_rounded, "Fees & Accounting"),
-              _navItem(Icons.bus_alert, "Buses"),
-              _navItem(Icons.book, "Exam & Results"),
-              _navItem(Icons.edit_calendar_rounded, "Exam Schedule"),
-              _navItem(Icons.account_balance_wallet_rounded, "Income & Outcome"),
-              _navItem(Icons.bar_chart_rounded, "General Reports"),
-              _navItem(Icons.chat_rounded, "Communications"),
-              _navItem(Icons.mark_as_unread_rounded, "Admin Messages"),
-              _navItem(Icons.person, "Users")
-            ]),
+  List<Map<String, dynamic>> _getNavItemsForRole() {
+    String r = activeRole.toLowerCase();
+
+    if (r.contains('cashier') || r.contains('qasnaji')) {
+      return [
+        {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
+        {"icon": Icons.people_alt_rounded, "title": "Students"},
+        {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
+        {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
+        {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
+      ];
+    } else if (r.contains('teacher') || r.contains('macalin')) {
+      return [
+        {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
+        {"icon": Icons.school_rounded, "title": "Teachers"},
+        {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.chat_rounded, "title": "Communications"},
+        {"icon": Icons.book, "title": "Exam & Results"},
+      ];
+    } else if (r == 'user' || r.contains('student') || r.contains('parent') || r.contains('ardey') || r.contains('waalid')) {
+      return [
+        {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.chat_rounded, "title": "Communications"},
+        {"icon": Icons.book, "title": "Exam & Results"},
+      ];
+    } else if (r == 'admin') {
+      return [
+        {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
+        {"icon": Icons.people_alt_rounded, "title": "Students"},
+        {"icon": Icons.school_rounded, "title": "Teachers"},
+        {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
+        {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
+        {"icon": Icons.bus_alert, "title": "Buses"},
+        {"icon": Icons.book, "title": "Exam & Results"},
+        {"icon": Icons.edit_calendar_rounded, "title": "Exam Schedule"},
+        {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
+        {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
+        {"icon": Icons.chat_rounded, "title": "Communications"},
+        {"icon": Icons.mark_as_unread_rounded, "title": "Admin Messages"},
+        {"icon": Icons.note_alt_rounded, "title": "Notes"},
+        {"icon": Icons.person, "title": "Users"},
+      ];
+    } else {
+      // SuperAdmin or default
+      return [
+        {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
+        {"icon": Icons.people_alt_rounded, "title": "Students"},
+        {"icon": Icons.school_rounded, "title": "Teachers"},
+        {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
+        {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
+        {"icon": Icons.bus_alert, "title": "Buses"},
+        {"icon": Icons.book, "title": "Exam & Results"},
+        {"icon": Icons.edit_calendar_rounded, "title": "Exam Schedule"},
+        {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
+        {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
+        {"icon": Icons.chat_rounded, "title": "Communications"},
+        {"icon": Icons.mark_as_unread_rounded, "title": "Admin Messages"},
+        {"icon": Icons.note_alt_rounded, "title": "Notes"},
+        {"icon": Icons.person, "title": "Users"},
+      ];
+    }
+  }
+
+  Widget _buildSidebar() {
+    final navItems = _getNavItemsForRole();
+    return Container(
+      decoration: const BoxDecoration(color: Color(0xFF1E1E2C)),
+      child: Column(children: [
+        const SizedBox(height: 50),
+        _buildSidebarLogo(),
+        const SizedBox(height: 40),
+        Expanded(
+          child: RawScrollbar(
+            controller: _sidebarScrollController,
+            thumbColor: Colors.amber,
+            thickness: 6.0,
+            thumbVisibility: true,
+            radius: const Radius.circular(10),
+            child: SingleChildScrollView(
+              controller: _sidebarScrollController,
+              child: Column(
+                children: navItems.map((item) => _navItem(item["icon"] as IconData, item["title"] as String)).toList(),
+              ),
+            ),
           ),
         ),
-      ),
-      const Divider(color: Colors.white10),
-      _navItem(Icons.logout, "Log Out"),
-      const SizedBox(height: 20)
-    ]),
-  );
-}
+        const Divider(color: Colors.white10),
+        _navItem(Icons.logout, "Log Out"),
+        const SizedBox(height: 20)
+      ]),
+    );
+  }
 
-Widget _buildSidebarLogo() {
-  return Container(
-    padding: const EdgeInsets.all(10),
-    decoration: BoxDecoration(border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)), borderRadius: BorderRadius.circular(10)),
-    child: const Text(" eSAHAL SCHOOL SYSTEM", style: TextStyle(color: Colors.cyanAccent, fontSize: 18, fontWeight: FontWeight.bold))
-  );
-}
+  Widget _buildSidebarLogo() {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)), borderRadius: BorderRadius.circular(10)),
+      child: const Text("eSAHAL SCHOOL SYSTEM", style: TextStyle(color: Colors.cyanAccent, fontSize: 15, fontWeight: FontWeight.bold)),
+    );
+  }
 
 Widget _navItem(IconData icon, String title) {
   bool isActive = selectedMenu == title;

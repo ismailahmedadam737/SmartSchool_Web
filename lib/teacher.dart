@@ -20,6 +20,8 @@ class _TeachersPageState extends State<TeachersPage> {
   List<Map<String, String>> teachers = [];
   bool isLoading = false;
 
+  bool get isTeacherRole => widget.userRole.trim().toLowerCase() == 'teacher';
+
   @override
   void initState() {
     super.initState();
@@ -260,7 +262,8 @@ class _TeachersPageState extends State<TeachersPage> {
             _inputField("Heerka Waxbarasho", Icons.school, levelController),
             _inputField("Khibradda (Experience)", Icons.workspace_premium, expController),
             const SizedBox(height: 20),
-            if (editingIndex != null)
+            // Teacher Role-ka waxa uu keliya geli karaa diiwaangelinta cusub, kuma cusboonaysiinayo
+            if (editingIndex != null && !isTeacherRole)
               TextButton(onPressed: _clearFields, child: const Text("Jooji Wax ka bedelka", style: TextStyle(color: Colors.red))),
             const SizedBox(height: 10),
             _saveButton(),
@@ -316,22 +319,26 @@ class _TeachersPageState extends State<TeachersPage> {
   }
 
   Widget _saveButton() {
+    // Teacher role-ku kaliya diiwaangelinta cusub buu samayn karaa (ma update-gareynkaro)
+    bool isUpdateMode = editingIndex != null && !isTeacherRole;
     return ElevatedButton(
-      onPressed: isLoading ? null : _saveTeacher,
+      onPressed: isLoading ? null : (isTeacherRole && editingIndex != null ? null : _saveTeacher),
       style: ElevatedButton.styleFrom(
         padding: EdgeInsets.zero,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       ),
       child: Ink(
         decoration: BoxDecoration(
-          gradient: const LinearGradient(colors: [Color(0xFFFF512F), Color(0xFFDD2476)]),
+          gradient: LinearGradient(colors: isTeacherRole && editingIndex != null
+              ? [Colors.grey, Colors.grey]
+              : [const Color(0xFFFF512F), const Color(0xFFDD2476)]),
           borderRadius: BorderRadius.circular(15),
         ),
         child: Container(
           height: 55,
           alignment: Alignment.center,
           child: Text(
-            editingIndex == null ? "Kaydi Macalinka" : "Cusboonaysii Xogta", 
+            isUpdateMode ? "Cusboonaysii Xogta" : "Kaydi Macalinka", 
             style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)
           ),
         ),
@@ -358,7 +365,9 @@ class _TeachersPageState extends State<TeachersPage> {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _editTeacher(index)),
+            // Teacher role-ku ma Edit-gareynkaro macalimiinta kale (is-diiwaangelin uun)
+            if (!isTeacherRole)
+              IconButton(icon: const Icon(Icons.edit, color: Colors.blue), onPressed: () => _editTeacher(index)),
             if (widget.userRole.toLowerCase() != 'teacher')
               IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteTeacher(index)),
           ],

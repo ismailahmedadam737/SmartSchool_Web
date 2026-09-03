@@ -134,7 +134,7 @@ class _SchoolCommunicationsPageState extends State<SchoolCommunicationsPage> {
                             children: [
                               Text("Xilliyada Shaqada", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
                               SizedBox(height: 4),
-                              Text("Sabti - Khamiis: 7:00 AM - 12:30 PM", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                              Text("Sabti - Arbaca: 7:00 AM - 11:50 PM", style: TextStyle(color: Colors.grey, fontSize: 13)),
                             ],
                           ),
                         )
