@@ -20,7 +20,7 @@ class EliteSchoolApp extends StatelessWidget {
       ),
       // Halkan LoginPage looma baahna in la siiyo userRole, 
       // waayo isagaa laga dhex dooranayaa.
-      home: const AuthPage(userRole: '',), 
+      home: const AuthPage(), 
     );
   }
 }

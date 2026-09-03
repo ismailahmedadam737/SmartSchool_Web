@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:iftiinshe/dashboard_screen.dart';
+import 'package:iftiinshe/super_admin_dashboard.dart';
 
 class AuthPage extends StatefulWidget {
-  const AuthPage({super.key, required String userRole});
+  const AuthPage({super.key});
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -61,7 +62,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         (pass == 'superadmin123' || pass == 'admin123' || pass == '123456')) {
       if (!mounted) return;
       Navigator.pushReplacement(context,
-          MaterialPageRoute(builder: (_) => const DashboardScreen(userRole: 'SuperAdmin', role: 'SuperAdmin')));
+          MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
       setState(() => _isLoading = false);
       return;
     }

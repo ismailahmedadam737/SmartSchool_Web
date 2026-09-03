@@ -79,7 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Color get textColor => isDarkMode ? Colors.white : Colors.black87;
 
   void _performLogout() {
-    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthPage(userRole: '')), (route) => false);
+    Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => const AuthPage()), (route) => false);
   }
 
   @override
