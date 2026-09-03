@@ -120,10 +120,15 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         return;
       }
     } catch (e) {
+      // ── Network / timeout error ──
+      // Show a connection error for non-demo users (real admins trying to login)
+      final bool isDemoUser = (lowerUser == 'admin' || lowerUser == 'cashier' ||
+          lowerUser == 'teacher' || lowerUser == 'user' ||
+          lowerUser == 'student' || lowerUser == 'parent');
+      final bool isDemoPass = (pass == 'admin123' || pass == '123456' || pass == 'password');
 
-      // Offline fallback for demo roles
-      if ((pass == 'admin123' || pass == '123456' || pass == 'password') &&
-          (lowerUser == 'admin' || lowerUser == 'cashier' || lowerUser == 'teacher' || lowerUser == 'user' || lowerUser == 'student' || lowerUser == 'parent')) {
+      // Demo offline fallback (for testing only)
+      if (isDemoUser && isDemoPass) {
         String assignedRole = lowerUser == 'admin'
             ? 'Admin'
             : lowerUser == 'cashier'
@@ -137,13 +142,24 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         setState(() => _isLoading = false);
         return;
       }
-      if (lowerUser == 'superadmin') {
+
+      // SuperAdmin offline fallback
+      if (lowerUser == 'superadmin' &&
+          (pass == 'superadmin123' || pass == 'admin123' || pass == '123456')) {
         if (!mounted) return;
         Navigator.pushReplacement(context,
             MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
         setState(() => _isLoading = false);
         return;
       }
+
+      // Real admin/provisioned user: server is unreachable → show connection error
+      _showSnack(
+        "Server-ka la xiriiri karo waayay. Internet-ka hubi ama dib u tijaabi (${e.toString().contains('timeout') ? 'Timeout' : 'Connection Error'}).",
+        Colors.orange,
+      );
+      setState(() => _isLoading = false);
+      return;
     }
 
     _showSnack("Username ama Password waa khalad!", Colors.redAccent);
