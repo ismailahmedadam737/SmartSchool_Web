@@ -108,12 +108,17 @@ async function ensureTenantsTable() {
         name                    TEXT NOT NULL,
         schema_name             TEXT UNIQUE NOT NULL,
         admin_email             TEXT,
+        admin_username          TEXT,
+        admin_password          TEXT,
         subscription_status     TEXT NOT NULL DEFAULT 'active',
         subscription_plan       TEXT NOT NULL DEFAULT 'basic',
         subscription_expires_at TIMESTAMPTZ,
         created_at              TIMESTAMPTZ DEFAULT NOW()
       )
     `);
+    // Add columns if upgrading from old schema
+    await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS admin_username TEXT`).catch(() => {});
+    await pool.query(`ALTER TABLE tenants ADD COLUMN IF NOT EXISTS admin_password TEXT`).catch(() => {});
     console.log('✅ Tenants table ready');
   } catch (err) {
     console.error('❌ Failed to create tenants table:', err.message);
@@ -125,7 +130,9 @@ ensureTenantsTable();
 app.get('/admin/tenants', async (req, res) => {
   try {
     const result = await pool.query(
-      'SELECT id, name, schema_name, admin_email, subscription_status, subscription_plan, subscription_expires_at, created_at FROM tenants ORDER BY id'
+      `SELECT id, name, schema_name, admin_email, admin_username, admin_password,
+              subscription_status, subscription_plan, subscription_expires_at, created_at
+       FROM tenants ORDER BY id`
     );
     res.json(result.rows);
   } catch (err) {
@@ -134,18 +141,55 @@ app.get('/admin/tenants', async (req, res) => {
   }
 });
 
-// POST /admin/tenants – register a new school
-app.post('/admin/tenants', async (req, res) => {
-  const { name, admin_email, subscription_plan = 'basic', billing_cycle_days = 30 } = req.body;
-  if (!name) return res.status(400).json({ error: 'name is required' });
-  const schemaName = 'tenant_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
-  const expiresAt = new Date(Date.now() + billing_cycle_days * 86400000);
+// GET /admin/tenants/:id – single tenant detail
+app.get('/admin/tenants/:id', async (req, res) => {
   try {
     const result = await pool.query(
-      `INSERT INTO tenants (name, schema_name, admin_email, subscription_plan, subscription_expires_at)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [name, schemaName, admin_email, subscription_plan, expiresAt]
+      `SELECT id, name, schema_name, admin_email, admin_username, admin_password,
+              subscription_status, subscription_plan, subscription_expires_at, created_at
+       FROM tenants WHERE id = $1`, [req.params.id]
     );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch tenant' });
+  }
+});
+
+// POST /admin/tenants – register a new school
+app.post('/admin/tenants', async (req, res) => {
+  const {
+    name,
+    admin_email = '',
+    admin_username,
+    admin_password,
+    subscription_plan = 'basic',
+    billing_cycle_days = 30
+  } = req.body;
+  if (!name)           return res.status(400).json({ error: 'name is required' });
+  if (!admin_username) return res.status(400).json({ error: 'admin_username is required' });
+  if (!admin_password) return res.status(400).json({ error: 'admin_password is required' });
+
+  const schemaName = 'tenant_' + name.toLowerCase().replace(/[^a-z0-9]/g, '_') + '_' + Date.now();
+  const expiresAt  = new Date(Date.now() + billing_cycle_days * 86400000);
+  try {
+    const result = await pool.query(
+      `INSERT INTO tenants
+         (name, schema_name, admin_email, admin_username, admin_password, subscription_plan, subscription_expires_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [name, schemaName, admin_email, admin_username, admin_password, subscription_plan, expiresAt]
+    );
+    // Also register the admin in the users table so they can log in
+    try {
+      await pool.query(
+        `INSERT INTO users (username, password, role)
+         VALUES ($1, $2, 'Admin')
+         ON CONFLICT (username) DO UPDATE SET password = $2, role = 'Admin'`,
+        [admin_username, admin_password]
+      );
+    } catch (uErr) {
+      console.log('Note: users table insert skipped:', uErr.message);
+    }
     res.status(201).json(result.rows[0]);
   } catch (err) {
     console.error('Create tenant error:', err.message);
