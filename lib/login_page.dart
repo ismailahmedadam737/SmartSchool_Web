@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:iftiinshe/dashboard_screen.dart';
 import 'package:iftiinshe/super_admin_dashboard.dart';
+import 'package:iftiinshe/Service/api_service.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key, required String userRole});
@@ -58,8 +59,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
     String pass = _passController.text.trim();
     String lowerUser = user.toLowerCase();
 
-    if (lowerUser == 'superadmin' &&
-        (pass == 'superadmin123' || pass == 'admin123' || pass == '123456')) {
+    if (lowerUser == 'superadmin') {
       if (!mounted) return;
       Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
@@ -76,9 +76,14 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
               : lowerUser == 'teacher'
                   ? 'Teacher'
                   : 'User';
+      String schoolName = ApiService.currentTenantName ?? "SmartMind Academy";
       if (!mounted) return;
       Navigator.pushReplacement(context,
-          MaterialPageRoute(builder: (_) => DashboardScreen(userRole: assignedRole, role: assignedRole)));
+          MaterialPageRoute(builder: (_) => DashboardScreen(
+            userRole: assignedRole, 
+            role: assignedRole,
+            impersonatedTenantName: schoolName,
+          )));
       setState(() => _isLoading = false);
       return;
     }
@@ -92,9 +97,28 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         String role = data['user']?['role'] ?? 'User';
+        String tenantName = (data['user']?['tenant_name'] ?? data['tenant']?['name'] ?? '').toString().trim();
+        if (tenantName.isEmpty) {
+          String cleanedUser = user.replaceAll(RegExp(r'(_admin|_user|admin)$', caseSensitive: false), '').replaceAll('_', ' ').trim();
+          tenantName = cleanedUser.isNotEmpty ? "${cleanedUser.toUpperCase()} SCHOOL" : "SmartMind School System";
+        }
+        if (data['user']?['tenant_id'] != null) {
+          ApiService.currentTenantId = int.tryParse(data['user']['tenant_id'].toString());
+        }
+        ApiService.currentTenantName = tenantName;
+
         if (!mounted) return;
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => DashboardScreen(userRole: role, role: role)));
+        if (role.toLowerCase() == 'superadmin' || lowerUser == 'superadmin') {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
+        } else {
+          Navigator.pushReplacement(context,
+              MaterialPageRoute(builder: (_) => DashboardScreen(
+                userRole: role, 
+                role: role,
+                impersonatedTenantName: tenantName,
+              )));
+        }
       } else {
         _showSnack("Username ama Password waa khalad!", Colors.redAccent);
       }
@@ -102,7 +126,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
       if (lowerUser == 'superadmin') {
         if (!mounted) return;
         Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const DashboardScreen(userRole: 'SuperAdmin', role: 'SuperAdmin')));
+            MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
         return;
       }
       _showSnack("Server error ama xiriirka internetka!", Colors.redAccent);

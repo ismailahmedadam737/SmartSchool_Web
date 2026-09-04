@@ -24,7 +24,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
   String? _error;
   String _searchQuery = '';
   String _selectedFilter = 'all'; // 'all' | 'active' | 'suspended' | 'expired'
+  String _currentTab = 'Dashboard'; // 'Dashboard' | 'All Schools' | 'Active' | 'Suspended' | 'Billing'
   late AnimationController _fabAnim;
+  final ScrollController _sidebarScrollCtrl = ScrollController();
 
   @override
   void initState() {
@@ -38,6 +40,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
   @override
   void dispose() {
     _fabAnim.dispose();
+    _sidebarScrollCtrl.dispose();
     super.dispose();
   }
 
@@ -293,13 +296,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
   void _showCredentialsDialog(Map<String, dynamic> school) {
     final String loginUrl = "https://smartschool-web.onrender.com";
     final String payloadText =
-        "🌐 IFTIINSHE SCHOOL SYSTEM CREDENTIALS 🌐\n\n"
+        "🌐 SMARTMIND TECHNOLOGY - SCHOOL CREDENTIALS 🌐\n\n"
         "🏢 School: ${school['name']}\n"
         "🔗 Login Web Link: $loginUrl\n"
         "👤 Username: ${school['admin_username']}\n"
         "🔑 Password: ${school['admin_password']}\n"
         "🏷️ Plan: ${(school['subscription_plan'] ?? 'basic').toString().toUpperCase()}\n\n"
         "Fadlan u dir cinwaannadan maamulaha iskuulka.";
+
+    final ScrollController dialogScrollCtrl = ScrollController();
 
     showDialog(
       context: context,
@@ -308,7 +313,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 460, maxHeight: 600),
+          constraints: const BoxConstraints(maxWidth: 480, maxHeight: 620),
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -325,10 +330,17 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                   spreadRadius: 2),
             ],
           ),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
+          child: RawScrollbar(
+            controller: dialogScrollCtrl,
+            thumbColor: const Color(0xFF00E676),
+            radius: const Radius.circular(8),
+            thickness: 6,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: dialogScrollCtrl,
+              physics: const BouncingScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
                   padding: const EdgeInsets.all(16),
@@ -417,6 +429,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -449,6 +462,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
         ]),
       );
 
+  // ─────────────────────────── SCROLLABLE 2-CARD SCHOOL REGISTRATION MODAL ───────────────────────────
+
   void _showAddSchoolDialog() {
     final formKey = GlobalKey<FormState>();
     final nameCtrl = TextEditingController();
@@ -456,6 +471,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
     final userCtrl = TextEditingController();
     final passCtrl = TextEditingController();
     final feeCtrl = TextEditingController(text: '50.00');
+    final ScrollController modalScrollCtrl = ScrollController();
     String plan = 'basic';
     int days = 30;
     bool saving = false;
@@ -467,6 +483,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(builder: (ctx, setBS) {
         return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+          ),
           padding: EdgeInsets.fromLTRB(
               24, 20, 24, MediaQuery.of(ctx).viewInsets.bottom + 24),
           decoration: const BoxDecoration(
@@ -477,247 +496,281 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
             ),
             borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: Form(
-              key: formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 44,
-                      height: 5,
-                      margin: const EdgeInsets.only(bottom: 20),
-                      decoration: BoxDecoration(
-                        color: Colors.white24,
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                    ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 5,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(3),
                   ),
-                  Row(children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(color: const Color(0xFF6C63FF).withValues(alpha: 0.4), blurRadius: 15)
-                        ],
-                      ),
-                      child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
-                    ),
-                    const SizedBox(width: 14),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Provision New School System',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 19,
-                                fontWeight: FontWeight.bold)),
-                        Text('Deploy dedicated multi-tenant instance & credentials',
-                            style: TextStyle(color: Colors.white38, fontSize: 11)),
-                      ],
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white38),
-                      onPressed: () => Navigator.pop(ctx),
-                    ),
-                  ]),
-                  const SizedBox(height: 24),
-
-                  _fieldLabel('School System Name *'),
-                  _customField(nameCtrl, 'e.g. Al-Nuur International Academy', Icons.domain_rounded,
-                      onChanged: (val) {
-                        if (userCtrl.text.isEmpty && val.trim().isNotEmpty) {
-                          String suggest = val.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_') + '_admin';
-                          setBS(() => userCtrl.text = suggest);
-                        }
-                      },
-                      validator: (v) => v == null || v.trim().isEmpty ? 'School name is required' : null),
-                  const SizedBox(height: 14),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _fieldLabel('Admin Username *'),
-                            _customField(userCtrl, 'e.g. alnuur_admin', Icons.person_rounded,
-                                validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _fieldLabel('Admin Email'),
-                            _customField(emailCtrl, 'admin@school.com', Icons.email_outlined,
-                                inputType: TextInputType.emailAddress),
-                          ],
-                        ),
-                      ),
+                ),
+              ),
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                        colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: const Color(0xFF6C63FF).withValues(alpha: 0.4), blurRadius: 15)
                     ],
                   ),
-                  const SizedBox(height: 14),
+                  child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 14),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Provision New School System',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold)),
+                    Text('SmartMind Technology Multi-Tenant Provisioning',
+                        style: TextStyle(color: Colors.white38, fontSize: 11)),
+                  ],
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded, color: Colors.white38),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ]),
+              const SizedBox(height: 16),
 
-                  _fieldLabel('Temporary Password *'),
-                  TextFormField(
-                    controller: passCtrl,
-                    obscureText: obscure,
-                    style: const TextStyle(color: Colors.white),
-                    validator: (v) => v == null || v.length < 4 ? 'Min 4 characters' : null,
-                    decoration: InputDecoration(
-                      hintText: 'Enter password',
-                      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                      prefixIcon: const Icon(Icons.lock_rounded, color: Color(0xFF6C63FF), size: 20),
-                      suffixIcon: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF00D2FF), size: 18),
-                            tooltip: 'Auto Generate Password',
-                            onPressed: () {
-                              setBS(() => passCtrl.text = 'SchoolPass${(1000 + (DateTime.now().millisecond % 9000))}');
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: Colors.white38, size: 18),
-                            onPressed: () => setBS(() => obscure = !obscure),
-                          ),
-                        ],
-                      ),
-                      filled: true,
-                      fillColor: Colors.white.withValues(alpha: 0.07),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
-                      enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15))),
-                      focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 1.5)),
-                      errorBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          borderSide: const BorderSide(color: Colors.redAccent)),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 6,
+              Expanded(
+                child: RawScrollbar(
+                  controller: modalScrollCtrl,
+                  thumbColor: const Color(0xFF6C63FF),
+                  radius: const Radius.circular(8),
+                  thickness: 6,
+                  thumbVisibility: true,
+                  child: SingleChildScrollView(
+                    controller: modalScrollCtrl,
+                    physics: const BouncingScrollPhysics(),
+                    child: Form(
+                      key: formKey,
+                      child: Container(
+                        padding: const EdgeInsets.all(22),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(24),
+                          border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.3)),
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _fieldLabel('Subscription Plan'),
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.07),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                              ),
-                              padding: const EdgeInsets.symmetric(horizontal: 14),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: plan,
-                                  dropdownColor: const Color(0xFF171E31),
-                                  style: const TextStyle(color: Colors.white),
-                                  isExpanded: true,
-                                  onChanged: (v) => setBS(() => plan = v!),
-                                  items: const [
-                                    DropdownMenuItem(value: 'basic', child: Text('Basic – Free Trial')),
-                                    DropdownMenuItem(value: 'standard', child: Text('Standard – Monthly (\$50)')),
-                                    DropdownMenuItem(value: 'premium', child: Text('Premium – Enterprise (\$100)')),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 4,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _fieldLabel('Monthly Fee (\$)'),
-                            _customField(feeCtrl, '50.00', Icons.attach_money_rounded, inputType: TextInputType.number),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
+                            // Unified Form Header inside Card
+                            const Text('MACLUUMAADKA DIIWAANGELINTA ISKUULKA CUSUB',
+                                style: TextStyle(color: Color(0xFF00D2FF), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                            const SizedBox(height: 18),
 
-                  _fieldLabel('Initial Billing Cycle: $days Days'),
-                  SliderTheme(
-                    data: SliderTheme.of(ctx).copyWith(
-                      activeTrackColor: const Color(0xFF6C63FF),
-                      thumbColor: const Color(0xFF00D2FF),
-                      inactiveTrackColor: Colors.white.withValues(alpha: 0.15),
-                      overlayColor: const Color(0xFF6C63FF).withValues(alpha: 0.2),
-                    ),
-                    child: Slider(
-                      min: 7,
-                      max: 365,
-                      divisions: 20,
-                      value: days.toDouble(),
-                      onChanged: (v) => setBS(() => days = v.round()),
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                            _fieldLabel('School System Name *'),
+                            _customField(nameCtrl, 'e.g. Al-Nuur International Academy', Icons.domain_rounded,
+                                onChanged: (val) {
+                                  if (userCtrl.text.isEmpty && val.trim().isNotEmpty) {
+                                    String suggest = '${val.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_')}_admin';
+                                    setBS(() => userCtrl.text = suggest);
+                                  }
+                                },
+                                validator: (v) => v == null || v.trim().isEmpty ? 'School name is required' : null),
+                            const SizedBox(height: 14),
 
-                  SizedBox(
-                    width: double.infinity,
-                    height: 54,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 8,
-                        shadowColor: const Color(0xFF6C63FF).withValues(alpha: 0.5),
-                      ),
-                      onPressed: saving
-                          ? null
-                          : () async {
-                              if (!formKey.currentState!.validate()) return;
-                              setBS(() => saving = true);
-                              Navigator.pop(ctx);
-                              await _createTenant(
-                                name: nameCtrl.text.trim(),
-                                email: emailCtrl.text.trim(),
-                                username: userCtrl.text.trim(),
-                                password: passCtrl.text.trim(),
-                                plan: plan,
-                                days: days,
-                                fee: double.tryParse(feeCtrl.text.trim()) ?? 50.0,
-                              );
-                            },
-                      child: saving
-                          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
-                          : const Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
+                            Row(
                               children: [
-                                Icon(Icons.rocket_launch_rounded, color: Colors.white),
-                                SizedBox(width: 8),
-                                Text('PROVISION SCHOOL SYSTEM', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1)),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _fieldLabel('Admin Username *'),
+                                      _customField(userCtrl, 'e.g. alnuur_admin', Icons.person_rounded,
+                                          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _fieldLabel('Admin Email'),
+                                      _customField(emailCtrl, 'admin@school.com', Icons.email_outlined,
+                                          inputType: TextInputType.emailAddress),
+                                    ],
+                                  ),
+                                ),
                               ],
                             ),
+                            const SizedBox(height: 14),
+
+                            _fieldLabel('Temporary Password *'),
+                            TextFormField(
+                              controller: passCtrl,
+                              obscureText: obscure,
+                              style: const TextStyle(color: Colors.white),
+                              validator: (v) => v == null || v.length < 4 ? 'Min 4 characters' : null,
+                              decoration: InputDecoration(
+                                hintText: 'Enter password',
+                                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                                prefixIcon: const Icon(Icons.lock_rounded, color: Color(0xFF6C63FF), size: 20),
+                                suffixIcon: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.auto_awesome_rounded, color: Color(0xFF00D2FF), size: 18),
+                                      tooltip: 'Auto Generate Password',
+                                      onPressed: () {
+                                        setBS(() => passCtrl.text = 'SchoolPass${(1000 + (DateTime.now().millisecond % 9000))}');
+                                      },
+                                    ),
+                                    IconButton(
+                                      icon: Icon(obscure ? Icons.visibility_off : Icons.visibility, color: Colors.white38, size: 18),
+                                      onPressed: () => setBS(() => obscure = !obscure),
+                                    ),
+                                  ],
+                                ),
+                                filled: true,
+                                fillColor: Colors.white.withValues(alpha: 0.07),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                                enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15))),
+                                focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(color: Color(0xFF6C63FF), width: 1.5)),
+                                errorBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(color: Colors.redAccent)),
+                                contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Divider(color: Colors.white12),
+                            const SizedBox(height: 16),
+
+                            // SUBSCRIPTION & BILLING SECTION INSIDE THE UNIFIED CARD
+                            const Text('QORSHAHA DIIWAANGELINTA & LACAGTA',
+                                style: TextStyle(color: Color(0xFF6C63FF), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+                            const SizedBox(height: 14),
+
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 6,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _fieldLabel('Subscription Plan'),
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withValues(alpha: 0.07),
+                                          borderRadius: BorderRadius.circular(14),
+                                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                                        ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                                        child: DropdownButtonHideUnderline(
+                                          child: DropdownButton<String>(
+                                            value: plan,
+                                            dropdownColor: const Color(0xFF171E31),
+                                            style: const TextStyle(color: Colors.white),
+                                            isExpanded: true,
+                                            onChanged: (v) => setBS(() => plan = v!),
+                                            items: const [
+                                              DropdownMenuItem(value: 'basic', child: Text('Basic – Free Trial')),
+                                              DropdownMenuItem(value: 'standard', child: Text('Standard – Monthly (\$50)')),
+                                              DropdownMenuItem(value: 'premium', child: Text('Premium – Enterprise (\$100)')),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  flex: 4,
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _fieldLabel('Monthly Fee (\$)'),
+                                      _customField(feeCtrl, '50.00', Icons.attach_money_rounded, inputType: TextInputType.number),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+
+                            _fieldLabel('Initial Billing Cycle: $days Days'),
+                            SliderTheme(
+                              data: SliderTheme.of(ctx).copyWith(
+                                activeTrackColor: const Color(0xFF6C63FF),
+                                thumbColor: const Color(0xFF00D2FF),
+                                inactiveTrackColor: Colors.white.withValues(alpha: 0.15),
+                                overlayColor: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                              ),
+                              child: Slider(
+                                min: 7,
+                                max: 365,
+                                divisions: 20,
+                                value: days.toDouble(),
+                                onChanged: (v) => setBS(() => days = v.round()),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+
+                            SizedBox(
+                              width: double.infinity,
+                              height: 54,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF6C63FF),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  elevation: 8,
+                                  shadowColor: const Color(0xFF6C63FF).withValues(alpha: 0.5),
+                                ),
+                                onPressed: saving
+                                    ? null
+                                    : () async {
+                                        if (!formKey.currentState!.validate()) return;
+                                        setBS(() => saving = true);
+                                        Navigator.pop(ctx);
+                                        await _createTenant(
+                                          name: nameCtrl.text.trim(),
+                                          email: emailCtrl.text.trim(),
+                                          username: userCtrl.text.trim(),
+                                          password: passCtrl.text.trim(),
+                                          plan: plan,
+                                          days: days,
+                                          fee: double.tryParse(feeCtrl.text.trim()) ?? 50.0,
+                                        );
+                                      },
+                                child: saving
+                                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                    : const Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.rocket_launch_rounded, color: Colors.white),
+                                          SizedBox(width: 8),
+                                          Text('PROVISION SCHOOL SYSTEM', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 1)),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         );
       }),
@@ -807,79 +860,258 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
     }
   }
 
+  // ─────────────────────────── SUPERADMIN SIDEBAR NAVIGATION ───────────────────────────
+
+  Widget _buildSuperAdminSidebar() {
+    return Container(
+      width: 270,
+      decoration: const BoxDecoration(
+        color: Color(0xFF0D121F),
+        border: Border(right: BorderSide(color: Color(0xFF1E2842), width: 1)),
+      ),
+      child: Column(
+        children: [
+          const SizedBox(height: 24),
+          // Logo & Branding Header
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFF172036), Color(0xFF1E2A47)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
+                  blurRadius: 15,
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(Icons.hub_rounded, color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'SMARTMIND',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      Text(
+                        'Central Command Hub',
+                        style: TextStyle(
+                          color: Color(0xFF00D2FF),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Menu Navigation List
+          Expanded(
+            child: RawScrollbar(
+              controller: _sidebarScrollCtrl,
+              thumbColor: const Color(0xFF6C63FF),
+              thickness: 5,
+              radius: const Radius.circular(10),
+              child: SingleChildScrollView(
+                controller: _sidebarScrollCtrl,
+                child: Column(
+                  children: [
+                    _sidebarNavItem(
+                      id: 'Dashboard',
+                      label: 'Dashboard Overview',
+                      icon: Icons.dashboard_customize_rounded,
+                      badge: '$_totalCount',
+                      badgeColor: const Color(0xFF6C63FF),
+                    ),
+                    _sidebarNavItem(
+                      id: 'All Schools',
+                      label: 'All Schools (Dhammaan)',
+                      icon: Icons.domain_rounded,
+                      badge: '$_totalCount',
+                      badgeColor: const Color(0xFF00D2FF),
+                    ),
+                    _sidebarNavItem(
+                      id: 'Active',
+                      label: 'Active Systems',
+                      icon: Icons.check_circle_rounded,
+                      badge: '$_activeCount',
+                      badgeColor: const Color(0xFF00E676),
+                    ),
+                    _sidebarNavItem(
+                      id: 'Suspended',
+                      label: 'Suspended / Expired',
+                      icon: Icons.pause_circle_rounded,
+                      badge: '${_suspendedCount + _expiredCount}',
+                      badgeColor: Colors.amberAccent,
+                    ),
+                    _sidebarNavItem(
+                      id: 'Billing',
+                      label: 'Subscriptions & MRR',
+                      icon: Icons.payments_rounded,
+                      badge: '\$${_estimatedMrr.toStringAsFixed(0)}',
+                      badgeColor: const Color(0xFF00D2FF),
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Divider(color: Colors.white12),
+                    ),
+                    ListTile(
+                      onTap: () {
+                        if (Navigator.canPop(context)) Navigator.pop(context);
+                        _showAddSchoolDialog();
+                      },
+                      leading: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6C63FF).withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.add_rounded, color: Color(0xFF6C63FF), size: 18),
+                      ),
+                      title: const Text('Provision New School',
+                          style: TextStyle(color: Color(0xFF6C63FF), fontSize: 13, fontWeight: FontWeight.bold)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // Footer Status & Logout
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.04),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.fiber_manual_record, color: Color(0xFF00E676), size: 10),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Multi-Tenant Engine Online',
+                          style: TextStyle(color: Colors.white54, fontSize: 10, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 10),
+                ListTile(
+                  onTap: _handleLogout,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  tileColor: Colors.redAccent.withValues(alpha: 0.08),
+                  leading: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 20),
+                  title: const Text('Logout Session', style: TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sidebarNavItem({
+    required String id,
+    required String label,
+    required IconData icon,
+    required String badge,
+    required Color badgeColor,
+  }) {
+    final bool isSelected = _currentTab == id;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFF6C63FF).withValues(alpha: 0.18) : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isSelected ? const Color(0xFF6C63FF).withValues(alpha: 0.5) : Colors.transparent,
+        ),
+      ),
+      child: ListTile(
+        dense: true,
+        onTap: () {
+          if (Navigator.canPop(context)) Navigator.pop(context);
+          setState(() {
+            _currentTab = id;
+            if (id == 'All Schools' || id == 'Dashboard') {
+              _selectedFilter = 'all';
+            } else if (id == 'Active') {
+              _selectedFilter = 'active';
+            } else if (id == 'Suspended') {
+              _selectedFilter = 'suspended';
+            }
+          });
+        },
+        leading: Icon(icon, color: isSelected ? const Color(0xFF00D2FF) : Colors.white70, size: 20),
+        title: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? const Color(0xFF00D2FF) : Colors.white,
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+          decoration: BoxDecoration(
+            color: badgeColor.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: badgeColor.withValues(alpha: 0.4)),
+          ),
+          child: Text(
+            badge,
+            style: TextStyle(color: badgeColor, fontSize: 10, fontWeight: FontWeight.bold),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ─────────────────────────── MAIN BUILD UI ───────────────────────────
 
   @override
   Widget build(BuildContext context) {
     final filtered = _filteredTenants;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFF090D16),
-      floatingActionButton: ScaleTransition(
-        scale: CurvedAnimation(parent: _fabAnim, curve: Curves.elasticOut),
-        child: FloatingActionButton.extended(
-          onPressed: _showAddSchoolDialog,
-          backgroundColor: const Color(0xFF6C63FF),
-          elevation: 10,
-          icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
-          label: const Text('Provision New School',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-        ),
-      ),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF111726),
-        elevation: 0,
-        title: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
-            ),
-            const SizedBox(width: 12),
-            const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('SCHOOL COMMAND CENTER',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1)),
-                Row(
-                  children: [
-                    Icon(Icons.fiber_manual_record, color: Color(0xFF00E676), size: 10),
-                    SizedBox(width: 4),
-                    Text('Platform Status: Operational (Multi-Tenant System)',
-                        style: TextStyle(color: Colors.white38, fontSize: 10)),
-                  ],
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
-            tooltip: 'Refresh All Systems',
-            onPressed: _fetchTenants,
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
-            tooltip: 'Logout',
-            onPressed: _handleLogout,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFF090D16), Color(0xFF111726), Color(0xFF182035)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isDesktop = constraints.maxWidth >= 900;
+
+        final Widget mainContentArea = SafeArea(
           child: _loading
               ? const Center(child: CircularProgressIndicator(color: Color(0xFF6C63FF)))
               : _error != null
@@ -887,11 +1119,53 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                   : CustomScrollView(
                       physics: const BouncingScrollPhysics(),
                       slivers: [
+                        // Header Badge Title area
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(10),
+                                    border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.verified_user_rounded, color: Color(0xFF00D2FF), size: 14),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'SMARTMIND TECHNOLOGY • CENTRAL COMMAND',
+                                        style: TextStyle(
+                                          color: Colors.white.withValues(alpha: 0.8),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.8,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const Spacer(),
+                                Text(
+                                  'Showing ${filtered.length} of $_totalCount Systems',
+                                  style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
                         // Hero Metric Cards
-                        SliverToBoxAdapter(child: _buildMetricCards()),
+                        if (_currentTab == 'Dashboard' || _currentTab == 'Billing')
+                          SliverToBoxAdapter(child: _buildMetricCards()),
+
                         // Search & Filter Bar
                         SliverToBoxAdapter(child: _buildSearchAndFilterHeader()),
-                        // School System Cards List
+
+                        // School System Cards List (All Schools view)
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
                           sliver: filtered.isEmpty
@@ -905,8 +1179,95 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                         ),
                       ],
                     ),
-        ),
-      ),
+        );
+
+        return Scaffold(
+          backgroundColor: const Color(0xFF090D16),
+          drawer: !isDesktop ? Drawer(width: 270, child: _buildSuperAdminSidebar()) : null,
+          floatingActionButton: ScaleTransition(
+            scale: CurvedAnimation(parent: _fabAnim, curve: Curves.elasticOut),
+            child: FloatingActionButton.extended(
+              onPressed: _showAddSchoolDialog,
+              backgroundColor: const Color(0xFF6C63FF),
+              elevation: 10,
+              icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
+              label: const Text('Provision New School',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+            ),
+          ),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF111726),
+            elevation: 0,
+            leading: !isDesktop
+                ? Builder(
+                    builder: (ctx) => IconButton(
+                      icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                      onPressed: () => Scaffold.of(ctx).openDrawer(),
+                      tooltip: 'Open Command Menu',
+                    ),
+                  )
+                : null,
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('SMARTMIND TECHNOLOGY COMMAND CENTER',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.8)),
+                    Row(
+                      children: [
+                        Icon(Icons.fiber_manual_record, color: Color(0xFF00E676), size: 10),
+                        SizedBox(width: 4),
+                        Text('Platform Status: Operational (Multi-Tenant System)',
+                            style: TextStyle(color: Colors.white38, fontSize: 10)),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
+                tooltip: 'Refresh All Systems',
+                onPressed: _fetchTenants,
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout_rounded, color: Colors.redAccent),
+                tooltip: 'Logout',
+                onPressed: _handleLogout,
+              ),
+              const SizedBox(width: 8),
+            ],
+          ),
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF090D16), Color(0xFF111726), Color(0xFF182035)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
+            ),
+            child: isDesktop
+                ? Row(
+                    children: [
+                      _buildSuperAdminSidebar(),
+                      Expanded(child: mainContentArea),
+                    ],
+                  )
+                : mainContentArea,
+          ),
+        );
+      },
     );
   }
 
@@ -914,7 +1275,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
 
   Widget _buildMetricCards() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth > 750;
@@ -1047,11 +1408,22 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
     return ChoiceChip(
       selected: selected,
       onSelected: (_) => setState(() => _selectedFilter = id),
-      avatar: Icon(icon, size: 16, color: selected ? Colors.white : Colors.white54),
-      label: Text(label, style: TextStyle(color: selected ? Colors.white : Colors.white70, fontSize: 12, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+      avatar: Icon(icon, size: 16, color: selected ? Colors.white : const Color(0xFF00D2FF)),
+      label: Text(
+        label,
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 13,
+          fontWeight: selected ? FontWeight.bold : FontWeight.w600,
+        ),
+      ),
       selectedColor: const Color(0xFF6C63FF),
-      backgroundColor: Colors.white.withValues(alpha: 0.06),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: selected ? const Color(0xFF6C63FF) : Colors.transparent)),
+      backgroundColor: const Color(0xFF1E2842),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(14),
+        side: BorderSide(color: selected ? const Color(0xFF00D2FF) : const Color(0xFF334266), width: 1.5),
+      ),
       showCheckmark: false,
     );
   }
@@ -1074,7 +1446,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
     final Color statusCol = isExpired ? Colors.redAccent : _statusColor(status);
 
     final String loginPayload =
-        "🌐 IFTIINSHE SCHOOL LOGIN 🌐\n"
+        "🌐 SMARTMIND TECHNOLOGY SCHOOL LOGIN 🌐\n"
         "Link: https://smartschool-web.onrender.com\n"
         "Username: $user\n"
         "Password: $pass";

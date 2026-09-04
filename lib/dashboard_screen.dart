@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:iftiinshe/AdminMessagesPage.dart';
 import 'package:iftiinshe/AtendancePage.dart';
+import 'package:iftiinshe/Service/api_service.dart';
 import 'package:iftiinshe/CommunicationsPage.dart';
 import 'package:iftiinshe/ExamScheduleGeneratorPage.dart';
 import 'package:iftiinshe/Income%20&%20Outcome.dart';
@@ -38,8 +39,8 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   String selectedMenu = "Dashboard";
   bool isDarkMode = false;
-  final ScrollController _sidebarController = ScrollController();
   final ScrollController _imageScrollController = ScrollController();
+  final ScrollController _sidebarScrollController = ScrollController();
   Timer? _timer;
 
   String get activeRole {
@@ -78,6 +79,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     _timer?.cancel();
     _imageScrollController.dispose();
+    _sidebarScrollController.dispose();
     super.dispose();
   }
 
@@ -232,94 +234,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildImpersonationBanner() {
-    if (!widget.isImpersonating) return const SizedBox.shrink();
-    final bool isSmall = MediaQuery.of(context).size.width < 600;
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(colors: [Color(0xFFFF512F), Color(0xFFDD2476)]),
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.redAccent.withValues(alpha: 0.3),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          )
-        ],
-      ),
-      child: isSmall
-          ? Column(
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.security, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        "⚠️ IMPERSONATION MODE (${widget.impersonatedTenantName.isNotEmpty ? widget.impersonatedTenantName : 'Iskuulka'})",
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.redAccent,
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
-                    onPressed: () {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SuperAdminDashboard()),
-                        (route) => false,
-                      );
-                    },
-                    icon: const Icon(Icons.exit_to_app_rounded, size: 14),
-                    label: const Text("Exit Impersonation", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
-                  ),
-                ),
-              ],
-            )
-          : Row(
-              children: [
-                const Icon(Icons.security, color: Colors.white, size: 22),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    "⚠️ IMPERSONATION MODE: Waxaad si toos ah uga dhex shaqaynaysaa (${widget.impersonatedTenantName.isNotEmpty ? widget.impersonatedTenantName : 'Iskuulka'})",
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.redAccent,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () {
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SuperAdminDashboard()),
-                      (route) => false,
-                    );
-                  },
-                  icon: const Icon(Icons.exit_to_app_rounded, size: 16),
-                  label: const Text("Exit Impersonation", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                ),
-              ],
-            ),
-    );
+    // Hidden completely so local school admin cannot see or cancel SuperAdmin access
+    return const SizedBox.shrink();
   }
 
   Widget _buildDashboardHome() {
@@ -454,9 +370,30 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return PopupMenuButton<String>(
       offset: const Offset(0, 50),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      onSelected: (value) { if (value == 'logout') _performLogout(); },
+      onSelected: (value) {
+        if (value == 'logout') {
+          _performLogout();
+        } else if (value == 'exit_impersonation') {
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (_) => const SuperAdminDashboard()),
+            (route) => false,
+          );
+        }
+      },
       itemBuilder: (context) => [
         PopupMenuItem(value: 'profile', child: Row(children: [const Icon(Icons.security, size: 20, color: Colors.blueAccent), const SizedBox(width: 10), Text("Role: $r", style: const TextStyle(fontWeight: FontWeight.bold))])),
+        if (widget.isImpersonating)
+          const PopupMenuItem(
+            value: 'exit_impersonation',
+            child: Row(
+              children: [
+                Icon(Icons.dashboard_customize_rounded, size: 20, color: Color(0xFF6C63FF)),
+                SizedBox(width: 10),
+                Text("Return to SuperAdmin Dashboard", style: TextStyle(color: Color(0xFF6C63FF), fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
         const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, size: 20, color: Colors.red), SizedBox(width: 10), Text("Log Out", style: TextStyle(color: Colors.red))])),
       ],
       child: Container(
@@ -558,8 +495,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-// Ku dar ScrollController-ka kor ku xusan widget-kaaga
-final ScrollController _sidebarScrollController = ScrollController();
 
 Widget _buildPieChart() {
   return Container(
@@ -678,6 +613,25 @@ Widget _buildPieChart() {
           ),
         ),
         const Divider(color: Colors.white10),
+        if (widget.isImpersonating) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            child: ListTile(
+              onTap: () {
+                ApiService.currentTenantId = null;
+                ApiService.currentTenantName = null;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SuperAdminDashboard()),
+                );
+              },
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              tileColor: Colors.cyanAccent.withOpacity(0.1),
+              leading: const Icon(Icons.arrow_back_rounded, color: Colors.cyanAccent, size: 20),
+              title: const Text('Back to SuperAdmin Hub', style: TextStyle(color: Colors.cyanAccent, fontWeight: FontWeight.bold, fontSize: 12)),
+            ),
+          ),
+        ],
         _navItem(Icons.logout, "Log Out"),
         const SizedBox(height: 20)
       ]),
@@ -685,36 +639,88 @@ Widget _buildPieChart() {
   }
 
   Widget _buildSidebarLogo() {
-    final String logoText = widget.impersonatedTenantName.trim().isNotEmpty
-        ? widget.impersonatedTenantName.trim().toUpperCase()
-        : "eSAHAL SCHOOL SYSTEM";
+    String schoolName = widget.impersonatedTenantName.trim();
+    if (schoolName.isEmpty && ApiService.currentTenantName != null && ApiService.currentTenantName!.trim().isNotEmpty) {
+      schoolName = ApiService.currentTenantName!.trim();
+    }
+    if (schoolName.isEmpty) {
+      schoolName = "SMARTMIND SCHOOL ACADEMY";
+    }
+    final String logoText = schoolName.toUpperCase();
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 14),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.cyanAccent.withOpacity(0.05),
-        border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
-        borderRadius: BorderRadius.circular(12),
+        gradient: const LinearGradient(
+          colors: [Color(0xFF161E36), Color(0xFF0F1526)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFF00D2FF).withValues(alpha: 0.6), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.cyanAccent.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: const Color(0xFF00D2FF).withValues(alpha: 0.2),
+            blurRadius: 16,
+            spreadRadius: 1,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Text(
-        logoText,
-        textAlign: TextAlign.center,
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(
-          color: Colors.cyanAccent,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.8,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(7),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)],
+                  ),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF00D2FF).withValues(alpha: 0.5),
+                      blurRadius: 10,
+                    ),
+                  ],
+                ),
+                child: const Icon(Icons.school_rounded, color: Colors.white, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "VERIFIED SCHOOL",
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            logoText,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Color(0xFF00D2FF),
+              fontSize: 13.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+              height: 1.3,
+              shadows: [
+                Shadow(
+                  color: Color(0xFF00D2FF),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
