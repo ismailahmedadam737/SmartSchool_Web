@@ -157,40 +157,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
-          children: [
-            if (!isDesktop)
-              Builder(
-                builder: (ctx) => IconButton(
-                  icon: Icon(Icons.menu, color: textColor, size: 26),
-                  onPressed: () => Scaffold.of(ctx).openDrawer(),
-                  tooltip: "Open Drawer",
+        Expanded(
+          child: Row(
+            children: [
+              if (!isDesktop)
+                Builder(
+                  builder: (ctx) => IconButton(
+                    icon: Icon(Icons.menu, color: textColor, size: 24),
+                    onPressed: () => Scaffold.of(ctx).openDrawer(),
+                    tooltip: "Open Drawer",
+                  ),
+                ),
+              if (isNotDashboard)
+                IconButton(
+                  icon: Icon(Icons.arrow_back, color: textColor, size: 22),
+                  onPressed: () => setState(() => selectedMenu = "Dashboard"),
+                  tooltip: "Dib u noqo Dashboard",
+                ),
+              if (!isDesktop || isNotDashboard) const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  selectedMenu,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
+                  style: TextStyle(
+                    fontSize: !isDesktop ? 18 : 28,
+                    fontWeight: FontWeight.bold,
+                    color: textColor,
+                  ),
                 ),
               ),
-            if (isNotDashboard)
-              IconButton(
-                icon: Icon(Icons.arrow_back, color: textColor, size: 24),
-                onPressed: () => setState(() => selectedMenu = "Dashboard"),
-                tooltip: "Dib u noqo Dashboard",
-              ),
-            if (!isDesktop || isNotDashboard) const SizedBox(width: 4),
-            Text(
-              selectedMenu,
-              style: TextStyle(
-                fontSize: !isDesktop ? 20 : 28,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
         Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             IconButton(
-              icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor),
+              icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor, size: 22),
               onPressed: () => setState(() => isDarkMode = !isDarkMode),
             ),
-            SizedBox(width: !isDesktop ? 4 : 15),
+            SizedBox(width: !isDesktop ? 2 : 15),
             _profileMenu(),
           ],
         ),
@@ -226,51 +233,92 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildImpersonationBanner() {
     if (!widget.isImpersonating) return const SizedBox.shrink();
+    final bool isSmall = MediaQuery.of(context).size.width < 600;
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         gradient: const LinearGradient(colors: [Color(0xFFFF512F), Color(0xFFDD2476)]),
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.redAccent.withOpacity(0.3),
+            color: Colors.redAccent.withValues(alpha: 0.3),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
         ],
       ),
-      child: Row(
-        children: [
-          const Icon(Icons.security, color: Colors.white, size: 22),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              "⚠️ IMPERSONATION MODE: Waxaad si toos ah uga dhex shaqaynaysaa (${widget.impersonatedTenantName.isNotEmpty ? widget.impersonatedTenantName : 'Iskuulka'})",
-              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+      child: isSmall
+          ? Column(
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.security, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        "⚠️ IMPERSONATION MODE (${widget.impersonatedTenantName.isNotEmpty ? widget.impersonatedTenantName : 'Iskuulka'})",
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () {
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SuperAdminDashboard()),
+                        (route) => false,
+                      );
+                    },
+                    icon: const Icon(Icons.exit_to_app_rounded, size: 14),
+                    label: const Text("Exit Impersonation", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                  ),
+                ),
+              ],
+            )
+          : Row(
+              children: [
+                const Icon(Icons.security, color: Colors.white, size: 22),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    "⚠️ IMPERSONATION MODE: Waxaad si toos ah uga dhex shaqaynaysaa (${widget.impersonatedTenantName.isNotEmpty ? widget.impersonatedTenantName : 'Iskuulka'})",
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.redAccent,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () {
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SuperAdminDashboard()),
+                      (route) => false,
+                    );
+                  },
+                  icon: const Icon(Icons.exit_to_app_rounded, size: 16),
+                  label: const Text("Exit Impersonation", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(width: 10),
-          ElevatedButton.icon(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.redAccent,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () {
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (_) => SuperAdminDashboard()),
-                (route) => false,
-              );
-            },
-            icon: const Icon(Icons.exit_to_app_rounded, size: 16),
-            label: const Text("Exit Impersonation", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -350,40 +398,47 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                if (showDrawerBtn)
-                  Builder(
-                    builder: (ctx) => IconButton(
-                      icon: Icon(Icons.menu, color: textColor),
-                      onPressed: () => Scaffold.of(ctx).openDrawer(),
-                      tooltip: "Open Menu",
+            Expanded(
+              child: Row(
+                children: [
+                  if (showDrawerBtn)
+                    Builder(
+                      builder: (ctx) => IconButton(
+                        icon: Icon(Icons.menu, color: textColor),
+                        onPressed: () => Scaffold.of(ctx).openDrawer(),
+                        tooltip: "Open Menu",
+                      ),
+                    ),
+                  if (isNotDashboard)
+                    IconButton(
+                      icon: Icon(Icons.arrow_back, color: textColor),
+                      onPressed: () => setState(() => selectedMenu = "Dashboard"),
+                      tooltip: "Dib u noqo Dashboard",
+                    ),
+                  if (showDrawerBtn || isNotDashboard) const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      selectedMenu,
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: showDrawerBtn ? 20 : 32,
+                        fontWeight: FontWeight.bold,
+                        color: textColor,
+                      ),
                     ),
                   ),
-                if (isNotDashboard)
-                  IconButton(
-                    icon: Icon(Icons.arrow_back, color: textColor),
-                    onPressed: () => setState(() => selectedMenu = "Dashboard"),
-                    tooltip: "Dib u noqo Dashboard",
-                  ),
-                if (showDrawerBtn || isNotDashboard) const SizedBox(width: 4),
-                Text(
-                  selectedMenu,
-                  style: TextStyle(
-                    fontSize: showDrawerBtn ? 20 : 32,
-                    fontWeight: FontWeight.bold,
-                    color: textColor,
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
             Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
                   icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor),
                   onPressed: () => setState(() => isDarkMode = !isDarkMode),
                 ),
-                SizedBox(width: showDrawerBtn ? 4 : 20),
+                SizedBox(width: showDrawerBtn ? 2 : 20),
                 _profileMenu(),
               ],
             ),
@@ -395,6 +450,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _profileMenu() {
     String r = activeRole;
+    final bool isSmall = MediaQuery.of(context).size.width < 600;
     return PopupMenuButton<String>(
       offset: const Offset(0, 50),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
@@ -404,31 +460,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const PopupMenuItem(value: 'logout', child: Row(children: [Icon(Icons.logout, size: 20, color: Colors.red), SizedBox(width: 10), Text("Log Out", style: TextStyle(color: Colors.red))])),
       ],
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
-        decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 5)]),
+        padding: EdgeInsets.symmetric(horizontal: isSmall ? 8 : 12, vertical: 6),
+        decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(15), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 5)]),
         child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            const CircleAvatar(backgroundColor: Colors.blueAccent, radius: 18, child: Icon(Icons.person, color: Colors.white, size: 20)),
-            const SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text("Profile", style: TextStyle(fontWeight: FontWeight.bold, color: textColor)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF6C63FF).withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(6),
+            CircleAvatar(backgroundColor: Colors.blueAccent, radius: isSmall ? 15 : 18, child: Icon(Icons.person, color: Colors.white, size: isSmall ? 16 : 20)),
+            if (!isSmall) ...[
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text("Profile", style: TextStyle(fontWeight: FontWeight.bold, color: textColor, fontSize: 13)),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF6C63FF).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      r,
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF)),
+                    ),
                   ),
-                  child: Text(
-                    r,
-                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF6C63FF)),
-                  ),
-                ),
-              ],
-            ),
-            const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                ],
+              ),
+              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+            ],
           ],
         ),
       ),
