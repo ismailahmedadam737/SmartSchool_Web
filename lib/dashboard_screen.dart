@@ -269,6 +269,57 @@ class _DashboardScreenState extends State<DashboardScreen> {
               }
             },
           ),
+          const SizedBox(height: 20),
+          _buildSmartMindFooter(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmartMindFooter() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      margin: const EdgeInsets.only(top: 10, bottom: 10),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.cyanAccent.withOpacity(0.3)),
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.verified_user_rounded, color: Colors.white, size: 14),
+          ),
+          const SizedBox(width: 10),
+          RichText(
+            textAlign: TextAlign.center,
+            text: TextSpan(
+              style: TextStyle(
+                fontSize: 12,
+                color: textColor.withOpacity(0.85),
+              ),
+              children: const [
+                TextSpan(text: 'Powered & Designed by '),
+                TextSpan(
+                  text: 'SmartMind Technology',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.cyanAccent,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                TextSpan(text: ' © 2026'),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -633,7 +684,33 @@ Widget _buildPieChart() {
           ),
         ],
         _navItem(Icons.logout, "Log Out"),
-        const SizedBox(height: 20)
+        const SizedBox(height: 10),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.cyanAccent.withOpacity(0.25)),
+          ),
+          child: const Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.hub_rounded, color: Color(0xFF00D2FF), size: 12),
+              SizedBox(width: 6),
+              Text(
+                "POWERED BY SMARTMIND TECHNOLOGY",
+                style: TextStyle(
+                  color: Color(0xFF00D2FF),
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16)
       ]),
     );
   }
