@@ -1,6 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
+import 'package:iftiinshe/Service/api_service.dart';
 
 class UsersPage extends StatefulWidget {
   final String currentRole;
@@ -42,44 +41,77 @@ class _UsersPageState extends State<UsersPage> {
 
   Future<void> fetchUsers() async {
     try {
-      final response = await http.get(Uri.parse(baseUrl));
-      if (response.statusCode == 200) {
-        final dynamic data = jsonDecode(response.body);
-        setState(() {
-          users = data is List ? data : (data['users'] ?? []);
-        });
-      } else {
-        debugPrint("Error Status: ${response.statusCode}");
-      }
+      final fetched = await ApiService.getAllUsers();
+      setState(() {
+        users = fetched;
+      });
     } catch (e) {
       debugPrint("Error fetching users: $e");
     }
   }
 
-  Future<void> createUser() async {
-    if (usernameController.text.trim().isEmpty || passwordController.text.trim().isEmpty) return;
-    setState(() => isLoading = true);
-    try {
-      final response = await http.post(
-        Uri.parse(baseUrl),
-        headers: {"Content-Type": "application/json"},
-        body: jsonEncode({
-          "username": usernameController.text.trim(),
-          "password": passwordController.text.trim(),
-          "role": selectedRole,
-        }),
+  Future<void> createUser([StateSetter? setDialogState]) async {
+    String u = usernameController.text.trim();
+    String p = passwordController.text.trim();
+
+    if (u.isEmpty || p.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Fadlan soo geli Username iyo Password!"),
+          backgroundColor: Colors.orange,
+        ),
       );
-      if (response.statusCode == 200 || response.statusCode == 201) {
+      return;
+    }
+
+    if (setDialogState != null) setDialogState(() => isLoading = true);
+    setState(() => isLoading = true);
+
+    try {
+      final res = await ApiService.createUserWithResult({
+        "username": u,
+        "password": p,
+        "role": selectedRole,
+      });
+
+      if (res["success"] == true) {
         usernameController.clear();
         passwordController.clear();
         selectedRole = "User";
-        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res["message"] ?? "User-ka waa la abuuray!"),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
         await fetchUsers();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(res["message"] ?? "Cilad ayaa dhacday!"),
+              backgroundColor: Colors.redAccent,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint("Error creating: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: $e"),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (setDialogState != null) setDialogState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
-    setState(() => isLoading = false);
   }
 
   Future<void> deleteUser(String id, String userRole) async {
@@ -93,7 +125,7 @@ class _UsersPageState extends State<UsersPage> {
       return;
     }
     try {
-      await http.delete(Uri.parse("$baseUrl/$id"));
+      await ApiService.deleteUser(id);
       await fetchUsers();
     } catch (e) {
       debugPrint("Error deleting: $e");
@@ -265,7 +297,7 @@ class _UsersPageState extends State<UsersPage> {
                 ),
                 const SizedBox(height: 25),
                 GestureDetector(
-                  onTap: isLoading ? null : createUser,
+                  onTap: isLoading ? null : () => createUser(setDialogState),
                   child: Container(
                     height: 50,
                     width: double.infinity,

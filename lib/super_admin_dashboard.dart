@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'login_page.dart';
 import 'school_detail_screen.dart';
 import 'dashboard_screen.dart';
+import 'Service/api_service.dart';
 
 const String _baseUrl = 'https://smartschool-web.onrender.com';
 
@@ -155,8 +156,13 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
   }
 
   Future<void> _impersonateSchool(Map<String, dynamic> tenant) async {
+    final int? tId = int.tryParse(tenant['id'].toString());
+    final String tName = (tenant['name'] ?? 'School').toString();
+    ApiService.currentTenantId = tId;
+    ApiService.currentTenantName = tName;
+
     try {
-      _snack('🚀 Logging in as ${tenant['name']}...', const Color(0xFF00D2FF));
+      _snack('🚀 Logging in as $tName...', const Color(0xFF00D2FF));
       await http
           .post(
             Uri.parse('$_baseUrl/admin/tenants/${tenant['id']}/impersonate'),
@@ -172,7 +178,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
             userRole: 'Admin',
             role: 'Admin',
             isImpersonating: true,
-            impersonatedTenantName: tenant['name'] ?? 'School',
+            impersonatedTenantName: tName,
           ),
         ),
       );
@@ -185,7 +191,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
             userRole: 'Admin',
             role: 'Admin',
             isImpersonating: true,
-            impersonatedTenantName: tenant['name'] ?? 'School',
+            impersonatedTenantName: tName,
           ),
         ),
       );
@@ -300,10 +306,10 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
       barrierDismissible: false,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 40),
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
         child: Container(
-          constraints: const BoxConstraints(maxWidth: 460),
-          padding: const EdgeInsets.all(28),
+          constraints: const BoxConstraints(maxWidth: 460, maxHeight: 600),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF0F1524), Color(0xFF1B233A)],
@@ -319,92 +325,95 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                   spreadRadius: 2),
             ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(18),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF00E676).withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00E676).withValues(alpha: 0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_circle_rounded,
+                      color: Color(0xFF00E676), size: 44),
                 ),
-                child: const Icon(Icons.check_circle_rounded,
-                    color: Color(0xFF00E676), size: 48),
-              ),
-              const SizedBox(height: 16),
-              const Text('System Provisioned Successfully! 🎉',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold)),
-              const SizedBox(height: 6),
-              Text(school['name'] ?? '',
-                  style: const TextStyle(color: Color(0xFF00D2FF), fontSize: 15, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 24),
+                const SizedBox(height: 14),
+                const Text('System Provisioned Successfully! 🎉',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(school['name'] ?? '',
+                    style: const TextStyle(color: Color(0xFF00D2FF), fontSize: 14, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 20),
 
-              _credRow(Icons.link_rounded, 'Login URL', loginUrl),
-              const SizedBox(height: 10),
-              _credRow(Icons.person_rounded, 'Admin Username', school['admin_username'] ?? 'N/A'),
-              const SizedBox(height: 10),
-              _credRow(Icons.lock_rounded, 'Admin Password', school['admin_password'] ?? 'N/A'),
-              const SizedBox(height: 10),
-              _credRow(Icons.workspace_premium_rounded, 'Subscription Plan', (school['subscription_plan'] ?? 'basic').toUpperCase()),
-              const SizedBox(height: 24),
+                _credRow(Icons.link_rounded, 'Login URL', loginUrl),
+                const SizedBox(height: 8),
+                _credRow(Icons.person_rounded, 'Admin Username', school['admin_username'] ?? 'N/A'),
+                const SizedBox(height: 8),
+                _credRow(Icons.lock_rounded, 'Admin Password', school['admin_password'] ?? 'N/A'),
+                const SizedBox(height: 8),
+                _credRow(Icons.workspace_premium_rounded, 'Subscription Plan', (school['subscription_plan'] ?? 'basic').toUpperCase()),
+                const SizedBox(height: 16),
 
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: Colors.amberAccent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.3)),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amberAccent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.3)),
+                  ),
+                  child: const Row(children: [
+                    Icon(Icons.info_outline_rounded, color: Colors.amberAccent, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'School Admin can now log in directly on the main login screen using these credentials.',
+                        style: TextStyle(color: Colors.amberAccent, fontSize: 12, height: 1.4),
+                      ),
+                    ),
+                  ]),
                 ),
-                child: const Row(children: [
-                  Icon(Icons.info_outline_rounded, color: Colors.amberAccent, size: 20),
-                  SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'School Admin can now log in directly on the main login screen using these credentials.',
-                      style: TextStyle(color: Colors.amberAccent, fontSize: 12, height: 1.4),
-                    ),
-                  ),
-                ]),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 16),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: const Color(0xFF00D2FF),
-                        side: const BorderSide(color: Color(0xFF00D2FF)),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF00D2FF),
+                          side: const BorderSide(color: Color(0xFF00D2FF)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: payloadText));
+                          _snack('📋 Full Credentials Payload Copied!', const Color(0xFF6C63FF));
+                        },
+                        icon: const Icon(Icons.share_rounded, size: 16),
+                        label: const Text('Copy Payload', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                       ),
-                      onPressed: () {
-                        Clipboard.setData(ClipboardData(text: payloadText));
-                        _snack('📋 Full Credentials Payload Copied!', const Color(0xFF6C63FF));
-                      },
-                      icon: const Icon(Icons.share_rounded, size: 18),
-                      label: const Text('Copy Payload', style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6C63FF),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C63FF),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        onPressed: () => Navigator.pop(ctx),
+                        child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                       ),
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                     ),
-                  ),
-                ],
-              )
-            ],
+                  ],
+                )
+              ],
+            ),
           ),
         ),
       ),

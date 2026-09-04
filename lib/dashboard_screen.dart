@@ -1,6 +1,4 @@
 import 'dart:async'; // Kani waa muhiim si loo maareeyo auto-scroll-ka
-import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:iftiinshe/AdminMessagesPage.dart';
@@ -15,7 +13,7 @@ import 'package:iftiinshe/finance_page.dart';
 import 'package:iftiinshe/examination_page.dart';
 import 'package:iftiinshe/login_page.dart';
 import 'package:iftiinshe/notes_page.dart';
-import 'package:iftiinshe/reports_page.dart' hide UsersPage;
+import 'package:iftiinshe/reports_page.dart';
 import 'package:iftiinshe/student_registration.dart';
 import 'package:iftiinshe/teacher.dart';
 import 'package:iftiinshe/super_admin_dashboard.dart';
@@ -628,10 +626,37 @@ Widget _buildPieChart() {
   }
 
   Widget _buildSidebarLogo() {
+    final String logoText = widget.impersonatedTenantName.trim().isNotEmpty
+        ? widget.impersonatedTenantName.trim().toUpperCase()
+        : "eSAHAL SCHOOL SYSTEM";
+
     return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)), borderRadius: BorderRadius.circular(10)),
-      child: const Text("eSAHAL SCHOOL SYSTEM", style: TextStyle(color: Colors.cyanAccent, fontSize: 15, fontWeight: FontWeight.bold)),
+      margin: const EdgeInsets.symmetric(horizontal: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.cyanAccent.withOpacity(0.05),
+        border: Border.all(color: Colors.cyanAccent.withOpacity(0.5)),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.cyanAccent.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        logoText,
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(
+          color: Colors.cyanAccent,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 0.8,
+        ),
+      ),
     );
   }
 

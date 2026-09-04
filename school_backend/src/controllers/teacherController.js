@@ -1,15 +1,15 @@
-// src/controllers/teacherController.js
-
-/**
- * FIIRO GAAR AH: Maadaama file-kaaga models-ka dhexdiisa ku jira magaciisu yahay 'Teacher.js',
- * waa inaan halkan ku qornaa 'Teacher' iyadoo 'T' ay weyn tahay.
- */
 const Teacher = require('../models/Teacher'); 
+
+const getTenantId = (req) => {
+    const tid = req.tenantId || req.headers['x-tenant-id'] || req.query.tenant_id || req.body.tenant_id;
+    return tid ? parseInt(tid, 10) : null;
+};
 
 // 1. Soo aqri dhamaan macalimiinta (GET)
 exports.getTeachers = async (req, res) => {
     try {
-        const teachers = await Teacher.findAll();
+        const tenantId = getTenantId(req);
+        const teachers = await Teacher.findAll(tenantId);
         res.status(200).json(teachers);
     } catch (error) {
         res.status(500).json({ error: "Khalad ayaa ka dhacay soo aqrinta: " + error.message });
@@ -19,8 +19,8 @@ exports.getTeachers = async (req, res) => {
 // 2. Kaydi Macalin cusub (POST)
 exports.addTeacher = async (req, res) => {
     try {
-        // req.body wuxuu ka imaanayaa Flutter: { name, district, phone, level, exp }
-        const newTeacher = await Teacher.create(req.body);
+        const tenantId = getTenantId(req);
+        const newTeacher = await Teacher.create(req.body, tenantId);
         res.status(201).json(newTeacher);
     } catch (error) {
         res.status(500).json({ error: "Kaydintu ma guulaysan: " + error.message });
@@ -31,7 +31,8 @@ exports.addTeacher = async (req, res) => {
 exports.updateTeacher = async (req, res) => {
     try {
         const { id } = req.params;
-        const updatedTeacher = await Teacher.update(id, req.body);
+        const tenantId = getTenantId(req);
+        const updatedTeacher = await Teacher.update(id, req.body, tenantId);
 
         if (!updatedTeacher) {
             return res.status(404).json({ message: "Macalinka lama helin" });
@@ -50,7 +51,8 @@ exports.updateTeacher = async (req, res) => {
 exports.deleteTeacher = async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await Teacher.delete(id);
+        const tenantId = getTenantId(req);
+        const result = await Teacher.delete(id, tenantId);
         res.status(200).json(result);
     } catch (error) {
         res.status(500).json({ error: "Tirtiristu ma guulaysan: " + error.message });

@@ -1,34 +1,21 @@
-const pool = require('../config/db'); 
+const pool = require('../config/db');
+const { scopedGetAll, scopedInsert, scopedDelete, scopedSum, ensureTenantColumn } = require('../utils/tenantIsolation');
 
 const Expense = {
-    getAll: async () => {
-        const query = 'SELECT * FROM expenses ORDER BY created_at DESC';
-        const { rows } = await pool.query(query);
-        return rows;
+    getAll: async (tenantId) => scopedGetAll('expenses', tenantId, 'created_at DESC'),
+
+    create: async (category, amount, note, title, tenantId) => {
+        await ensureTenantColumn('expenses').catch(() => {});
+        return scopedInsert('expenses',
+            ['category', 'amount', 'note', 'title'],
+            [category, amount, note || '', title || 'Expense'],
+            tenantId
+        );
     },
 
-    // Waxaan meesha ka saaray 'is_paid' oo aan ku beddelay columns-ka aad haysato
-    create: async (category, amount, note, title) => {
-        const query = `
-            INSERT INTO expenses (category, amount, note, title) 
-            VALUES ($1, $2, $3, $4) 
-            RETURNING *`;
-        const values = [category, amount, note || '', title || 'Expense']; 
-        const { rows } = await pool.query(query, values);
-        return rows[0];
-    },
+    getTotalExpenses: async (tenantId) => scopedSum('expenses', 'amount', tenantId),
 
-    getTotalExpenses: async () => {
-        const query = 'SELECT SUM(amount) as total FROM expenses';
-        const { rows } = await pool.query(query);
-        return rows[0].total || 0;
-    },
-
-    deleteById: async (id) => {
-        const query = 'DELETE FROM expenses WHERE id = $1 RETURNING *';
-        const { rows } = await pool.query(query, [id]);
-        return rows[0];
-    }
+    deleteById: async (id, tenantId) => scopedDelete('expenses', id, tenantId),
 };
 
 module.exports = Expense;

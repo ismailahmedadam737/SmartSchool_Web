@@ -1,9 +1,15 @@
 const Expense = require('../models/expenseModel');
 
+const getTenantId = (req) => {
+    const tid = req.tenantId || req.headers['x-tenant-id'] || req.query.tenant_id || req.body.tenant_id;
+    return tid ? parseInt(tid, 10) : null;
+};
+
 // 1. Soo hel dhammaan kharashyada
 const getExpenses = async (req, res) => {
     try {
-        const expenses = await Expense.getAll();
+        const tenantId = getTenantId(req);
+        const expenses = await Expense.getAll(tenantId);
         res.status(200).json(expenses);
     } catch (err) {
         console.error("Error in getExpenses:", err.message);
@@ -13,17 +19,15 @@ const getExpenses = async (req, res) => {
 
 // 2. Kaydi kharash cusub
 const createExpense = async (req, res) => {
-    // Xogta aan ka sugayno Flutter
     const { category, amount, note, title } = req.body;
+    const tenantId = getTenantId(req);
 
-    // Hubi in xogta lagama maarmaanka ah ay timid
     if (!category || !amount) {
         return res.status(400).json({ error: "Fadlan soo geli category iyo amount" });
     }
 
     try {
-        // U gudbi xogta Model-ka (category, amount, note, title)
-        const newExpense = await Expense.create(category, amount, note, title);
+        const newExpense = await Expense.create(category, amount, note, title, tenantId);
         res.status(201).json(newExpense);
     } catch (err) {
         console.error("Qaladka Database-ka (createExpense):", err);
@@ -34,7 +38,8 @@ const createExpense = async (req, res) => {
 // 3. Wadarta guud ee kharashyada
 const getTotalExpenses = async (req, res) => {
     try {
-        const total = await Expense.getTotalExpenses();
+        const tenantId = getTenantId(req);
+        const total = await Expense.getTotalExpenses(tenantId);
         res.json({ total_expenses: parseFloat(total) });
     } catch (err) {
         console.error("Error in getTotalExpenses:", err.message);
@@ -45,11 +50,12 @@ const getTotalExpenses = async (req, res) => {
 // 4. Tirtir kharash gaar ah
 const deleteExpense = async (req, res) => {
     const { id } = req.params;
+    const tenantId = getTenantId(req);
     if (!id) {
         return res.status(400).json({ error: "ID-ga kharashka lama bixin" });
     }
     try {
-        const deleted = await Expense.deleteById(id);
+        const deleted = await Expense.deleteById(id, tenantId);
         if (!deleted) {
             return res.status(404).json({ error: "Kharashka lama helin" });
         }

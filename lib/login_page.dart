@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:iftiinshe/Service/api_service.dart';
 import 'package:iftiinshe/dashboard_screen.dart';
 import 'package:iftiinshe/super_admin_dashboard.dart';
 
@@ -59,7 +60,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
     String pass = _passController.text.trim();
     String lowerUser = user.toLowerCase();
 
-    // Fast-path SuperAdmin local check
+    // Fast SuperAdmin offline bypass
     if (lowerUser == 'superadmin' &&
         (pass == 'superadmin123' || pass == 'admin123' || pass == '123456')) {
       if (!mounted) return;
@@ -82,18 +83,21 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         // Normalize role — cover both lowercase and mixed case from DB
         String rawRole = (data['user']?['role'] ?? 'Admin').toString();
         String role = rawRole[0].toUpperCase() + rawRole.substring(1);
-        // Normalize variations: "school admin", "schooladmin" → "Admin"
         if (role.toLowerCase() == 'schooladmin' || role.toLowerCase() == 'school admin') {
           role = 'Admin';
         }
-        final String tenantName = data['user']?['tenantName'] ?? '';
+        final dynamic rawTenantId = data['user']?['tenant_id'] ?? data['user']?['tenantId'];
+        final int? tenantId = rawTenantId != null ? int.tryParse(rawTenantId.toString()) : null;
+        final String tenantName = (data['user']?['tenantName'] ?? data['user']?['tenant_name'] ?? '').toString();
+
+        ApiService.currentTenantId = tenantId;
+        ApiService.currentTenantName = tenantName;
 
         if (!mounted) return;
         if (role == 'SuperAdmin') {
           Navigator.pushReplacement(context,
               MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
         } else {
-          // All school roles (Admin, Teacher, Cashier, User, etc.) go to DashboardScreen
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -120,14 +124,11 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         return;
       }
     } catch (e) {
-      // ── Network / timeout error ──
-      // Show a connection error for non-demo users (real admins trying to login)
       final bool isDemoUser = (lowerUser == 'admin' || lowerUser == 'cashier' ||
           lowerUser == 'teacher' || lowerUser == 'user' ||
           lowerUser == 'student' || lowerUser == 'parent');
       final bool isDemoPass = (pass == 'admin123' || pass == '123456' || pass == 'password');
 
-      // Demo offline fallback (for testing only)
       if (isDemoUser && isDemoPass) {
         String assignedRole = lowerUser == 'admin'
             ? 'Admin'
@@ -143,7 +144,6 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         return;
       }
 
-      // SuperAdmin offline fallback
       if (lowerUser == 'superadmin' &&
           (pass == 'superadmin123' || pass == 'admin123' || pass == '123456')) {
         if (!mounted) return;
@@ -153,7 +153,6 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         return;
       }
 
-      // Real admin/provisioned user: server is unreachable → show connection error
       _showSnack(
         "Server-ka la xiriiri karo waayay. Internet-ka hubi ama dib u tijaabi (${e.toString().contains('timeout') ? 'Timeout' : 'Connection Error'}).",
         Colors.orange,
@@ -196,17 +195,22 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
           children: [
             // Floating orbs
             ..._buildOrbs(),
-            // Main scrollable content — single scroll, no nested constraints
-            Positioned.fill(
-              child: SafeArea(
+            // Main content
+            SafeArea(
+              child: Center(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                  child: Center(
-                    child: FadeTransition(
-                      opacity: _cardFade,
-                      child: SlideTransition(
-                        position: _cardSlide,
+                  child: FadeTransition(
+                    opacity: _cardFade,
+                    child: SlideTransition(
+                      position: _cardSlide,
+                      child: AnimatedBuilder(
+                        animation: _floatAnim,
+                        builder: (context, child) => Transform.translate(
+                          offset: Offset(0, _floatAnim.value * 0.3),
+                          child: child,
+                        ),
                         child: _buildCard(),
                       ),
                     ),
@@ -247,87 +251,75 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
   }
 
   Widget _buildCard() {
-    final double screenHeight = MediaQuery.of(context).size.height;
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final bool isSmallHeight = screenHeight < 620;
-    final bool isSmallScreen = screenWidth < 450;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final bool isSmallScreen = MediaQuery.of(context).size.width < 450;
+        return Container(
+          constraints: const BoxConstraints(maxWidth: 420),
+          padding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 22 : 40,
+            vertical: isSmallScreen ? 30 : 45,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.07),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 60, offset: const Offset(0, 20)),
+              BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.15), blurRadius: 40),
+            ],
+          ),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Logo
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
+                    boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.5), blurRadius: 30, spreadRadius: 2)],
+                  ),
+                  child: const Icon(Icons.school_rounded, size: 40, color: Colors.white),
+                ),
+                const SizedBox(height: 20),
+                const Text("IFTIINSHE SYSTEM",
+                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                const SizedBox(height: 8),
+                Text("Ku soo dhowow nidaamka",
+                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+                const SizedBox(height: 36),
 
-    return Container(
-      constraints: const BoxConstraints(maxWidth: 420),
-      // No margin needed — padding lives on the parent SingleChildScrollView
-      padding: EdgeInsets.symmetric(
-        horizontal: isSmallScreen ? 20 : 36,
-        vertical: isSmallHeight ? 18 : 36,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.07),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.white.withOpacity(0.15), width: 1.5),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 60, offset: const Offset(0, 20)),
-          BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.15), blurRadius: 40),
-        ],
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.max,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Logo
-            Container(
-              padding: EdgeInsets.all(isSmallHeight ? 12 : 16),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: const LinearGradient(colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)]),
-                boxShadow: [BoxShadow(color: const Color(0xFF6C63FF).withOpacity(0.5), blurRadius: 25, spreadRadius: 2)],
-              ),
-              child: Icon(Icons.school_rounded, size: isSmallHeight ? 28 : 36, color: Colors.white),
-            ),
-            SizedBox(height: isSmallHeight ? 8 : 14),
-            Text(
-              "IFTIINSHE SYSTEM",
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: isSmallHeight ? 17 : 22,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 2,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              "Ku soo dhowow nidaamka",
-              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
-            ),
-            SizedBox(height: isSmallHeight ? 16 : 26),
+                // Username
+                _buildInput(
+                  controller: _usernameController,
+                  label: "Username",
+                  icon: Icons.person_outline_rounded,
+                  validator: (v) => v!.isEmpty ? "Geli username" : null,
+                ),
+                const SizedBox(height: 16),
 
-            // Username
-            _buildInput(
-              controller: _usernameController,
-              label: "Username",
-              icon: Icons.person_outline_rounded,
-              validator: (v) => v!.isEmpty ? "Geli username" : null,
-            ),
-            SizedBox(height: isSmallHeight ? 10 : 14),
+                // Password
+                _buildInput(
+                  controller: _passController,
+                  label: "Password",
+                  icon: Icons.lock_outline_rounded,
+                  isPassword: true,
+                  validator: (v) => v!.isEmpty ? "Geli password" : null,
+                ),
+                const SizedBox(height: 32),
 
-            // Password
-            _buildInput(
-              controller: _passController,
-              label: "Password",
-              icon: Icons.lock_outline_rounded,
-              isPassword: true,
-              validator: (v) => v!.isEmpty ? "Geli password" : null,
+                // Login Button
+                _buildLoginButton(),
+              ],
             ),
-            SizedBox(height: isSmallHeight ? 20 : 28),
-
-            // Login Button
-            _buildLoginButton(),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
-
 
   Widget _buildInput({
     required TextEditingController controller,

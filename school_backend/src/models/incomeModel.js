@@ -1,57 +1,34 @@
 const pool = require('../config/db');
+const { scopedGetAll, scopedInsert, scopedDelete, scopedSum, ensureTenantColumn } = require('../utils/tenantIsolation');
 
 const Income = {
-    // 1. In la kaydiyo rasiid cusub
-    create: async (data) => {
-        const { 
-            receipt_no, 
-            student_id,    // 👈 Waxaa fiican in la isticmaalo ID-ga ardayga
-            student_name, 
-            amount_paid, 
-            remaining_debt, 
-            payment_method, 
-            description,
-            month 
-        } = data;
-        
-        const query = `
-            INSERT INTO incomes (receipt_no, student_id, student_name, amount_paid, remaining_debt, payment_method, description, month)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING *;
-        `;
-        
-        const values = [
-            receipt_no, 
-            student_id,    // 👈 Ku dar halkan
-            student_name, 
-            amount_paid, 
-            remaining_debt, 
-            payment_method, 
-            description || "School Fee Payment",
-            month 
-        ];
-        
-        try {
-            const result = await pool.query(query, values);
-            return result.rows[0];
-        } catch (err) {
-            throw err;
-        }
+    create: async (data, tenantId) => {
+        await ensureTenantColumn('incomes').catch(() => {});
+        const { receipt_no, student_id, student_name, amount_paid, remaining_debt, payment_method, description, month } = data;
+        return scopedInsert('incomes',
+            ['receipt_no', 'student_id', 'student_name', 'amount_paid', 'remaining_debt', 'payment_method', 'description', 'month'],
+            [receipt_no, student_id, student_name, amount_paid, remaining_debt, payment_method, description || 'School Fee Payment', month],
+            tenantId
+        );
     },
 
-    // 2. Tani waxay muhiim u tahay getPaidStudentIds-ka Flutter-ka
-    getPaidIdsByMonth: async (month) => {
-        const query = 'SELECT student_id FROM incomes WHERE month = $1';
-        const result = await pool.query(query, [month]);
-        // Waxay soo celinaysaa list ah ID-yo kaliya: [1, 5, 12]
+    getPaidIdsByMonth: async (month, tenantId) => {
+        await ensureTenantColumn('incomes').catch(() => {});
+        let result;
+        if (tenantId) {
+            result = await pool.query(
+                'SELECT student_id FROM incomes WHERE month = $1 AND tenant_id = $2',
+                [month, tenantId]
+            );
+        } else {
+            result = await pool.query('SELECT student_id FROM incomes WHERE month = $1', [month]);
+        }
         return result.rows.map(row => row.student_id);
     },
 
-    // 3. In la soo wada aqriyo dakhliga
-    getAll: async () => {
-        const result = await pool.query('SELECT * FROM incomes ORDER BY created_at DESC');
-        return result.rows;
-    }
+    getAll: async (tenantId) => scopedGetAll('incomes', tenantId, 'created_at DESC'),
+
+    getTotal: async (tenantId) => scopedSum('incomes', 'amount_paid', tenantId),
 };
 
 module.exports = Income;

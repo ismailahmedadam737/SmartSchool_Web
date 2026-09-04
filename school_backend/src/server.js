@@ -34,7 +34,18 @@ app.use(helmet({
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Cache-Control', 'cache-control', 'Pragma', 'pragma'],
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Cache-Control',
+    'cache-control',
+    'Pragma',
+    'pragma',
+    'X-Tenant-Id',
+    'x-tenant-id',
+    'tenant_id'
+  ],
   optionsSuccessStatus: 200,
 }));
 app.options('*', cors()); // Preflight
@@ -128,6 +139,14 @@ async function ensureTenantsTable() {
       await pool.query(`ALTER TABLE ${tbl} ADD COLUMN IF NOT EXISTS tenant_id INT REFERENCES tenants(id) ON DELETE CASCADE`).catch(() => {});
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_${tbl}_tenant_id ON ${tbl}(tenant_id)`).catch(() => {});
     }
+
+    // Auto-link orphaned users in users table to tenants table if username matches admin_username
+    await pool.query(`
+      UPDATE users u
+      SET tenant_id = t.id
+      FROM tenants t
+      WHERE LOWER(u.username) = LOWER(t.admin_username) AND u.tenant_id IS NULL;
+    `).catch(() => {});
 
     console.log('✅ Multi-Tenant Database Isolation Schema Ready');
   } catch (err) {

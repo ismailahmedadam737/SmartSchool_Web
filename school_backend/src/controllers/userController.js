@@ -1,10 +1,16 @@
 const pool = require('../config/db');
 const User = require('../models/userModel');
 
-// 📌 GET ALL USERS
+const getTenantId = (req) => {
+    const tid = req.tenantId || req.headers['x-tenant-id'] || req.query.tenant_id || req.body.tenant_id;
+    return tid ? parseInt(tid, 10) : null;
+};
+
+// 📌 GET ALL USERS (tenant-scoped)
 const getAllUsers = async (req, res) => {
   try {
-    const result = await User.getAll();
+    const tenantId = getTenantId(req);
+    const result = await User.getAll(tenantId);
     res.json(result.rows);
   } catch (err) {
     console.log(err);
@@ -15,34 +21,51 @@ const getAllUsers = async (req, res) => {
 // 📌 GET USER BY ID
 const getUserById = async (req, res) => {
   try {
-    const result = await User.getById(req.params.id);
+    const tenantId = getTenantId(req);
+    const result = await User.getById(req.params.id, tenantId);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ message: "Server error" });
   }
 };
 
-// 📌 CREATE USER
+// 📌 CREATE USER (tenant-scoped)
 const createUser = async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     const { username, password, role } = req.body;
-    const result = await User.create(username, password, role);
+    if (!username || !username.trim() || !password || !password.trim()) {
+      return res.status(400).json({ message: "Geli Username iyo Password" });
+    }
+    const cleanUser = username.trim();
+    const cleanPass = password.trim();
+    const cleanRole = role || 'User';
+
+    // Check duplicate username
+    const existing = await pool.query('SELECT id FROM users WHERE LOWER(username) = LOWER($1)', [cleanUser]);
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ message: "Username-kan hore ayaa loo isticmaalay!" });
+    }
+
+    const result = await User.create(cleanUser, cleanPass, cleanRole, tenantId);
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Server error" });
+    console.log("Create user error:", err.message);
+    res.status(500).json({ message: "Server error: " + err.message });
   }
 };
 
 // 📌 UPDATE USER
 const updateUser = async (req, res) => {
   try {
+    const tenantId = getTenantId(req);
     const { username, password, role } = req.body;
     const result = await User.update(
       req.params.id,
       username,
       password,
-      role
+      role,
+      tenantId
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -53,7 +76,8 @@ const updateUser = async (req, res) => {
 // 📌 DELETE USER
 const deleteUser = async (req, res) => {
   try {
-    await User.delete(req.params.id);
+    const tenantId = getTenantId(req);
+    await User.delete(req.params.id, tenantId);
     res.json({ message: "User deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: "Server error" });
@@ -82,10 +106,24 @@ const loginUser = async (req, res) => {
       if (userRes.rows.length > 0) {
         const foundUser = userRes.rows[0];
 
-        // If user belongs to a tenant, check tenant status
+        // If user is missing tenant_id, auto-link if username matches tenant admin_username
+        if (!foundUser.tenant_id) {
+          const autoLink = await pool.query(
+            'SELECT id, name FROM tenants WHERE LOWER(admin_username) = LOWER($1)',
+            [trimmedUser]
+          );
+          if (autoLink.rows.length > 0) {
+            const tenant = autoLink.rows[0];
+            foundUser.tenant_id = tenant.id;
+            foundUser.tenantName = tenant.name;
+            await pool.query('UPDATE users SET tenant_id = $1 WHERE id = $2', [tenant.id, foundUser.id]).catch(() => {});
+          }
+        }
+
+        // If user belongs to a tenant, check tenant status and attach tenantName
         if (foundUser.tenant_id) {
           const tenantCheck = await pool.query(
-            'SELECT subscription_status, subscription_expires_at FROM tenants WHERE id = $1',
+            'SELECT name, subscription_status, subscription_expires_at FROM tenants WHERE id = $1',
             [foundUser.tenant_id]
           );
           if (tenantCheck.rows.length > 0) {
@@ -96,6 +134,7 @@ const loginUser = async (req, res) => {
                 code: "SUBSCRIPTION_EXPIRED"
               });
             }
+            foundUser.tenantName = tenant.name;
           }
         }
 

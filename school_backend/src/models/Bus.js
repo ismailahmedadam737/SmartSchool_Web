@@ -1,70 +1,46 @@
-const pool = require('../config/db'); // Hubi in dariiqani sax yahay
+const pool = require('../config/db');
+const { scopedGetAll, scopedInsert, scopedDelete, ensureTenantColumn } = require('../utils/tenantIsolation');
 
 const Bus = {
-    // 1. Soo kici dhammaan basaska
-    getAll: async () => {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS buses (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255),
-                phone VARCHAR(255),
-                plate VARCHAR(255),
-                route VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `).catch(() => {});
-        const res = await pool.query('SELECT * FROM buses ORDER BY id DESC');
-        return res.rows;
+    // 1. Soo kici dhammaan basaska (tenant-scoped)
+    getAll: async (tenantId) => {
+        await ensureTenantColumn('buses').catch(() => {});
+        return scopedGetAll('buses', tenantId, 'id DESC');
     },
 
-    // 2. Diwaangeli bas cusub
-    create: async (bus) => {
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS buses (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(255),
-                phone VARCHAR(255),
-                plate VARCHAR(255),
-                route VARCHAR(255),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `).catch(() => {});
+    // 2. Diwaangeli bas cusub (tenant-scoped)
+    create: async (bus, tenantId) => {
+        await ensureTenantColumn('buses').catch(() => {});
+        const { name, phone, plate, route } = bus;
+        return scopedInsert('buses',
+            ['name', 'phone', 'plate', 'route'],
+            [name, phone, plate, route],
+            tenantId
+        );
+    },
+
+    // 3. Wax ka beddel baska jira (tenant-scoped)
+    update: async (id, bus, tenantId) => {
         const { name, phone, plate, route } = bus;
         let res;
-        try {
+        if (tenantId) {
             res = await pool.query(
-                'INSERT INTO buses (name, phone, plate, route) VALUES ($1, $2, $3, $4) RETURNING *',
-                [name, phone, plate, route]
+                'UPDATE buses SET name = $1, phone = $2, plate = $3, route = $4 WHERE id = $5 AND tenant_id = $6 RETURNING *',
+                [name, phone, plate, route, id, tenantId]
             );
-        } catch (err) {
-            if (err.code === '23502' || err.code === '23505' || (err.message && (err.message.includes('null value in column "id"') || err.message.includes('violates unique constraint')))) {
-                const maxRes = await pool.query('SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM buses');
-                const nextId = maxRes.rows[0].next_id;
-                res = await pool.query(
-                    'INSERT INTO buses (id, name, phone, plate, route) VALUES ($1, $2, $3, $4, $5) RETURNING *',
-                    [nextId, name, phone, plate, route]
-                );
-            } else {
-                throw err;
-            }
+        } else {
+            res = await pool.query(
+                'UPDATE buses SET name = $1, phone = $2, plate = $3, route = $4 WHERE id = $5 RETURNING *',
+                [name, phone, plate, route, id]
+            );
         }
         return res.rows[0];
     },
 
-    // 3. Wax ka beddel baska jira (Update)
-    update: async (id, bus) => {
-        const { name, phone, plate, route } = bus;
-        const res = await pool.query(
-            'UPDATE buses SET name = $1, phone = $2, plate = $3, route = $4 WHERE id = $5 RETURNING *',
-            [name, phone, plate, route, id]
-        );
-        return res.rows[0];
-    },
-
-    // 4. Tirtir baska (Delete)
-    delete: async (id) => {
-        await pool.query('DELETE FROM buses WHERE id = $1', [id]);
-        return { message: "Bus deleted successfully" };
+    // 4. Tirtir baska (tenant-scoped)
+    delete: async (id, tenantId) => {
+        await scopedDelete('buses', id, tenantId);
+        return { message: "Baska waa la tirtiray" };
     }
 };
 

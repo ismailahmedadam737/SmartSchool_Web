@@ -16,13 +16,27 @@ class ApiService {
   static const String incomeUrl = "https://smartschool-web.onrender.com/api/incomes";
   static const String userUrl = "https://smartschool-web.onrender.com/api/users";
 
-  static const Map<String, String> _headers = {
-    "Content-Type": "application/json",
-  };
+  static int? currentTenantId;
+  static String? currentTenantName;
+
+  static Map<String, String> get _headers {
+    final map = <String, String>{"Content-Type": "application/json"};
+    if (currentTenantId != null) {
+      map["X-Tenant-Id"] = currentTenantId.toString();
+    }
+    return map;
+  }
 
   static final List<StudentModel> _localStudents = [];
   static final List<Map<String, String>> _localTeachers = [];
   static final List<Bus> _localBuses = [];
+
+  static String _scopedKey(String key) {
+    if (currentTenantId != null) {
+      return "${key}_$currentTenantId";
+    }
+    return key;
+  }
 
   static void saveStorage(String key, String data) => _saveToStorage(key, data);
   static String? readStorage(String key) => _readFromStorage(key);
@@ -30,7 +44,7 @@ class ApiService {
   static void _saveToStorage(String key, String data) {
     if (kIsWeb) {
       try {
-        html.window.localStorage[key] = data;
+        html.window.localStorage[_scopedKey(key)] = data;
       } catch (e) {
         log("LocalStorage write error: $e");
       }
@@ -40,7 +54,7 @@ class ApiService {
   static String? _readFromStorage(String key) {
     if (kIsWeb) {
       try {
-        return html.window.localStorage[key];
+        return html.window.localStorage[_scopedKey(key)];
       } catch (e) {
         log("LocalStorage read error: $e");
       }
@@ -102,7 +116,7 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse("$baseUrl/register"), 
-        headers: {"Content-Type": "application/json"}, 
+        headers: _headers, 
         body: jsonEncode(student.toJson())
       );
       return response.statusCode == 201 || response.statusCode == 200;
@@ -195,7 +209,7 @@ class ApiService {
 
   static Future<bool> submitAttendance(List<Map<String, dynamic>> students, String className, String month, String date) async {
     try {
-      final response = await http.post(Uri.parse("$attendanceUrl/submit"), headers: {"Content-Type": "application/json"}, body: jsonEncode({"students": students, "class_name": className, "month": month, "date": date}));
+      final response = await http.post(Uri.parse("$attendanceUrl/submit"), headers: _headers, body: jsonEncode({"students": students, "class_name": className, "month": month, "date": date}));
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       return false;
@@ -229,7 +243,7 @@ class ApiService {
     _saveToStorage('local_teachers', jsonEncode(currentStored));
 
     try {
-      final response = await http.post(Uri.parse("$teacherUrl/register"), headers: {"Content-Type": "application/json"}, body: jsonEncode(teacher));
+      final response = await http.post(Uri.parse("$teacherUrl/register"), headers: _headers, body: jsonEncode(teacher));
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       return true;
@@ -304,7 +318,7 @@ class ApiService {
     _saveToStorage('local_teachers', jsonEncode(currentStored));
 
     try {
-      final response = await http.put(Uri.parse("$teacherUrl/update/$id"), headers: {"Content-Type": "application/json"}, body: jsonEncode(teacher));
+      final response = await http.put(Uri.parse("$teacherUrl/update/$id"), headers: _headers, body: jsonEncode(teacher));
       return response.statusCode == 200;
     } catch (e) {
       return true;
@@ -345,7 +359,7 @@ class ApiService {
     _saveToStorage('local_buses', jsonEncode(currentStored));
 
     try {
-      final response = await http.post(Uri.parse("$busUrl/register"), headers: {"Content-Type": "application/json"}, body: jsonEncode(bus.toJson()));
+      final response = await http.post(Uri.parse("$busUrl/register"), headers: _headers, body: jsonEncode(bus.toJson()));
       return response.statusCode == 201 || response.statusCode == 200;
     } catch (e) {
       return true;
@@ -475,13 +489,25 @@ class ApiService {
     }
   }
 
-  static Future<bool> createUser(Map<String, dynamic> user) async {
+  static Future<Map<String, dynamic>> createUserWithResult(Map<String, dynamic> user) async {
     try {
       final response = await http.post(Uri.parse(userUrl), headers: _headers, body: jsonEncode(user));
-      return response.statusCode == 200 || response.statusCode == 201;
+      final dynamic body = jsonDecode(response.body);
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return {"success": true, "message": "User-ka si guul leh ayaa loo abuuray!"};
+      }
+      final String msg = (body is Map && body['message'] != null)
+          ? body['message'].toString()
+          : "Ma suurtagalin in la abuuro user-ka (${response.statusCode})";
+      return {"success": false, "message": msg};
     } catch (e) {
-      return false;
+      return {"success": false, "message": "Connection error: $e"};
     }
+  }
+
+  static Future<bool> createUser(Map<String, dynamic> user) async {
+    final res = await createUserWithResult(user);
+    return res["success"] == true;
   }
 
   static Future<bool> updateUser(String id, Map<String, dynamic> user) async {

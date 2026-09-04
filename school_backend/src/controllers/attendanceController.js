@@ -1,9 +1,15 @@
 const AttendanceModel = require('../models/Attendance');
 
+const getTenantId = (req) => {
+    const tid = req.tenantId || req.headers['x-tenant-id'] || req.query.tenant_id || req.body.tenant_id;
+    return tid ? parseInt(tid, 10) : null;
+};
+
 // Xareynta Liiska Attendance-ka
 exports.submitAttendance = async (req, res) => {
   try {
     const { students, class_name, month, date } = req.body;
+    const tenantId = getTenantId(req);
 
     // Waxaan isticmaalaynaa Map si aan u fulino dhamaan INSERT/UPDATE isku mar
     const promises = students.map(student => {
@@ -14,7 +20,7 @@ exports.submitAttendance = async (req, res) => {
         remarks: student.remarks || '',
         month: month,
         date: date
-      });
+      }, tenantId);
     });
 
     await Promise.all(promises);
@@ -29,7 +35,8 @@ exports.submitAttendance = async (req, res) => {
 exports.getDailyReport = async (req, res) => {
   try {
     const { class_name, date } = req.query;
-    const report = await AttendanceModel.getAttendanceByDate(class_name, date);
+    const tenantId = getTenantId(req);
+    const report = await AttendanceModel.getAttendanceByDate(class_name, date, tenantId);
     res.status(200).json(report);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -40,7 +47,8 @@ exports.getDailyReport = async (req, res) => {
 exports.getSummary = async (req, res) => {
   try {
     const { class_name, month } = req.query;
-    const summary = await AttendanceModel.getMonthlySummary(class_name, month);
+    const tenantId = getTenantId(req);
+    const summary = await AttendanceModel.getMonthlySummary(class_name, month, tenantId);
     res.status(200).json(summary);
   } catch (error) {
     res.status(500).json({ error: error.message });

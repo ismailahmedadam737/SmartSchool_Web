@@ -1,9 +1,16 @@
 const StudentModel = require('../models/studentModel');
 
+// Helper to extract tenantId from request
+const getTenantId = (req) => {
+    const tid = req.tenantId || req.headers['x-tenant-id'] || req.query.tenant_id || req.body.tenant_id;
+    return tid ? parseInt(tid, 10) : null;
+};
+
 // 1. Diiwaangelinta Ardayga
 exports.createStudent = async (req, res) => {
     try {
-        const newStudent = await StudentModel.registerStudent(req.body);
+        const tenantId = getTenantId(req);
+        const newStudent = await StudentModel.registerStudent(req.body, tenantId);
         res.status(201).json({
             message: "Student registered successfully!",
             student: newStudent
@@ -16,7 +23,8 @@ exports.createStudent = async (req, res) => {
 // 2. Soo saarista Dhamaan Ardayda
 exports.getStudents = async (req, res) => {
     try {
-        const students = await StudentModel.getAllStudents();
+        const tenantId = getTenantId(req);
+        const students = await StudentModel.getAllStudents(tenantId);
         res.status(200).json(students);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -27,7 +35,8 @@ exports.getStudents = async (req, res) => {
 exports.deleteStudent = async (req, res) => {
     try {
         const { id } = req.params;
-        const result = await StudentModel.deleteStudentById(id); 
+        const tenantId = getTenantId(req);
+        const result = await StudentModel.deleteStudentById(id, tenantId); 
         if (result) {
             res.status(200).json({ message: "Student deleted successfully!" });
         } else {
@@ -41,9 +50,9 @@ exports.deleteStudent = async (req, res) => {
 // 4. Soo saarista Fasallada (UNIQUE CLASSES)
 exports.getClasses = async (req, res) => {
     try {
-        const students = await StudentModel.getAllStudents();
-        // Waxay ka dhex saaraysaa fasallada unique-ka ah
-        const classes = [...new Set(students.map(s => s.class_name || s.className))];
+        const tenantId = getTenantId(req);
+        const students = await StudentModel.getAllStudents(tenantId);
+        const classes = [...new Set(students.map(s => s.class_name || s.className).filter(Boolean))];
         const classList = classes.map(c => ({ class_name: c }));
         res.status(200).json(classList);
     } catch (error) {
@@ -55,11 +64,11 @@ exports.getClasses = async (req, res) => {
 exports.updateStudent = async (req, res) => {
     try {
         const id = req.params.id || req.body.id || req.body._id;
-        console.log("DEBUG: Updating student ID:", id, "Body:", req.body);
+        const tenantId = getTenantId(req);
         if (!id) {
             return res.status(400).json({ error: "Student ID waa loo baahan yahay" });
         }
-        const updatedStudent = await StudentModel.updateStudent(id, req.body);
+        const updatedStudent = await StudentModel.updateStudent(id, req.body, tenantId);
         if (updatedStudent) {
             res.status(200).json({
                 message: "Student updated successfully!",
@@ -69,7 +78,6 @@ exports.updateStudent = async (req, res) => {
             res.status(404).json({ message: "Student not found!" });
         }
     } catch (error) {
-        console.error("DEBUG: Update student error:", error.message);
         res.status(500).json({ error: error.message });
     }
 };
