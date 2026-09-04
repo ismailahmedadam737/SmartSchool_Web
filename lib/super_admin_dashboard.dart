@@ -776,7 +776,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
   void _handleLogout() {
     Navigator.pushAndRemoveUntil(
       context,
-      MaterialPageRoute(builder: (_) => const AuthPage()),
+      MaterialPageRoute(builder: (_) => const AuthPage(userRole: '',)),
       (route) => false,
     );
   }
@@ -843,7 +843,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
             const Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('IFTIINSHE COMMAND CENTER',
+                Text('SCHOOL COMMAND CENTER',
                     style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 1)),
                 Row(
                   children: [
@@ -1312,7 +1312,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
             const Text('No Systems Found', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 6),
             Text(
-              _searchQuery.isNotEmpty ? 'No school matching "$_searchQuery"' : 'Click "Provision New School" to create your first system.',
+              _searchQuery.isNotEmpty ? 'No school matching "$_searchQuery"' : 'Click "Add New School" to create your first system.',
               style: const TextStyle(color: Colors.white38, fontSize: 13),
             ),
           ],

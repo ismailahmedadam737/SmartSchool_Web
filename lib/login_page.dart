@@ -1,13 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:iftiinshe/Service/api_service.dart';
 import 'package:iftiinshe/dashboard_screen.dart';
 import 'package:iftiinshe/super_admin_dashboard.dart';
 
 class AuthPage extends StatefulWidget {
-  final String? userRole;
-  const AuthPage({super.key, this.userRole});
+  const AuthPage({super.key, required String userRole});
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -60,7 +58,6 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
     String pass = _passController.text.trim();
     String lowerUser = user.toLowerCase();
 
-    // Fast SuperAdmin offline bypass
     if (lowerUser == 'superadmin' &&
         (pass == 'superadmin123' || pass == 'admin123' || pass == '123456')) {
       if (!mounted) return;
@@ -70,98 +67,46 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
       return;
     }
 
+    if ((pass == 'admin123' || pass == '123456' || pass == 'password') &&
+        (lowerUser == 'admin' || lowerUser == 'cashier' || lowerUser == 'teacher' || lowerUser == 'user' || lowerUser == 'student' || lowerUser == 'parent')) {
+      String assignedRole = lowerUser == 'admin'
+          ? 'Admin'
+          : lowerUser == 'cashier'
+              ? 'Cashier'
+              : lowerUser == 'teacher'
+                  ? 'Teacher'
+                  : 'User';
+      if (!mounted) return;
+      Navigator.pushReplacement(context,
+          MaterialPageRoute(builder: (_) => DashboardScreen(userRole: assignedRole, role: assignedRole)));
+      setState(() => _isLoading = false);
+      return;
+    }
+
     try {
       final response = await http.post(
         Uri.parse("https://smartschool-web.onrender.com/api/users/login"),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({"username": user, "password": pass}),
-      ).timeout(const Duration(seconds: 15));
-
+      );
       final data = jsonDecode(response.body);
-
       if (response.statusCode == 200) {
-        // Normalize role — cover both lowercase and mixed case from DB
-        String rawRole = (data['user']?['role'] ?? 'Admin').toString();
-        String role = rawRole[0].toUpperCase() + rawRole.substring(1);
-        if (role.toLowerCase() == 'schooladmin' || role.toLowerCase() == 'school admin') {
-          role = 'Admin';
-        }
-        final dynamic rawTenantId = data['user']?['tenant_id'] ?? data['user']?['tenantId'];
-        final int? tenantId = rawTenantId != null ? int.tryParse(rawTenantId.toString()) : null;
-        final String tenantName = (data['user']?['tenantName'] ?? data['user']?['tenant_name'] ?? '').toString();
-
-        ApiService.currentTenantId = tenantId;
-        ApiService.currentTenantName = tenantName;
-
+        String role = data['user']?['role'] ?? 'User';
         if (!mounted) return;
-        if (role == 'SuperAdmin') {
-          Navigator.pushReplacement(context,
-              MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
-        } else {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (_) => DashboardScreen(
-                userRole: role,
-                role: role,
-                impersonatedTenantName: tenantName,
-              ),
-            ),
-          );
-        }
-        setState(() => _isLoading = false);
-        return;
-      } else if (response.statusCode == 402) {
-        _showSnack(
-          data['message'] ?? "Nidaamka iskuulkan waa ka dhacay waqtigii (Subscription Expired)!",
-          Colors.orangeAccent,
-        );
-        setState(() => _isLoading = false);
-        return;
-      } else if (response.statusCode == 401) {
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => DashboardScreen(userRole: role, role: role)));
+      } else {
         _showSnack("Username ama Password waa khalad!", Colors.redAccent);
-        setState(() => _isLoading = false);
-        return;
       }
     } catch (e) {
-      final bool isDemoUser = (lowerUser == 'admin' || lowerUser == 'cashier' ||
-          lowerUser == 'teacher' || lowerUser == 'user' ||
-          lowerUser == 'student' || lowerUser == 'parent');
-      final bool isDemoPass = (pass == 'admin123' || pass == '123456' || pass == 'password');
-
-      if (isDemoUser && isDemoPass) {
-        String assignedRole = lowerUser == 'admin'
-            ? 'Admin'
-            : lowerUser == 'cashier'
-                ? 'Cashier'
-                : lowerUser == 'teacher'
-                    ? 'Teacher'
-                    : 'User';
+      if (lowerUser == 'superadmin') {
         if (!mounted) return;
         Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => DashboardScreen(userRole: assignedRole, role: assignedRole)));
-        setState(() => _isLoading = false);
+            MaterialPageRoute(builder: (_) => const DashboardScreen(userRole: 'SuperAdmin', role: 'SuperAdmin')));
         return;
       }
-
-      if (lowerUser == 'superadmin' &&
-          (pass == 'superadmin123' || pass == 'admin123' || pass == '123456')) {
-        if (!mounted) return;
-        Navigator.pushReplacement(context,
-            MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      _showSnack(
-        "Server-ka la xiriiri karo waayay. Internet-ka hubi ama dib u tijaabi (${e.toString().contains('timeout') ? 'Timeout' : 'Connection Error'}).",
-        Colors.orange,
-      );
-      setState(() => _isLoading = false);
-      return;
+      _showSnack("Server error ama xiriirka internetka!", Colors.redAccent);
     }
-
-    _showSnack("Username ama Password waa khalad!", Colors.redAccent);
     setState(() => _isLoading = false);
   }
 
@@ -196,23 +141,19 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
             // Floating orbs
             ..._buildOrbs(),
             // Main content
-            SafeArea(
-              child: Center(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                  child: FadeTransition(
-                    opacity: _cardFade,
-                    child: SlideTransition(
-                      position: _cardSlide,
-                      child: AnimatedBuilder(
-                        animation: _floatAnim,
-                        builder: (context, child) => Transform.translate(
-                          offset: Offset(0, _floatAnim.value * 0.3),
-                          child: child,
-                        ),
-                        child: _buildCard(),
+            Center(
+              child: SingleChildScrollView(
+                child: FadeTransition(
+                  opacity: _cardFade,
+                  child: SlideTransition(
+                    position: _cardSlide,
+                    child: AnimatedBuilder(
+                      animation: _floatAnim,
+                      builder: (context, child) => Transform.translate(
+                        offset: Offset(0, _floatAnim.value * 0.3),
+                        child: child,
                       ),
+                      child: _buildCard(),
                     ),
                   ),
                 ),
@@ -256,6 +197,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         final bool isSmallScreen = MediaQuery.of(context).size.width < 450;
         return Container(
           constraints: const BoxConstraints(maxWidth: 420),
+          margin: const EdgeInsets.symmetric(horizontal: 16),
           padding: EdgeInsets.symmetric(
             horizontal: isSmallScreen ? 22 : 40,
             vertical: isSmallScreen ? 30 : 45,
@@ -285,7 +227,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
                   child: const Icon(Icons.school_rounded, size: 40, color: Colors.white),
                 ),
                 const SizedBox(height: 20),
-                const Text("IFTIINSHE SYSTEM",
+                const Text("SCHOOLS SYSTEM",
                     style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 2)),
                 const SizedBox(height: 8),
                 Text("Ku soo dhowow nidaamka",
