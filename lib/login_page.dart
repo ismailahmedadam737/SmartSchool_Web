@@ -116,10 +116,25 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
           String cleanedUser = user.replaceAll(RegExp(r'(_admin|_user|admin)$', caseSensitive: false), '').replaceAll('_', ' ').trim();
           tenantName = cleanedUser.isNotEmpty ? cleanedUser.toUpperCase() : "Al-Nuur International Academy";
         }
+        String tenantStatus = (
+          data['user']?['subscription_status'] ?? 
+          data['tenant']?['subscription_status'] ?? 
+          data['subscription_status'] ?? 
+          'active'
+        ).toString().trim().toLowerCase();
+        
+        String? expiresAt = (
+          data['user']?['subscription_expires_at'] ?? 
+          data['tenant']?['subscription_expires_at'] ?? 
+          data['subscription_expires_at']
+        )?.toString();
+
         if (data['user']?['tenant_id'] != null) {
           ApiService.currentTenantId = int.tryParse(data['user']['tenant_id'].toString());
         }
         ApiService.currentTenantName = tenantName;
+        ApiService.currentTenantStatus = tenantStatus;
+        ApiService.currentTenantExpiresAt = expiresAt;
 
         if (!mounted) return;
         if (role.toLowerCase() == 'superadmin' || lowerUser == 'superadmin') {
@@ -131,6 +146,8 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
                 userRole: role, 
                 role: role,
                 impersonatedTenantName: tenantName,
+                tenantStatus: tenantStatus,
+                subscriptionExpiresAt: expiresAt,
               )));
         }
       } else {

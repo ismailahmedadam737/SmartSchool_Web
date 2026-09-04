@@ -18,6 +18,8 @@ class ApiService {
 
   static int? currentTenantId;
   static String? currentTenantName;
+  static String? currentTenantStatus;
+  static String? currentTenantExpiresAt;
 
   static Map<String, String> get _headers {
     final map = <String, String>{"Content-Type": "application/json"};

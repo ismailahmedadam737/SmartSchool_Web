@@ -164,6 +164,11 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
     ApiService.currentTenantId = tId;
     ApiService.currentTenantName = tName;
 
+    final String tStatus = (tenant['subscription_status'] ?? 'active').toString();
+    final String? tExpires = tenant['subscription_expires_at']?.toString();
+    ApiService.currentTenantStatus = tStatus;
+    ApiService.currentTenantExpiresAt = tExpires;
+
     try {
       _snack('🚀 Logging in as $tName...', const Color(0xFF00D2FF));
       await http
@@ -182,6 +187,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
             role: 'Admin',
             isImpersonating: true,
             impersonatedTenantName: tName,
+            tenantStatus: tStatus,
+            subscriptionExpiresAt: tExpires,
           ),
         ),
       );
@@ -195,6 +202,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
             role: 'Admin',
             isImpersonating: true,
             impersonatedTenantName: tName,
+            tenantStatus: tStatus,
+            subscriptionExpiresAt: tExpires,
           ),
         ),
       );

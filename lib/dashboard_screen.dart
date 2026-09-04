@@ -24,12 +24,17 @@ class DashboardScreen extends StatefulWidget {
   final String role;
   final bool isImpersonating;
   final String impersonatedTenantName;
+  final String tenantStatus;
+  final String? subscriptionExpiresAt;
+
   const DashboardScreen({
     super.key, 
     this.userRole = '', 
     this.role = '',
     this.isImpersonating = false,
     this.impersonatedTenantName = '',
+    this.tenantStatus = 'active',
+    this.subscriptionExpiresAt,
   });
 
   @override
@@ -47,6 +52,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String r = (widget.userRole.isNotEmpty ? widget.userRole : widget.role).trim();
     if (r.isEmpty) return 'SuperAdmin';
     return r;
+  }
+
+  String get effectiveStatus {
+    String s = widget.tenantStatus.trim().toLowerCase();
+    if (s.isEmpty || s == 'unknown') {
+      s = (ApiService.currentTenantStatus ?? 'active').trim().toLowerCase();
+    }
+    return s;
+  }
+
+  int? get remainingDays {
+    final exp = widget.subscriptionExpiresAt ?? ApiService.currentTenantExpiresAt;
+    if (exp == null || exp.isEmpty) return null;
+    final d = DateTime.tryParse(exp);
+    if (d == null) return null;
+    return d.difference(DateTime.now()).inDays;
   }
 
   @override
@@ -93,6 +114,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (effectiveStatus == 'suspended' || effectiveStatus == 'cancelled') {
+      return _buildSuspendedScreen();
+    }
     return PopScope(
       canPop: selectedMenu == "Dashboard",
       onPopInvokedWithResult: (didPop, result) {
@@ -150,6 +174,197 @@ class _DashboardScreenState extends State<DashboardScreen> {
             );
           }
         },
+      ),
+    );
+  }
+
+  Widget _buildSuspendedScreen() {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D111A),
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 520),
+          margin: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF1B1522), Color(0xFF0F1524)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: Colors.redAccent.withOpacity(0.6), width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.redAccent.withOpacity(0.2),
+                blurRadius: 30,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.redAccent.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.block_rounded, color: Colors.redAccent, size: 54),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                "SYSTEM HAKAD LAGU SHUMIYAY",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.redAccent,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                widget.impersonatedTenantName.isNotEmpty
+                    ? widget.impersonatedTenantName.toUpperCase()
+                    : (ApiService.currentTenantName ?? "ISKUULKA"),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.04),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white12),
+                ),
+                child: const Text(
+                  "Maamule/Isticmaale, Nidaamka Iskuulkiina wuu hakad ku jiraa ama waa la joojiyay (Suspended/Cancelled).\n\n"
+                  "Fadlan la xidhiidh Shirkadda SmartMind Technology si nidaamka dib loogu soo celiyo ama subscribtion-ka loogu cusboonaysiiyo.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white70,
+                        side: const BorderSide(color: Colors.white24),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                      ),
+                      onPressed: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AuthPage(userRole: '')),
+                          (route) => false,
+                        );
+                      },
+                      icon: const Icon(Icons.logout_rounded, size: 18),
+                      label: const Text("Dib u Noqo Login"),
+                    ),
+                  ),
+                  if (widget.isImpersonating) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6C63FF),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                        onPressed: () {
+                          ApiService.currentTenantId = null;
+                          ApiService.currentTenantName = null;
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (_) => const SuperAdminDashboard()),
+                          );
+                        },
+                        icon: const Icon(Icons.arrow_back_rounded, size: 18),
+                        label: const Text("SuperAdmin Hub"),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpirationWarningBanner() {
+    final days = remainingDays;
+    if (days == null || days > 7) return const SizedBox.shrink();
+
+    final bool isExpired = days <= 0;
+    final Color bannerColor = isExpired ? Colors.redAccent : Colors.amber;
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: bannerColor.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: bannerColor.withOpacity(0.5), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: bannerColor.withOpacity(0.1),
+            blurRadius: 12,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: bannerColor.withOpacity(0.2),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              isExpired ? Icons.error_outline_rounded : Icons.hourglass_top_rounded,
+              color: bannerColor,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isExpired
+                      ? "⚠️ DIGNIIN: Subscribtion-ka Iskuulkiina Wuu Ka Dhacay!"
+                      : "⚠️ DIGNIIN: Subscribtion-ka Waxaa Ka Dhiman $days Maalmood!",
+                  style: TextStyle(
+                    color: bannerColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  isExpired
+                      ? "Fadlan la xidhiidh SmartMind Technology si aad u cusboonaysiiso."
+                      : "Subscribtion-ku wuu dhowyahay inuu ka dhaco. Fadlan la xidhiidh SmartMind Technology.",
+                  style: TextStyle(
+                    color: bannerColor.withOpacity(0.85),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -244,6 +459,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildImpersonationBanner(),
+          _buildExpirationWarningBanner(),
           _buildHeader(),
           const SizedBox(height: 20),
           _buildScrollingImagesRow(),
