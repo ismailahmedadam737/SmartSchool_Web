@@ -123,6 +123,9 @@ class _NotesPageState extends State<NotesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final double screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 768;
+
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -134,22 +137,22 @@ class _NotesPageState extends State<NotesPage> {
       child: Scaffold(
         backgroundColor: Colors.transparent,
         body: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: EdgeInsets.all(isMobile ? 12.0 : 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildHeader(),
-              const SizedBox(height: 20),
-              _buildMetricsRow(),
-              const SizedBox(height: 20),
-              _buildFilterControls(),
+              _buildHeader(isMobile: isMobile),
+              SizedBox(height: isMobile ? 12 : 20),
+              _buildMetricsRow(isMobile: isMobile),
+              SizedBox(height: isMobile ? 12 : 20),
+              _buildFilterControls(isMobile: isMobile),
               const SizedBox(height: 15),
               Expanded(
                 child: isLoading
                     ? const Center(child: CircularProgressIndicator(color: Colors.cyanAccent))
                     : filteredDebtorStudents.isEmpty
                         ? _buildEmptyState()
-                        : _buildStudentNotesList(),
+                        : _buildStudentNotesList(isMobile: isMobile),
               ),
             ],
           ),
@@ -158,119 +161,195 @@ class _NotesPageState extends State<NotesPage> {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildNotificationBell() {
+    final int debtCount = allStudents
+        .where((s) => (studentDebtMap[s.idString] ?? 0) > 0)
+        .length;
+    final bool hasDebts = debtCount > 0;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Tooltip(
+          message: hasDebts
+              ? "$debtCount arday oo baaqi lagu leeyahay — Riix si liiska aad u aragto"
+              : "Wax baaqi ah laguma leh",
+          child: InkWell(
+            onTap: _showDebtorNotificationsPanel,
+            borderRadius: BorderRadius.circular(14),
+            child: Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: hasDebts
+                    ? Colors.red.withValues(alpha: 0.12)
+                    : Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: hasDebts
+                      ? Colors.redAccent.withValues(alpha: 0.5)
+                      : Colors.white.withValues(alpha: 0.1),
+                  width: 1.5,
+                ),
+                boxShadow: hasDebts
+                    ? [BoxShadow(color: Colors.red.withValues(alpha: 0.25), blurRadius: 12, spreadRadius: 1)]
+                    : [],
+              ),
+              child: Icon(
+                Icons.notifications_active_rounded,
+                color: hasDebts ? Colors.redAccent : Colors.white38,
+                size: 24,
+              ),
+            ),
+          ),
+        ),
+        if (hasDebts)
+          Positioned(
+            top: -5,
+            right: -5,
+            child: GestureDetector(
+              onTap: _showDebtorNotificationsPanel,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: const [
+                    BoxShadow(color: Colors.redAccent, blurRadius: 8, spreadRadius: 2),
+                  ],
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+                constraints: const BoxConstraints(minWidth: 20, minHeight: 18),
+                child: Text(
+                  debtCount > 99 ? "99+" : "$debtCount",
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHeader({bool isMobile = false}) {
+    if (isMobile) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
+                ),
+                child: const Icon(Icons.note_alt_rounded, color: Colors.amber, size: 22),
+              ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Fee Balance & Notes",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      "Maamulka baaqiga lacagaha ardayda",
+                      style: TextStyle(fontSize: 11, color: Colors.white60),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              _buildNotificationBell(),
+              ElevatedButton.icon(
+                onPressed: _showAddNewDebtDialog,
+                icon: const Icon(Icons.add_card_rounded, color: Colors.black, size: 16),
+                label: const Text("+ Geli Baaqi", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.amberAccent,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _fetchData,
+                icon: const Icon(Icons.refresh, color: Colors.white, size: 16),
+                label: const Text("Refresh", style: TextStyle(fontSize: 12)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ],
+          ),
+        ],
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.amber.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
-                  ),
-                  child: const Icon(Icons.note_alt_rounded, color: Colors.amber, size: 28),
+        Expanded(
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.5)),
                 ),
-                const SizedBox(width: 15),
-                const Column(
+                child: const Icon(Icons.note_alt_rounded, color: Colors.amber, size: 28),
+              ),
+              const SizedBox(width: 15),
+              const Expanded(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       "Fee Balance & Notes Tracker",
-                      style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white, letterSpacing: 0.5),
+                      overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       "Maamulka ogaysiisyada & baaqiga lacagaha ardayda",
                       style: TextStyle(fontSize: 13, color: Colors.white60),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
+        const SizedBox(width: 10),
         Row(
           children: [
-            // 🔔 Notification Bell with badge — only shows when debt > 0 is recorded
-            Builder(builder: (context) {
-              final int debtCount = allStudents
-                  .where((s) => (studentDebtMap[s.idString] ?? 0) > 0)
-                  .length;
-              final bool hasDebts = debtCount > 0;
-
-              return Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Tooltip(
-                    message: hasDebts
-                        ? "$debtCount arday oo baaqi lagu leeyahay — Riix si liiska aad u aragto"
-                        : "Wax baaqi ah laguma leh",
-                    child: InkWell(
-                      onTap: _showDebtorNotificationsPanel,
-                      borderRadius: BorderRadius.circular(14),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: hasDebts
-                              ? Colors.red.withValues(alpha: 0.12)
-                              : Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: hasDebts
-                                ? Colors.redAccent.withValues(alpha: 0.5)
-                                : Colors.white.withValues(alpha: 0.1),
-                            width: 1.5,
-                          ),
-                          boxShadow: hasDebts
-                              ? [BoxShadow(color: Colors.red.withValues(alpha: 0.25), blurRadius: 12, spreadRadius: 1)]
-                              : [],
-                        ),
-                        child: Icon(
-                          Icons.notifications_active_rounded,
-                          color: hasDebts ? Colors.redAccent : Colors.white38,
-                          size: 26,
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Badge — only visible when there are debts
-                  if (hasDebts)
-                    Positioned(
-                      top: -7,
-                      right: -7,
-                      child: GestureDetector(
-                        onTap: _showDebtorNotificationsPanel,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.redAccent, blurRadius: 8, spreadRadius: 2),
-                            ],
-                            border: Border.all(color: Colors.white, width: 1.5),
-                          ),
-                          constraints: const BoxConstraints(minWidth: 24, minHeight: 20),
-                          child: Text(
-                            debtCount > 99 ? "99+" : "$debtCount",
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            }),
+            _buildNotificationBell(),
             const SizedBox(width: 12),
             ElevatedButton.icon(
               onPressed: _showAddNewDebtDialog,
@@ -310,12 +389,13 @@ class _NotesPageState extends State<NotesPage> {
 
     final ScrollController popupScrollController = ScrollController();
     final double totalDebt = debtors.fold(0.0, (sum, s) => sum + (studentDebtMap[s.idString] ?? 0));
+    final bool isMobile = MediaQuery.of(context).size.width < 600;
 
     showDialog(
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 50, vertical: 30),
+        insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 50, vertical: 24),
         child: ConstrainedBox(
           constraints: BoxConstraints(
             maxHeight: MediaQuery.of(context).size.height * 0.82,
@@ -656,10 +736,10 @@ class _NotesPageState extends State<NotesPage> {
                         value: selectedClass,
                         dropdownColor: const Color(0xFF1E1B4B),
                         isExpanded: true,
-                        hint: const Text("Dhammaan Fasallada", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                        hint: const Text("Fasallada", style: TextStyle(color: Colors.white70, fontSize: 12)),
                         icon: const Icon(Icons.keyboard_arrow_down, color: Colors.cyanAccent, size: 18),
                         items: [
-                          const DropdownMenuItem(value: null, child: Text("Dhammaan Fasallada", style: TextStyle(color: Colors.white, fontSize: 12))),
+                          const DropdownMenuItem(value: null, child: Text("Dhammaan", style: TextStyle(color: Colors.white, fontSize: 12))),
                           ...classes.map((c) => DropdownMenuItem(value: c, child: Text(c, style: const TextStyle(color: Colors.white, fontSize: 12)))),
                         ],
                         onChanged: (val) => setState(() => selectedClass = val),
@@ -668,9 +748,16 @@ class _NotesPageState extends State<NotesPage> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                _filterChip("Dhammaan", "All"),
-                const SizedBox(width: 6),
-                _filterChip("Unpaid", "Unpaid"),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _filterChip("Dhammaan", "All"),
+                      const SizedBox(width: 6),
+                      _filterChip("Unpaid", "Unpaid"),
+                    ],
+                  ),
+                ),
               ],
             ),
           ],
@@ -825,28 +912,29 @@ class _NotesPageState extends State<NotesPage> {
 
   Widget _buildEmptyState() {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 color: Colors.white.withValues(alpha: 0.05),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.check_circle_outline_rounded, color: Colors.greenAccent, size: 64),
+              child: const Icon(Icons.check_circle_outline_rounded, color: Colors.greenAccent, size: 44),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             const Text(
               "Wax baaqi ah laguma helin!",
-              style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
             ),
             const SizedBox(height: 6),
             const Text(
               "Ma jiraan arday buuxisa shuruudaha raadinta ee hadda.",
-              style: TextStyle(color: Colors.white54, fontSize: 13),
+              style: TextStyle(color: Colors.white54, fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],
@@ -1135,10 +1223,11 @@ class _NotesPageState extends State<NotesPage> {
                 ),
               ],
             ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // Current debt display
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -1212,7 +1301,8 @@ class _NotesPageState extends State<NotesPage> {
                   ),
               ],
             ),
-            actions: [
+          ),
+          actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text("Ka noqo", style: TextStyle(color: Colors.white54)),
@@ -1505,10 +1595,11 @@ class _NotesPageState extends State<NotesPage> {
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             const Text("Lacagta Baaqiga (\$) :", style: TextStyle(color: Colors.white60, fontSize: 12)),
             const SizedBox(height: 6),
             TextField(
@@ -1541,7 +1632,8 @@ class _NotesPageState extends State<NotesPage> {
             ),
           ],
         ),
-        actions: [
+      ),
+      actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Ka noqo", style: TextStyle(color: Colors.white54)),
@@ -1610,9 +1702,10 @@ class _NotesPageState extends State<NotesPage> {
             Text("Ogeysiis: ${student.name}", style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Container(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -1627,7 +1720,8 @@ class _NotesPageState extends State<NotesPage> {
             ),
           ],
         ),
-        actions: [
+      ),
+      actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text("Close", style: TextStyle(color: Colors.white54)),
