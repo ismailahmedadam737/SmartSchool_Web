@@ -76,7 +76,9 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
               : lowerUser == 'teacher'
                   ? 'Teacher'
                   : 'User';
-      String schoolName = ApiService.currentTenantName ?? "SmartMind Academy";
+      String schoolName = (ApiService.currentTenantName != null && ApiService.currentTenantName!.trim().isNotEmpty)
+          ? ApiService.currentTenantName!.trim()
+          : "Al-Nuur International Academy";
       if (!mounted) return;
       Navigator.pushReplacement(context,
           MaterialPageRoute(builder: (_) => DashboardScreen(
@@ -97,10 +99,22 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
       final data = jsonDecode(response.body);
       if (response.statusCode == 200) {
         String role = data['user']?['role'] ?? 'User';
-        String tenantName = (data['user']?['tenant_name'] ?? data['tenant']?['name'] ?? '').toString().trim();
+        String tenantName = (
+          data['user']?['schoolName'] ??
+          data['schoolName'] ??
+          data['user']?['tenant_name'] ??
+          data['tenant']?['name'] ??
+          data['school_name'] ??
+          data['name'] ??
+          ''
+        ).toString().trim();
+
+        if (tenantName.isEmpty && ApiService.currentTenantName != null && ApiService.currentTenantName!.trim().isNotEmpty) {
+          tenantName = ApiService.currentTenantName!.trim();
+        }
         if (tenantName.isEmpty) {
           String cleanedUser = user.replaceAll(RegExp(r'(_admin|_user|admin)$', caseSensitive: false), '').replaceAll('_', ' ').trim();
-          tenantName = cleanedUser.isNotEmpty ? "${cleanedUser.toUpperCase()} SCHOOL" : "SmartMind School System";
+          tenantName = cleanedUser.isNotEmpty ? cleanedUser.toUpperCase() : "Al-Nuur International Academy";
         }
         if (data['user']?['tenant_id'] != null) {
           ApiService.currentTenantId = int.tryParse(data['user']['tenant_id'].toString());

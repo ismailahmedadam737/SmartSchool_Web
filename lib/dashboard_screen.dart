@@ -644,7 +644,7 @@ Widget _buildPieChart() {
       schoolName = ApiService.currentTenantName!.trim();
     }
     if (schoolName.isEmpty) {
-      schoolName = "SMARTMIND SCHOOL ACADEMY";
+      schoolName = "AL-NUUR INTERNATIONAL ACADEMY";
     }
     final String logoText = schoolName.toUpperCase();
 
