@@ -314,8 +314,9 @@ class _UsersPageState extends State<UsersPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildInput(TextEditingController controller, String label, IconData icon, {bool isObscure = false}) {
     return TextField(
