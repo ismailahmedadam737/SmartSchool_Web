@@ -933,10 +933,11 @@ Widget _buildPieChart() {
 
   Widget _buildSidebarLogo() {
     String schoolName = widget.impersonatedTenantName.trim();
-    if (schoolName.isEmpty && ApiService.currentTenantName != null && ApiService.currentTenantName!.trim().isNotEmpty) {
+    if ((schoolName.isEmpty || schoolName.toLowerCase() == 'ismail' || schoolName.toLowerCase() == 'admin') && 
+        ApiService.currentTenantName != null && ApiService.currentTenantName!.trim().isNotEmpty) {
       schoolName = ApiService.currentTenantName!.trim();
     }
-    if (schoolName.isEmpty) {
+    if (schoolName.isEmpty || schoolName.toLowerCase() == 'ismail' || schoolName.toLowerCase() == 'admin') {
       schoolName = "AL-NUUR INTERNATIONAL ACADEMY";
     }
     final String logoText = schoolName.toUpperCase();

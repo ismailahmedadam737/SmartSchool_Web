@@ -109,12 +109,37 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
           ''
         ).toString().trim();
 
+        if (tenantName.isEmpty || tenantName.toLowerCase() == 'ismail' || tenantName.toLowerCase() == 'admin') {
+          try {
+            final tenantsRes = await http.get(
+              Uri.parse("https://smartschool-web.onrender.com/admin/tenants"),
+              headers: {"Content-Type": "application/json"},
+            ).timeout(const Duration(seconds: 4));
+            if (tenantsRes.statusCode == 200) {
+              final List<dynamic> tenantsList = jsonDecode(tenantsRes.body);
+              final int? userTenantId = data['user']?['tenant_id'] != null 
+                  ? int.tryParse(data['user']['tenant_id'].toString()) 
+                  : null;
+                  
+              final match = tenantsList.firstWhere(
+                (t) => (userTenantId != null && t['id'] == userTenantId) ||
+                       (t['admin_username'] ?? '').toString().toLowerCase() == lowerUser ||
+                       (t['admin_email'] ?? '').toString().toLowerCase() == lowerUser,
+                orElse: () => null,
+              );
+              if (match != null && (match['name'] ?? '').toString().trim().isNotEmpty) {
+                tenantName = match['name'].toString().trim();
+              }
+            }
+          } catch (_) {}
+        }
+
         if (tenantName.isEmpty && ApiService.currentTenantName != null && ApiService.currentTenantName!.trim().isNotEmpty) {
           tenantName = ApiService.currentTenantName!.trim();
         }
-        if (tenantName.isEmpty) {
-          String cleanedUser = user.replaceAll(RegExp(r'(_admin|_user|admin)$', caseSensitive: false), '').replaceAll('_', ' ').trim();
-          tenantName = cleanedUser.isNotEmpty ? cleanedUser.toUpperCase() : "Al-Nuur International Academy";
+
+        if (tenantName.isEmpty || tenantName.toLowerCase() == 'ismail' || tenantName.toLowerCase() == 'admin') {
+          tenantName = "Al-Nuur International Academy";
         }
         String tenantStatus = (
           data['user']?['subscription_status'] ?? 
