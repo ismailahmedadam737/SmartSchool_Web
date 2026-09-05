@@ -1,4 +1,5 @@
 import 'dart:async'; // Kani waa muhiim si loo maareeyo auto-scroll-ka
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:iftiinshe/AdminMessagesPage.dart';
@@ -18,6 +19,7 @@ import 'package:iftiinshe/reports_page.dart';
 import 'package:iftiinshe/student_registration.dart';
 import 'package:iftiinshe/teacher.dart';
 import 'package:iftiinshe/super_admin_dashboard.dart';
+import 'package:iftiinshe/ClassTimetablePage.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userRole;
@@ -47,6 +49,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final ScrollController _imageScrollController = ScrollController();
   final ScrollController _sidebarScrollController = ScrollController();
   Timer? _timer;
+
+  final List<String> _bannerImages = [
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzeE-WPoZYslQCRQKKV4ue8uiPlI28wElSRGsTMfmOPySxzUDXZNDYIqiK&s=10",
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFoIq3RM4xn7mlu4qXJXAIiKGqzoq9haAZSYBl0KZzumbspkbHdorZMmc&s=10",
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXZbfZq23Fr-6Fkv0washqLKd9u6-_lGuFF4HZ5kGPkA&s=10",
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJ4ubfnrwFjKz0xaLkrM8kBn13H1DBScz1ug&s",
+    "https://static.vecteezy.com/system/resources/previews/008/734/694/large_2x/happy-school-children-in-front-of-building-school-vector.jpg",
+    "https://i.ytimg.com/vi/1RJEOsbOyE4/hq720.jpg?sqp=-oaymwE7CK4FEIIDSFryq4qpAy0IARUAAAAAGAElAADIQj0AgKJD8AEB-AH-CYAC0AWKAgwIABABGEsgTyhlMA8=&rs=AOn4CLBRnx_rWtjn5Dk_tzdNnqnQAWIWiw",
+    "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRT8ryhfF9HVfusWZhVGw6qSZmsysP2PBHh3A&s",
+  ];
 
   String get activeRole {
     String r = (widget.userRole.isNotEmpty ? widget.userRole : widget.role).trim();
@@ -436,6 +448,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case "Buses": return const BusesPage();
       case "Exam & Results": return ExaminationPage(userRole: r);
       case "Exam Schedule": return const ExamScheduleGeneratorPage();
+      case "Class Timetable": return ClassTimetablePage(userRole: r);
       case "Communications": return const SchoolCommunicationsPage();
       case "Admin Messages": return const AdminMessagesPage();
       case "General Reports": return const ReportsPage();
@@ -541,35 +554,310 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildScrollingImagesRow() {
-    final List<String> adImages = [
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzeE-WPoZYslQCRQKKV4ue8uiPlI28wElSRGsTMfmOPySxzUDXZNDYIqiK&s=10",
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFoIq3RM4xn7mlu4qXJXAIiKGqzoq9haAZSYBl0KZzumbspkbHdorZMmc&s=10",
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXZbfZq23Fr-6Fkv0washqLKd9u6-_lGuFF4HZ5kGPkA&s=10"
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJ4ubfnrwFjKz0xaLkrM8kBn13H1DBScz1ug&s",
-      "https://static.vecteezy.com/system/resources/previews/008/734/694/large_2x/happy-school-children-in-front-of-building-school-vector.jpg",
-      "https://i.ytimg.com/vi/1RJEOsbOyE4/hq720.jpg?sqp=-oaymwE7CK4FEIIDSFryq4qpAy0IARUAAAAAGAElAADIQj0AgKJD8AEB-AH-CYAC0AWKAgwIABABGEsgTyhlMA8=&rs=AOn4CLBRnx_rWtjn5Dk_tzdNnqnQAWIWiw",
-      "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRT8ryhfF9HVfusWZhVGw6qSZmsysP2PBHh3A&s",
-    ];
+  void _pickImageFromComputer(BuildContext dialogContext) {
+    try {
+      final uploadInput = html.FileUploadInputElement();
+      uploadInput.accept = 'image/*';
+      uploadInput.click();
 
-    return SizedBox(
-      height: 180,
-      child: ListView.builder(
-        controller: _imageScrollController,
-        scrollDirection: Axis.horizontal,
-        itemCount: adImages.length,
-        itemBuilder: (context, index) {
-          return Container(
-            width: 300,
-            margin: const EdgeInsets.only(right: 20),
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.grey),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: Image.network(adImages[index], fit: BoxFit.cover),
+      uploadInput.onChange.listen((e) {
+        final files = uploadInput.files;
+        if (files != null && files.isNotEmpty) {
+          final file = files[0];
+          final reader = html.FileReader();
+          reader.readAsDataUrl(file);
+          reader.onLoadEnd.listen((e) {
+            final String? result = reader.result as String?;
+            if (result != null && result.isNotEmpty) {
+              setState(() {
+                _bannerImages.insert(0, result);
+              });
+              if (mounted && Navigator.canPop(dialogContext)) {
+                Navigator.pop(dialogContext);
+              }
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Sawirka xaflada iskuulka si guul leh ayaa looga soo xulay Computer-ka!"),
+                  backgroundColor: Colors.green,
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          });
+        }
+      });
+    } catch (e) {
+      debugPrint("Error picking file: $e");
+    }
+  }
+
+  void _showUploadImageDialog() {
+    final TextEditingController urlController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          backgroundColor: cardColor,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              const Icon(Icons.add_photo_alternate_rounded, color: Colors.cyanAccent),
+              const SizedBox(width: 10),
+              Text(
+                "Soo Gali Sawir / Upload Photo",
+                style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  "Waad ka soo xuli kartaa sawirada xaflada ama dhacdooyinka iskuulka Computer-kaaga (Documents, Pictures, Downloads):",
+                  style: TextStyle(color: textColor.withOpacity(0.85), fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _pickImageFromComputer(ctx),
+                    icon: const Icon(Icons.folder_open_rounded, size: 22),
+                    label: const Text(
+                      "📁 Ka Xul Computer-ka (Documents/Pictures)",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00D2FF),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: textColor.withOpacity(0.2))),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Text(
+                        "AMA / OR",
+                        style: TextStyle(color: textColor.withOpacity(0.5), fontSize: 11, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Expanded(child: Divider(color: textColor.withOpacity(0.2))),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                TextField(
+                  controller: urlController,
+                  style: TextStyle(color: textColor),
+                  decoration: InputDecoration(
+                    labelText: "URL Link Sawirka",
+                    hintText: "https://example.com/image.jpg",
+                    labelStyle: TextStyle(color: textColor.withOpacity(0.7)),
+                    hintStyle: TextStyle(color: textColor.withOpacity(0.4)),
+                    prefixIcon: const Icon(Icons.link, color: Colors.cyanAccent),
+                    filled: true,
+                    fillColor: isDarkMode ? Colors.grey[900] : Colors.grey[100],
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(color: Colors.cyanAccent, width: 2),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          );
-        },
-      ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text("Baaq / Cancel", style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C63FF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              ),
+              icon: const Icon(Icons.cloud_upload_rounded, size: 18),
+              label: const Text("Gali Link-ka"),
+              onPressed: () {
+                final text = urlController.text.trim();
+                if (text.isNotEmpty) {
+                  setState(() {
+                    _bannerImages.insert(0, text);
+                  });
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Sawirka cusub si guul leh ayaa loo soo geliyey!"),
+                      backgroundColor: Colors.green,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildScrollingImagesRow() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF6C63FF), Color(0xFF00D2FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.cyanAccent.withOpacity(0.4),
+                        blurRadius: 10,
+                        spreadRadius: 1,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(Icons.school_rounded, color: Colors.white, size: 24),
+                ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 800),
+                      builder: (context, value, child) {
+                        return Opacity(
+                          opacity: value,
+                          child: Transform.translate(
+                            offset: Offset(0, (1 - value) * 10),
+                            child: ShaderMask(
+                              shaderCallback: (bounds) => const LinearGradient(
+                                colors: [Color(0xFF00D2FF), Color(0xFF928DFF), Color(0xFF00E676)],
+                              ).createShader(bounds),
+                              child: const Text(
+                                "Welcome to Dashboard 👋",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 0.5,
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Smart School Management & Gallery Overview",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: textColor.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            ElevatedButton.icon(
+              onPressed: _showUploadImageDialog,
+              icon: const Icon(Icons.cloud_upload_rounded, size: 18),
+              label: const Text(
+                "Upload File / Soo Gali Sawir",
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C63FF),
+                foregroundColor: Colors.white,
+                elevation: 3,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 180,
+          child: ListView.builder(
+            controller: _imageScrollController,
+            scrollDirection: Axis.horizontal,
+            itemCount: _bannerImages.length,
+            itemBuilder: (context, index) {
+              return Container(
+                width: 300,
+                margin: const EdgeInsets.only(right: 20),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  color: cardColor,
+                  boxShadow: const [
+                    BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: Image.network(
+                          _bannerImages[index],
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey[800],
+                              child: const Center(
+                                child: Icon(Icons.broken_image, color: Colors.white54, size: 40),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Material(
+                        color: Colors.black45,
+                        shape: const CircleBorder(),
+                        child: IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.white, size: 18),
+                          tooltip: "Tirtir Sawirka",
+                          onPressed: () {
+                            setState(() {
+                              _bannerImages.removeAt(index);
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
@@ -806,12 +1094,14 @@ Widget _buildPieChart() {
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
         {"icon": Icons.school_rounded, "title": "Teachers"},
+        {"icon": Icons.calendar_month_rounded, "title": "Class Timetable"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
         {"icon": Icons.chat_rounded, "title": "Communications"},
         {"icon": Icons.book, "title": "Exam & Results"},
       ];
     } else if (r == 'user' || r.contains('student') || r.contains('parent') || r.contains('ardey') || r.contains('waalid')) {
       return [
+        {"icon": Icons.calendar_month_rounded, "title": "Class Timetable"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
         {"icon": Icons.chat_rounded, "title": "Communications"},
         {"icon": Icons.book, "title": "Exam & Results"},
@@ -823,6 +1113,7 @@ Widget _buildPieChart() {
         {"icon": Icons.school_rounded, "title": "Teachers"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.calendar_month_rounded, "title": "Class Timetable"},
         {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
         {"icon": Icons.bus_alert, "title": "Buses"},
         {"icon": Icons.book, "title": "Exam & Results"},
@@ -842,6 +1133,7 @@ Widget _buildPieChart() {
         {"icon": Icons.school_rounded, "title": "Teachers"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
+        {"icon": Icons.calendar_month_rounded, "title": "Class Timetable"},
         {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
         {"icon": Icons.bus_alert, "title": "Buses"},
         {"icon": Icons.book, "title": "Exam & Results"},

@@ -32,6 +32,7 @@ dependencies:
 
   # Animations
   lottie: ^3.1.2
+  file_picker: ^12.2.0
 
 dev_dependencies:
   flutter_test:
