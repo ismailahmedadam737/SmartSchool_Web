@@ -415,6 +415,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
     String role = widget.userRole.toLowerCase();
     bool isStudent = role == 'user' || role.contains('student') || role.contains('ardey') || role.contains('waalid') || role.contains('parent');
+    bool canEdit = !(isStudent || role.contains('teacher') || role.contains('macalin'));
 
     // Sort announcements so NEWEST CREATED IS ALWAYS AT THE TOP
     List<Map<String, dynamic>> sortedList = List.from(_announcements);
@@ -564,8 +565,8 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                                 Expanded(child: textWidget),
                               ],
                             ),
-                            const SizedBox(height: 18),
-                            SizedBox(width: double.infinity, child: buttonWidget),
+                            if (canEdit) const SizedBox(height: 18),
+                            if (canEdit) SizedBox(width: double.infinity, child: buttonWidget),
                           ],
                         )
                       : Row(
@@ -573,8 +574,8 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                             iconWidget,
                             const SizedBox(width: 16),
                             Expanded(child: textWidget),
-                            const SizedBox(width: 12),
-                            buttonWidget,
+                            if (canEdit) const SizedBox(width: 12),
+                            if (canEdit) buttonWidget,
                           ],
                         ),
                 );
@@ -691,7 +692,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
             else
               Column(
                 children: [
-                  _buildFeaturedAnnouncementCard(filteredList.first, isDark, cardColor, textColor),
+                  _buildFeaturedAnnouncementCard(filteredList.first, isDark, cardColor, textColor, canEdit),
                   const SizedBox(height: 20),
                   if (filteredList.length > 1)
                     LayoutBuilder(
@@ -708,7 +709,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                             itemCount: listRest.length,
                             separatorBuilder: (ctx, i) => const SizedBox(height: 16),
                             itemBuilder: (ctx, index) {
-                              return _buildAnnouncementCard(listRest[index], isDark, cardColor, textColor);
+                              return _buildAnnouncementCard(listRest[index], isDark, cardColor, textColor, canEdit);
                             },
                           );
                         }
@@ -724,7 +725,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                           ),
                           itemCount: listRest.length,
                           itemBuilder: (ctx, index) {
-                            return _buildAnnouncementCard(listRest[index], isDark, cardColor, textColor);
+                            return _buildAnnouncementCard(listRest[index], isDark, cardColor, textColor, canEdit);
                           },
                         );
                       },
@@ -738,7 +739,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     );
   }
 
-  Widget _buildFeaturedAnnouncementCard(Map<String, dynamic> item, bool isDark, Color cardColor, Color textColor) {
+  Widget _buildFeaturedAnnouncementCard(Map<String, dynamic> item, bool isDark, Color cardColor, Color textColor, bool canEdit) {
     final String cat = (item["category"] ?? "General").toString();
     final style = _getAnnouncementCategoryStyle(cat);
     final String countdownText = _getCountdownText(item["eventDate"]?.toString());
@@ -825,19 +826,20 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                   ),
                 ],
               ),
-              IconButton(
-                icon: Icon(Icons.delete_outline_rounded, color: Colors.red.withValues(alpha: 0.7), size: 24),
-                tooltip: "Tirtir Ogeysiiska",
-                onPressed: () {
-                  setState(() {
-                    _announcements.removeWhere((a) => a["id"] == item["id"]);
-                    _saveAnnouncements();
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Ogeysiiska waa la tirtiray")),
-                  );
-                },
-              ),
+              if (canEdit)
+                IconButton(
+                  icon: Icon(Icons.delete_outline_rounded, color: Colors.red.withValues(alpha: 0.7), size: 24),
+                  tooltip: "Tirtir Ogeysiiska",
+                  onPressed: () {
+                    setState(() {
+                      _announcements.removeWhere((a) => a["id"] == item["id"]);
+                      _saveAnnouncements();
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Ogeysiiska waa la tirtiray")),
+                    );
+                  },
+                ),
             ],
           ),
           const SizedBox(height: 20),
@@ -891,7 +893,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     );
   }
 
-  Widget _buildAnnouncementCard(Map<String, dynamic> item, bool isDark, Color cardColor, Color textColor) {
+  Widget _buildAnnouncementCard(Map<String, dynamic> item, bool isDark, Color cardColor, Color textColor, bool canEdit) {
     final String cat = (item["category"] ?? "General").toString();
     final style = _getAnnouncementCategoryStyle(cat);
     final String countdownText = _getCountdownText(item["eventDate"]?.toString());
@@ -954,21 +956,22 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                   ),
                 ],
               ),
-              IconButton(
-                constraints: const BoxConstraints(),
-                padding: EdgeInsets.zero,
-                icon: Icon(Icons.delete_outline_rounded, color: Colors.red.withValues(alpha: 0.7), size: 20),
-                tooltip: "Tirtir Ogeysiiska",
-                onPressed: () {
-                  setState(() {
-                    _announcements.removeWhere((a) => a["id"] == item["id"]);
-                    _saveAnnouncements();
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Ogeysiiska waa la tirtiray")),
-                  );
-                },
-              ),
+              if (canEdit)
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                  icon: Icon(Icons.delete_outline_rounded, color: Colors.red.withValues(alpha: 0.7), size: 20),
+                  tooltip: "Tirtir Ogeysiiska",
+                  onPressed: () {
+                    setState(() {
+                      _announcements.removeWhere((a) => a["id"] == item["id"]);
+                      _saveAnnouncements();
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Ogeysiiska waa la tirtiray")),
+                    );
+                  },
+                ),
             ],
           ),
           const SizedBox(height: 14),
