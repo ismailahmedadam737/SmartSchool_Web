@@ -569,25 +569,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
     );
   }
 
-  void _deleteSingleTimetableImage(String targetClass, int index) {
-    setState(() {
-      if (classTimetableImagesMap.containsKey(targetClass)) {
-        classTimetableImagesMap[targetClass]!.removeAt(index);
-        if (classTimetableImagesMap[targetClass]!.isEmpty) {
-          classTimetableImagesMap.remove(targetClass);
-        }
-        _saveTimetableData();
-      }
-    });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Sawirka jadwalka si guul leh ayaa loo tirtiray!"),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
 
   void _triggerPrint() {
     try {
@@ -797,7 +779,6 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
       body: LayoutBuilder(
         builder: (context, constraints) {
           final bool isMobile = constraints.maxWidth < 600;
-          final List<Map<String, dynamic>> imagesList = activeTimetableImages;
 
           return SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? 12.0 : 20.0),
@@ -1138,194 +1119,9 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
     );
   }
 
-  Widget _buildImageViewerGallery(bool isDark, Color cardColor, Color textColor, List<Map<String, dynamic>> imagesList) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.4)),
-        boxShadow: const [
-          BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF6366F1).withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Icon(Icons.image_rounded, color: Color(0xFF6366F1), size: 22),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    "SAWIRADA JADWALKA XIISADAHA (${imagesList.length} SAWIR)",
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      color: textColor,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
-              ),
-              if (canManageTimetable)
-                ElevatedButton.icon(
-                  onPressed: () => _showUploadTimetableImageDialog(context),
-                  icon: const Icon(Icons.add_photo_alternate_rounded, size: 16),
-                  label: const Text("Soo Gali Sawir Kale"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF6366F1),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 16),
 
-          // Display list of timetable images
-          ...imagesList.map((item) {
-            final String clsName = item["class"] as String;
-            final String imgUrl = item["url"] as String;
-            final int imgIndex = item["index"] as int;
 
-            return Container(
-              margin: const EdgeInsets.only(bottom: 20),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header badge for class image
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0F5257).withValues(alpha: 0.1),
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(16),
-                        topRight: Radius.circular(16),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.bookmark_rounded, color: Color(0xFF0F5257), size: 18),
-                            const SizedBox(width: 8),
-                            Text(
-                              clsName == "General" ? "JADWALKA ALBAABKA / GENERAL TIMETABLE" : "JADWALKA: ${clsName.toUpperCase()}",
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: Color(0xFF0F5257),
-                              ),
-                            ),
-                          ],
-                        ),
-                        if (canManageTimetable)
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
-                            tooltip: "Tirtir sawirkan jadwalka",
-                            onPressed: () => _deleteSingleTimetableImage(clsName, imgIndex),
-                          ),
-                      ],
-                    ),
-                  ),
-                  ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(16),
-                      bottomRight: Radius.circular(16),
-                    ),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          constraints: const BoxConstraints(maxHeight: 550),
-                          width: double.infinity,
-                          color: isDark ? Colors.black38 : Colors.grey.shade100,
-                          child: Image.network(
-                            imgUrl,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Padding(
-                                padding: EdgeInsets.all(40.0),
-                                child: Center(child: Text("Cilad ayaa ka dhacday soo bandhigida sawirka")),
-                              );
-                            },
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 12,
-                          right: 12,
-                          child: FloatingActionButton.small(
-                            heroTag: "zoom_timetable_${clsName}_$imgIndex",
-                            backgroundColor: Colors.black87,
-                            foregroundColor: Colors.white,
-                            tooltip: "Eeg Mugged Buuxa (Full Screen)",
-                            onPressed: () => _showFullScreenImage(context, imgUrl),
-                            child: const Icon(Icons.zoom_in_rounded),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
 
-  void _showFullScreenImage(BuildContext context, String imageUrl) {
-    showDialog(
-      context: context,
-      builder: (ctx) {
-        return Dialog(
-          backgroundColor: Colors.black87,
-          insetPadding: const EdgeInsets.all(16),
-          child: Stack(
-            children: [
-              InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                child: Center(
-                  child: Image.network(imageUrl, fit: BoxFit.contain),
-                ),
-              ),
-              Positioned(
-                top: 12,
-                right: 12,
-                child: CircleAvatar(
-                  backgroundColor: Colors.white24,
-                  child: IconButton(
-                    icon: const Icon(Icons.close_rounded, color: Colors.white),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
 
   void _deleteClassSchedule(String className) {
     showDialog(
