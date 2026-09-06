@@ -21,6 +21,7 @@ import 'package:iftiinshe/student_registration.dart';
 import 'package:iftiinshe/teacher.dart';
 import 'package:iftiinshe/super_admin_dashboard.dart';
 import 'package:iftiinshe/ClassTimetablePage.dart';
+import 'package:iftiinshe/announcements_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userRole;
@@ -103,6 +104,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
     });
   }
 
+  // --- ANNOUNCEMENTS & EVENTS STATE ---
+  String selectedAnnouncementFilter = "Dhammaan";
+  List<Map<String, dynamic>> _announcements = [];
+
+  Future<void> _loadSavedAnnouncements() async {
+    try {
+      final String? stored = await ApiService.getPersistentSetting('school_announcements');
+      if (stored != null && stored.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(stored);
+        final List<Map<String, dynamic>> loaded = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        if (mounted) {
+          setState(() {
+            _announcements = loaded;
+          });
+        }
+      } else {
+        _loadDefaultSampleAnnouncements();
+      }
+    } catch (e) {
+      debugPrint("Error loading saved announcements: $e");
+      _loadDefaultSampleAnnouncements();
+    }
+  }
+
+  void _loadDefaultSampleAnnouncements() {
+    final now = DateTime.now();
+    final sampleAnnouncements = [
+      {
+        "id": "1",
+        "title": "Fasaxa Dhexe ee Imtixaanka Mid-Term",
+        "description": "Iskuulku wuxuu galayaa fasaxa dhexe ee imtixaanka. Dhammaan maamulka iyo ardayda waxaa lagu ogeysiinayaa in fasaxu bilaabmi doono.",
+        "category": "Fasax",
+        "targetRole": "All",
+        "eventDate": now.add(const Duration(days: 5)).toIso8601String().split('T')[0],
+        "createdAt": now.toIso8601String(),
+      },
+      {
+        "id": "2",
+        "title": "DIGNIIN: Fasax Kadis ah (Roobka & Dabaylaha)",
+        "description": "Roobab waaweyn oo ka da'aya magaalada awgeed, maanta waxaa jira fasax kadis ah si daryeelka ardayda loo ilaaliyo.",
+        "category": "Fasax Kadis ah",
+        "targetRole": "All",
+        "eventDate": now.toIso8601String().split('T')[0],
+        "createdAt": now.toIso8601String(),
+      },
+      {
+        "id": "3",
+        "title": "Imtixaanka Final-ka ee Sanad Dugsileedka",
+        "description": "Jadwalka rasmi ah ee imtixaanka Final-ka waa la soo saaray. Fadlan arday walba iyo macallin walba ha u diyaargaroobo imtixaanka.",
+        "category": "Imtixaan",
+        "targetRole": "All",
+        "eventDate": now.add(const Duration(days: 12)).toIso8601String().split('T')[0],
+        "createdAt": now.toIso8601String(),
+      },
+      {
+        "id": "4",
+        "title": "Maalinta Safka ee Subaxda (Morning Assembly)",
+        "description": "Dhammaan ardayda iyo macallimiinta waxaa lagu ogeysiinayaa in safka subaxda uu bilaabmi doono 7:00 AM sakad ahaan.",
+        "category": "Safka Dugsiga",
+        "targetRole": "All",
+        "eventDate": now.add(const Duration(days: 2)).toIso8601String().split('T')[0],
+        "createdAt": now.toIso8601String(),
+      },
+      {
+        "id": "5",
+        "title": "Shirka Wadajirka ah ee Macallimiinta",
+        "description": "Waxaa jira shir muhiim ah oo dhammaan macallimiinta iskuulka loogu yeedhay saacadu markay tahay 1:00 PM maanta.",
+        "category": "Shirka Macallimiinta",
+        "targetRole": "Teachers",
+        "eventDate": now.add(const Duration(days: 1)).toIso8601String().split('T')[0],
+        "createdAt": now.toIso8601String(),
+      },
+    ];
+
+    if (mounted) {
+      setState(() {
+        _announcements = sampleAnnouncements;
+      });
+      _saveAnnouncements();
+    }
+  }
+
+  void _saveAnnouncements() {
+    try {
+      ApiService.savePersistentSetting('school_announcements', _announcements);
+    } catch (e) {
+      debugPrint("Error saving announcements: $e");
+    }
+  }
+
+
+
   String get activeRole {
     String r = (widget.userRole.isNotEmpty ? widget.userRole : widget.role).trim();
     if (r.isEmpty) return 'SuperAdmin';
@@ -129,6 +222,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void initState() {
     super.initState();
     _loadSavedBannerImages();
+    _loadSavedAnnouncements();
     String r = activeRole.toLowerCase();
     if (r == 'user' || r.contains('student') || r.contains('parent') || r.contains('ardey') || r.contains('waalid')) {
       selectedMenu = "Attendance";
@@ -466,6 +560,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.notifications_active_rounded, color: textColor, size: 22),
+                  onPressed: () => setState(() => selectedMenu = "Ogeysiisyada"),
+                  tooltip: "Ogeysiisyada & Dhacdooyinka Iskuulka",
+                ),
+                if (_announcements.isNotEmpty)
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: GestureDetector(
+                      onTap: () => setState(() => selectedMenu = "Ogeysiisyada"),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.redAccent,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 18,
+                          minHeight: 18,
+                        ),
+                        child: Text(
+                          '${_announcements.length}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             IconButton(
               icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor, size: 22),
               onPressed: () => setState(() => isDarkMode = !isDarkMode),
@@ -482,6 +614,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String r = activeRole;
     switch (selectedMenu.trim()) {
       case "Dashboard": return _buildDashboardHome();
+      case "Ogeysiisyada": return AnnouncementsPage(userRole: r);
       case "Students": return const StudentRegistrationPage();
       case "Users": return UsersPage(currentRole: r);
       case "Teachers": return TeachersPage(userRole: r);
@@ -548,6 +681,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+
+
+
+
 
   Widget _buildSmartMindFooter() {
     return Container(
@@ -620,13 +757,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               if (mounted && Navigator.canPop(dialogContext)) {
                 Navigator.pop(dialogContext);
               }
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Sawirka xaflada iskuulka si guul leh ayaa loo kaysiyay (Permanently Saved)! ✨"),
-                  backgroundColor: Colors.green,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Sawirka xaflada iskuulka si guul leh ayaa loo kaysiyay (Permanently Saved)! ✨"),
+                    backgroundColor: Colors.green,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             }
           });
         }
@@ -971,6 +1110,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.notifications_active_rounded, color: textColor, size: 24),
+                      onPressed: () => setState(() => selectedMenu = "Ogeysiisyada"),
+                      tooltip: "Ogeysiisyada & Dhacdooyinka Iskuulka",
+                    ),
+                    if (_announcements.isNotEmpty)
+                      Positioned(
+                        right: 4,
+                        top: 4,
+                        child: GestureDetector(
+                          onTap: () => setState(() => selectedMenu = "Ogeysiisyada"),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.redAccent,
+                              shape: BoxShape.circle,
+                            ),
+                            constraints: const BoxConstraints(
+                              minWidth: 18,
+                              minHeight: 18,
+                            ),
+                            child: Text(
+                              '${_announcements.length}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
                 IconButton(
                   icon: Icon(isDarkMode ? Icons.light_mode : Icons.dark_mode, color: textColor),
                   onPressed: () => setState(() => isDarkMode = !isDarkMode),
@@ -1150,6 +1327,7 @@ Widget _buildPieChart() {
     if (r.contains('cashier') || r.contains('qasnaji')) {
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
+        {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
         {"icon": Icons.people_alt_rounded, "title": "Students"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
@@ -1159,6 +1337,7 @@ Widget _buildPieChart() {
     } else if (r.contains('teacher') || r.contains('macalin')) {
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
+        {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
         {"icon": Icons.school_rounded, "title": "Teachers"},
         {"icon": Icons.calendar_month_rounded, "title": "Class Timetable"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
@@ -1167,6 +1346,7 @@ Widget _buildPieChart() {
       ];
     } else if (r == 'user' || r.contains('student') || r.contains('parent') || r.contains('ardey') || r.contains('waalid')) {
       return [
+        {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
         {"icon": Icons.calendar_month_rounded, "title": "Class Timetable"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
         {"icon": Icons.chat_rounded, "title": "Communications"},
@@ -1175,6 +1355,7 @@ Widget _buildPieChart() {
     } else if (r == 'admin') {
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
+        {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
         {"icon": Icons.people_alt_rounded, "title": "Students"},
         {"icon": Icons.school_rounded, "title": "Teachers"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
@@ -1195,6 +1376,7 @@ Widget _buildPieChart() {
       // SuperAdmin or default
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
+        {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
         {"icon": Icons.people_alt_rounded, "title": "Students"},
         {"icon": Icons.school_rounded, "title": "Teachers"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
