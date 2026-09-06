@@ -107,6 +107,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   // --- ANNOUNCEMENTS & EVENTS STATE ---
   String selectedAnnouncementFilter = "Dhammaan";
   List<Map<String, dynamic>> _announcements = [];
+  bool _hasViewedAnnouncements = false;
+
+  int _getRelevantAnnouncementsCount() {
+    int count = 0;
+    String r = activeRole.toLowerCase();
+    bool isStudent = r == 'user' || r.contains('student') || r.contains('ardey') || r.contains('waalid') || r.contains('parent');
+    for (var a in _announcements) {
+      String tr = (a["targetRole"] ?? "All").toString();
+      String cat = (a["category"] ?? "").toString().trim();
+      if (isStudent && (tr == 'Teachers' || cat == "Shirka Macallimiinta" || cat == "Tababarka Macallimiinta")) continue;
+      count++;
+    }
+    return count;
+  }
 
   Future<void> _loadSavedAnnouncements() async {
     try {
@@ -565,15 +579,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 IconButton(
                   icon: Icon(Icons.notifications_active_rounded, color: textColor, size: 22),
-                  onPressed: () => setState(() => selectedMenu = "Ogeysiisyada"),
+                  onPressed: () {
+                    setState(() {
+                      selectedMenu = "Ogeysiisyada";
+                      _hasViewedAnnouncements = true;
+                    });
+                  },
                   tooltip: "Ogeysiisyada & Dhacdooyinka Iskuulka",
                 ),
-                if (_announcements.isNotEmpty)
+                if (!_hasViewedAnnouncements && _getRelevantAnnouncementsCount() > 0)
                   Positioned(
                     right: 4,
                     top: 4,
                     child: GestureDetector(
-                      onTap: () => setState(() => selectedMenu = "Ogeysiisyada"),
+                      onTap: () {
+                        setState(() {
+                          selectedMenu = "Ogeysiisyada";
+                          _hasViewedAnnouncements = true;
+                        });
+                      },
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(
@@ -585,7 +609,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           minHeight: 18,
                         ),
                         child: Text(
-                          '${_announcements.length}',
+                          '${_getRelevantAnnouncementsCount()}',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 10,
@@ -1569,7 +1593,12 @@ Widget _navItem(IconData icon, String title) {
       if (title == "Log Out") {
         _performLogout();
       } else {
-        setState(() => selectedMenu = title);
+        setState(() {
+          selectedMenu = title;
+          if (title == "Ogeysiisyada") {
+            _hasViewedAnnouncements = true;
+          }
+        });
       }
     },
     leading: Icon(icon, color: isActive ? Colors.cyanAccent : Colors.white60),

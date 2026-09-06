@@ -413,6 +413,9 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     final cardColor = isDark ? const Color(0xFF161B26) : Colors.white;
     final textColor = isDark ? Colors.white : Colors.black87;
 
+    String role = widget.userRole.toLowerCase();
+    bool isStudent = role == 'user' || role.contains('student') || role.contains('ardey') || role.contains('waalid') || role.contains('parent');
+
     // Sort announcements so NEWEST CREATED IS ALWAYS AT THE TOP
     List<Map<String, dynamic>> sortedList = List.from(_announcements);
     sortedList.sort((a, b) {
@@ -423,7 +426,11 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
     // Apply Filter & Search
     List<Map<String, dynamic>> filteredList = sortedList.where((item) {
+      final String tr = (item["targetRole"] ?? "All").toString();
       final cat = (item["category"] ?? "").toString().trim();
+      
+      if (isStudent && (tr == 'Teachers' || cat == "Shirka Macallimiinta" || cat == "Tababarka Macallimiinta")) return false;
+
       final title = (item["title"] ?? "").toString().toLowerCase();
       final desc = (item["description"] ?? "").toString().toLowerCase();
 
@@ -452,99 +459,126 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Page Header Card
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E1E2C), Color(0xFF2A2A40)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.3)),
-                boxShadow: const [
-                  BoxShadow(color: Colors.black26, blurRadius: 16, offset: Offset(0, 6)),
-                ],
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFF007F), Color(0xFF7928CA), Color(0xFF00D2FF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                bool isMobile = constraints.maxWidth < 650;
+                
+                Widget iconWidget = Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFF007F), Color(0xFF7928CA), Color(0xFF00D2FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFFFF007F).withValues(alpha: 0.4),
+                        blurRadius: 14,
                       ),
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: const Color(0xFFFF007F).withValues(alpha: 0.4),
-                          blurRadius: 14,
+                    ],
+                  ),
+                  child: const Icon(Icons.campaign_rounded, color: Colors.white, size: 32),
+                );
+
+                Widget textWidget = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 10,
+                      runSpacing: 6,
+                      children: [
+                        const Text(
+                          "Ogeysiisyada & Dhacdooyinka Iskuulka",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.redAccent.withValues(alpha: 0.6)),
+                          ),
+                          child: Text(
+                            "${_announcements.length} WARTA CUSUB",
+                            style: const TextStyle(
+                              color: Colors.redAccent,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ],
                     ),
-                    child: const Icon(Icons.campaign_rounded, color: Colors.white, size: 32),
+                    const SizedBox(height: 6),
+                    const Text(
+                      "Halkan ka eeg dhammaan fasaxyada, imtixaanaadka, safka subaxda iyo shirarka macallimiinta.",
+                      style: TextStyle(fontSize: 13, color: Colors.white70),
+                    ),
+                  ],
+                );
+
+                Widget buttonWidget = ElevatedButton.icon(
+                  onPressed: _showAddAnnouncementDialog,
+                  icon: const Icon(Icons.add_rounded, size: 20),
+                  label: const Text("Ogeysiis Cusub"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6C63FF),
+                    foregroundColor: Colors.white,
+                    elevation: 4,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
+                );
+
+                return Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(isMobile ? 18 : 24),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF1E1E2C), Color(0xFF2A2A40)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: const Color(0xFF6C63FF).withValues(alpha: 0.3)),
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black26, blurRadius: 16, offset: Offset(0, 6)),
+                    ],
+                  ),
+                  child: isMobile
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              "Ogeysiisyada & Dhacdooyinka Iskuulka",
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                letterSpacing: 0.5,
-                              ),
+                            Row(
+                              children: [
+                                iconWidget,
+                                const SizedBox(width: 14),
+                                Expanded(child: textWidget),
+                              ],
                             ),
-                            const SizedBox(width: 10),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: Colors.redAccent.withValues(alpha: 0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.redAccent.withValues(alpha: 0.6)),
-                              ),
-                              child: Text(
-                                "${_announcements.length} WARTA CUSUB",
-                                style: const TextStyle(
-                                  color: Colors.redAccent,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            const SizedBox(height: 18),
+                            SizedBox(width: double.infinity, child: buttonWidget),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            iconWidget,
+                            const SizedBox(width: 16),
+                            Expanded(child: textWidget),
+                            const SizedBox(width: 12),
+                            buttonWidget,
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          "Halkan ka eeg dhammaan fasaxyada, imtixaanaadka, safka subaxda iyo shirarka macallimiinta.",
-                          style: TextStyle(fontSize: 13, color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    onPressed: _showAddAnnouncementDialog,
-                    icon: const Icon(Icons.add_rounded, size: 20),
-                    label: const Text("Ogeysiis Cusub"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF6C63FF),
-                      foregroundColor: Colors.white,
-                      elevation: 4,
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
             const SizedBox(height: 20),
 
@@ -590,7 +624,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                           "Fasaxyada",
                           "Imtixaanaadka",
                           "Safka Dugsiga",
-                          "Shirarka & Tababarada",
+                          if (!isStudent) "Shirarka & Tababarada",
                         ].map((flt) {
                           final bool isSel = selectedFilter == flt;
                           return Padding(
@@ -655,43 +689,204 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                 ),
               )
             else
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final int crossAxisCount = constraints.maxWidth >= 1100
-                      ? 3
-                      : (constraints.maxWidth >= 700 ? 2 : 1);
+              Column(
+                children: [
+                  _buildFeaturedAnnouncementCard(filteredList.first, isDark, cardColor, textColor),
+                  const SizedBox(height: 20),
+                  if (filteredList.length > 1)
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final listRest = filteredList.sublist(1);
+                        final int crossAxisCount = constraints.maxWidth >= 1100
+                            ? 3
+                            : (constraints.maxWidth >= 700 ? 2 : 1);
 
-                  if (crossAxisCount == 1) {
-                    return ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: filteredList.length,
-                      separatorBuilder: (ctx, i) => const SizedBox(height: 16),
-                      itemBuilder: (ctx, index) {
-                        return _buildAnnouncementCard(filteredList[index], isDark, cardColor, textColor);
+                        if (crossAxisCount == 1) {
+                          return ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: listRest.length,
+                            separatorBuilder: (ctx, i) => const SizedBox(height: 16),
+                            itemBuilder: (ctx, index) {
+                              return _buildAnnouncementCard(listRest[index], isDark, cardColor, textColor);
+                            },
+                          );
+                        }
+
+                        return GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                            mainAxisExtent: 240,
+                          ),
+                          itemCount: listRest.length,
+                          itemBuilder: (ctx, index) {
+                            return _buildAnnouncementCard(listRest[index], isDark, cardColor, textColor);
+                          },
+                        );
                       },
-                    );
-                  }
-
-                  return GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                      mainAxisExtent: 240,
                     ),
-                    itemCount: filteredList.length,
-                    itemBuilder: (ctx, index) {
-                      return _buildAnnouncementCard(filteredList[index], isDark, cardColor, textColor);
-                    },
-                  );
-                },
+                ],
               ),
             const SizedBox(height: 30),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildFeaturedAnnouncementCard(Map<String, dynamic> item, bool isDark, Color cardColor, Color textColor) {
+    final String cat = (item["category"] ?? "General").toString();
+    final style = _getAnnouncementCategoryStyle(cat);
+    final String countdownText = _getCountdownText(item["eventDate"]?.toString());
+
+    final Color cardAccent = style["color"] as Color;
+    final IconData cardIcon = style["icon"] as IconData;
+    final String badgeLabel = style["badge"] as String;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            cardAccent.withValues(alpha: 0.15),
+            cardAccent.withValues(alpha: 0.02),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: cardAccent.withValues(alpha: 0.5), width: 2.0),
+        boxShadow: [
+          BoxShadow(
+            color: cardAccent.withValues(alpha: 0.08),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cardAccent,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: cardAccent.withValues(alpha: 0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Icon(cardIcon, color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: cardAccent.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          "WARKA UGU DAMBEEYA",
+                          style: TextStyle(
+                            color: cardAccent,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        badgeLabel,
+                        style: TextStyle(
+                          color: textColor.withValues(alpha: 0.8),
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              IconButton(
+                icon: Icon(Icons.delete_outline_rounded, color: Colors.red.withValues(alpha: 0.7), size: 24),
+                tooltip: "Tirtir Ogeysiiska",
+                onPressed: () {
+                  setState(() {
+                    _announcements.removeWhere((a) => a["id"] == item["id"]);
+                    _saveAnnouncements();
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Ogeysiiska waa la tirtiray")),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Text(
+            item["title"]?.toString() ?? "",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: textColor,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            item["description"]?.toString() ?? "",
+            style: TextStyle(
+              fontSize: 15,
+              height: 1.6,
+              color: textColor.withValues(alpha: 0.85),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: cardAccent.withValues(alpha: 0.2)),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.event_rounded, color: cardAccent, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      countdownText.isNotEmpty ? countdownText : "📅 ${item["eventDate"] ?? ""}",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: cardAccent,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -721,8 +916,12 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
@@ -788,21 +987,21 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
           const SizedBox(height: 8),
 
           // Description
-          Expanded(
-            child: Text(
-              item["description"]?.toString() ?? "",
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.45,
-                color: textColor.withValues(alpha: 0.75),
-              ),
+          Text(
+            item["description"]?.toString() ?? "",
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.45,
+              color: textColor.withValues(alpha: 0.75),
             ),
           ),
           const SizedBox(height: 12),
+        ],
+      ),
 
-          // Countdown & Date Footer
+      // Countdown & Date Footer
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
@@ -812,28 +1011,17 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  countdownText.isNotEmpty ? countdownText : "📅 ${item["eventDate"] ?? ""}",
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: cardAccent,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E1E2C) : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    "🎯 ${item["targetRole"] == 'Teachers' ? 'Macallimiinta' : 'Dhammaan'}",
-                    style: TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      color: textColor.withValues(alpha: 0.7),
+                Row(
+                  children: [
+                    Text(
+                      countdownText.isNotEmpty ? countdownText : "📅 ${item["eventDate"] ?? ""}",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: cardAccent,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
