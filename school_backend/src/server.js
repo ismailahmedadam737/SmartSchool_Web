@@ -137,12 +137,69 @@ async function ensureTenantsTable() {
       WHERE LOWER(u.username) = LOWER(t.admin_username) AND u.tenant_id IS NULL;
     `).catch(() => {});
 
+    // Ensure school_settings table exists for storing permanent school banners & timetables
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS school_settings (
+        id            SERIAL PRIMARY KEY,
+        tenant_id     INT REFERENCES tenants(id) ON DELETE CASCADE,
+        setting_key   TEXT NOT NULL,
+        setting_value TEXT NOT NULL,
+        updated_at    TIMESTAMPTZ DEFAULT NOW(),
+        CONSTRAINT unique_tenant_setting UNIQUE(tenant_id, setting_key)
+      )
+    `).catch(() => {});
+
     console.log('✅ Multi-Tenant Database Isolation Schema Ready');
   } catch (err) {
     console.error('❌ Failed to prepare multi-tenant schema:', err.message);
   }
 }
 ensureTenantsTable();
+
+// ============================================================
+// 📌 PERMANENT TENANT SETTINGS ROUTES (Banners, Timetables, etc.)
+// ============================================================
+app.get('/api/settings/:key', async (req, res) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'];
+    const { key } = req.params;
+    if (!tenantId) {
+      return res.status(200).json({ value: null });
+    }
+    const result = await pool.query(
+      'SELECT setting_value FROM school_settings WHERE tenant_id = $1 AND setting_key = $2',
+      [tenantId, key]
+    );
+    if (result.rows.length === 0) return res.status(200).json({ value: null });
+    res.json({ value: result.rows[0].setting_value });
+  } catch (err) {
+    console.error('Get setting error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/settings/:key', async (req, res) => {
+  try {
+    const tenantId = req.headers['x-tenant-id'];
+    const { key } = req.params;
+    const { value } = req.body;
+    if (!tenantId) {
+      return res.status(400).json({ error: 'Tenant ID is required' });
+    }
+    const strVal = typeof value === 'string' ? value : JSON.stringify(value);
+    await pool.query(
+      `INSERT INTO school_settings (tenant_id, setting_key, setting_value, updated_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (tenant_id, setting_key)
+       DO UPDATE SET setting_value = EXCLUDED.setting_value, updated_at = NOW()`,
+      [tenantId, key, strVal]
+    );
+    res.json({ success: true, message: 'Setting saved permanently!' });
+  } catch (err) {
+    console.error('Save setting error:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Automated Daily Cron Job (Runs at 00:00 every midnight) to suspend expired subscriptions
 const cron = require('node-cron');

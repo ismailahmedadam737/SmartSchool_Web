@@ -1,4 +1,5 @@
 import 'dart:async'; // Kani waa muhiim si loo maareeyo auto-scroll-ka
+import 'dart:convert';
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -50,7 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final ScrollController _sidebarScrollController = ScrollController();
   Timer? _timer;
 
-  final List<String> _bannerImages = [
+  List<String> _bannerImages = [
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzeE-WPoZYslQCRQKKV4ue8uiPlI28wElSRGsTMfmOPySxzUDXZNDYIqiK&s=10",
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFoIq3RM4xn7mlu4qXJXAIiKGqzoq9haAZSYBl0KZzumbspkbHdorZMmc&s=10",
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXZbfZq23Fr-6Fkv0washqLKd9u6-_lGuFF4HZ5kGPkA&s=10",
@@ -59,6 +60,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
     "https://i.ytimg.com/vi/1RJEOsbOyE4/hq720.jpg?sqp=-oaymwE7CK4FEIIDSFryq4qpAy0IARUAAAAAGAElAADIQj0AgKJD8AEB-AH-CYAC0AWKAgwIABABGEsgTyhlMA8=&rs=AOn4CLBRnx_rWtjn5Dk_tzdNnqnQAWIWiw",
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRT8ryhfF9HVfusWZhVGw6qSZmsysP2PBHh3A&s",
   ];
+
+  void _loadSavedBannerImages() {
+    try {
+      final String? stored = ApiService.readStorage('dashboard_banner_images');
+      if (stored != null && stored.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(stored);
+        final List<String> loaded = list.map((e) => e.toString()).toList();
+        if (loaded.isNotEmpty) {
+          _bannerImages = loaded;
+        }
+      }
+    } catch (e) {
+      debugPrint("Error loading saved dashboard banner images: $e");
+    }
+  }
+
+  void _saveBannerImages() {
+    try {
+      ApiService.savePersistentSetting('dashboard_banner_images', _bannerImages);
+    } catch (e) {
+      debugPrint("Error saving dashboard banner images: $e");
+    }
+  }
+
+  void _resetDefaultBannerImages() {
+    setState(() {
+      _bannerImages = [
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSzeE-WPoZYslQCRQKKV4ue8uiPlI28wElSRGsTMfmOPySxzUDXZNDYIqiK&s=10",
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFoIq3RM4xn7mlu4qXJXAIiKGqzoq9haAZSYBl0KZzumbspkbHdorZMmc&s=10",
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRXZbfZq23Fr-6Fkv0washqLKd9u6-_lGuFF4HZ5kGPkA&s=10",
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRJ4ubfnrwFjKz0xaLkrM8kBn13H1DBScz1ug&s",
+        "https://static.vecteezy.com/system/resources/previews/008/734/694/large_2x/happy-school-children-in-front-of-building-school-vector.jpg",
+        "https://i.ytimg.com/vi/1RJEOsbOyE4/hq720.jpg?sqp=-oaymwE7CK4FEIIDSFryq4qpAy0IARUAAAAAGAElAADIQj0AgKJD8AEB-AH-CYAC0AWKAgwIABABGEsgTyhlMA8=&rs=AOn4CLBRnx_rWtjn5Dk_tzdNnqnQAWIWiw",
+        "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRT8ryhfF9HVfusWZhVGw6qSZmsysP2PBHh3A&s",
+      ];
+      _saveBannerImages();
+    });
+  }
 
   String get activeRole {
     String r = (widget.userRole.isNotEmpty ? widget.userRole : widget.role).trim();
@@ -85,6 +124,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _loadSavedBannerImages();
     String r = activeRole.toLowerCase();
     if (r == 'user' || r.contains('student') || r.contains('parent') || r.contains('ardey') || r.contains('waalid')) {
       selectedMenu = "Attendance";
@@ -571,13 +611,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             if (result != null && result.isNotEmpty) {
               setState(() {
                 _bannerImages.insert(0, result);
+                _saveBannerImages();
               });
               if (mounted && Navigator.canPop(dialogContext)) {
                 Navigator.pop(dialogContext);
               }
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text("Sawirka xaflada iskuulka si guul leh ayaa looga soo xulay Computer-ka!"),
+                  content: Text("Sawirka xaflada iskuulka si guul leh ayaa loo kaysiyay (Permanently Saved)! ✨"),
                   backgroundColor: Colors.green,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -669,6 +710,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 16),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    _resetDefaultBannerImages();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text("Sawirada asalka ah ayaa dib loo soo celiyay!"),
+                        backgroundColor: Colors.blueAccent,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.restore_rounded, size: 16, color: Colors.orangeAccent),
+                  label: const Text(
+                    "Soo Celin Sawirada Asalka Ah (Reset Defaults)",
+                    style: TextStyle(color: Colors.orangeAccent, fontSize: 12),
+                  ),
+                ),
               ],
             ),
           ),
@@ -691,11 +751,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 if (text.isNotEmpty) {
                   setState(() {
                     _bannerImages.insert(0, text);
+                    _saveBannerImages();
                   });
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text("Sawirka cusub si guul leh ayaa loo soo geliyey!"),
+                      content: Text("Sawirka cusub si guul leh ayaa loo soo geliyey oo loo kaysiyay! ✨"),
                       backgroundColor: Colors.green,
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -846,6 +907,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           onPressed: () {
                             setState(() {
                               _bannerImages.removeAt(index);
+                              _saveBannerImages();
                             });
                           },
                         ),
@@ -1318,12 +1380,15 @@ Widget _navItem(IconData icon, String title) {
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
-      if (title == "Log Out") _performLogout();
-      else setState(() => selectedMenu = title);
+      if (title == "Log Out") {
+        _performLogout();
+      } else {
+        setState(() => selectedMenu = title);
+      }
     },
     leading: Icon(icon, color: isActive ? Colors.cyanAccent : Colors.white60),
     title: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.white60)),
-    tileColor: isActive ? Colors.white.withOpacity(0.05) : Colors.transparent
+    tileColor: isActive ? Colors.white.withValues(alpha: 0.05) : Colors.transparent
   );
 }
 }

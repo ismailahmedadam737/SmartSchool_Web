@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:iftiinshe/Service/api_service.dart';
@@ -41,19 +42,22 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
     "Quran": {"color": const Color(0xFFE2EFDA), "textColor": const Color(0xFF155724), "code": "Q"},
   };
 
-  // Per-tenant memory storage for timetables
-  static final Map<String, Map<String, List<List<String>>>> _schoolTimetablesMap = {};
-  static final Map<String, String?> _schoolTimetableImageMap = {};
-  static final Map<String, List<Map<String, String>>> _schoolPeriodTimesMap = {};
+  // Multi-image Timetable Map per Class
+  // Key: Class Name e.g. "General", "Class 2A", "Class 3A"...
+  // Value: List of image URLs / base64 Data URLs
+  Map<String, List<String>> classTimetableImagesMap = {};
 
-  // Timetable Data for the active school
+  // Timetable Data Grid for the active school
   Map<String, List<List<String>>> timetableData = {};
-  String? uploadedTimetableImage;
-  bool showImageView = false;
+
+  // Custom Period Times per school
+  List<Map<String, String>>? customPeriodTimes;
+
+  bool showImageView = true;
 
   List<Map<String, String>> get effectivePeriodTimes {
-    if (_schoolPeriodTimesMap.containsKey(effectiveTenantId)) {
-      return _schoolPeriodTimesMap[effectiveTenantId]!;
+    if (customPeriodTimes != null && customPeriodTimes!.isNotEmpty) {
+      return customPeriodTimes!;
     }
     return periodTimes;
   }
@@ -84,19 +88,94 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
   void initState() {
     super.initState();
     _tabController = TabController(length: defaultClasses.length, vsync: this);
+    _loadPersistedTimetableData();
+  }
 
-    // Initialize timetable for active school: starts empty unless previously uploaded or loaded
-    if (_schoolTimetablesMap.containsKey(effectiveTenantId)) {
-      timetableData = Map.from(_schoolTimetablesMap[effectiveTenantId]!);
-    } else {
-      timetableData = {}; // Empty by default for new schools!
+  void _loadPersistedTimetableData() {
+    // 1. Grid Data
+    final String? gridJson = ApiService.readStorage('timetable_grid_data');
+    if (gridJson != null && gridJson.isNotEmpty) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(gridJson);
+        Map<String, List<List<String>>> loadedGrid = {};
+        decoded.forEach((key, val) {
+          if (val is List) {
+            List<List<String>> rows = [];
+            for (var row in val) {
+              if (row is List) {
+                rows.add(row.map((item) => item.toString()).toList());
+              }
+            }
+            loadedGrid[key] = rows;
+          }
+        });
+        if (loadedGrid.isNotEmpty) {
+          timetableData = loadedGrid;
+        }
+      } catch (e) {
+        debugPrint("Error loading timetable grid data: $e");
+      }
     }
 
-    if (_schoolTimetableImageMap.containsKey(effectiveTenantId)) {
-      uploadedTimetableImage = _schoolTimetableImageMap[effectiveTenantId];
-      if (uploadedTimetableImage != null && timetableData.isEmpty) {
-        showImageView = true;
+    // 2. Class Timetable Images
+    final String? imagesJson = ApiService.readStorage('timetable_class_images');
+    if (imagesJson != null && imagesJson.isNotEmpty) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(imagesJson);
+        Map<String, List<String>> loadedImages = {};
+        decoded.forEach((key, val) {
+          if (val is List) {
+            loadedImages[key] = val.map((e) => e.toString()).toList();
+          }
+        });
+        classTimetableImagesMap = loadedImages;
+      } catch (e) {
+        debugPrint("Error loading class timetable images: $e");
       }
+    } else {
+      // Legacy single image compatibility
+      final String? oldSingle = ApiService.readStorage('timetable_single_image');
+      if (oldSingle != null && oldSingle.isNotEmpty) {
+        classTimetableImagesMap["General"] = [oldSingle];
+      }
+    }
+
+    // 3. Period Times
+    final String? timesJson = ApiService.readStorage('timetable_period_times');
+    if (timesJson != null && timesJson.isNotEmpty) {
+      try {
+        final List<dynamic> decoded = jsonDecode(timesJson);
+        List<Map<String, String>> loadedTimes = [];
+        for (var item in decoded) {
+          if (item is Map) {
+            loadedTimes.add({
+              "period": item["period"]?.toString() ?? "",
+              "time": item["time"]?.toString() ?? "",
+            });
+          }
+        }
+        if (loadedTimes.isNotEmpty) {
+          customPeriodTimes = loadedTimes;
+        }
+      } catch (e) {
+        debugPrint("Error loading period times: $e");
+      }
+    }
+
+    if (timetableData.isEmpty) {
+      _loadSampleScheduleQuietly();
+    }
+  }
+
+  void _saveTimetableData() {
+    try {
+      ApiService.savePersistentSetting('timetable_grid_data', timetableData);
+      ApiService.savePersistentSetting('timetable_class_images', classTimetableImagesMap);
+      if (customPeriodTimes != null) {
+        ApiService.savePersistentSetting('timetable_period_times', customPeriodTimes);
+      }
+    } catch (e) {
+      debugPrint("Error saving timetable data: $e");
     }
   }
 
@@ -107,8 +186,47 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
   }
 
   List<String> get availableClasses {
-    if (timetableData.isEmpty) return ["All"];
-    return ["All", ...timetableData.keys.toList()];
+    final set = <String>{"All"};
+    for (var c in defaultClasses) {
+      if (c != "All") set.add(c);
+    }
+    set.addAll(timetableData.keys);
+    for (var k in classTimetableImagesMap.keys) {
+      if (k != "General" && k != "All") set.add(k);
+    }
+    return set.toList();
+  }
+
+  bool get hasTimetableImages {
+    for (var list in classTimetableImagesMap.values) {
+      if (list.isNotEmpty) return true;
+    }
+    return false;
+  }
+
+  List<Map<String, dynamic>> get activeTimetableImages {
+    List<Map<String, dynamic>> list = [];
+    if (selectedClassFilter == "All") {
+      classTimetableImagesMap.forEach((clsKey, imgList) {
+        for (int i = 0; i < imgList.length; i++) {
+          list.add({"class": clsKey, "url": imgList[i], "index": i});
+        }
+      });
+    } else {
+      if (classTimetableImagesMap.containsKey(selectedClassFilter)) {
+        final imgList = classTimetableImagesMap[selectedClassFilter]!;
+        for (int i = 0; i < imgList.length; i++) {
+          list.add({"class": selectedClassFilter, "url": imgList[i], "index": i});
+        }
+      }
+      if (classTimetableImagesMap.containsKey("General")) {
+        final imgList = classTimetableImagesMap["General"]!;
+        for (int i = 0; i < imgList.length; i++) {
+          list.add({"class": "General", "url": imgList[i], "index": i});
+        }
+      }
+    }
+    return list;
   }
 
   void _loadSampleSchedule() {
@@ -173,23 +291,21 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
 
     setState(() {
       timetableData = sampleMap;
-      _schoolTimetablesMap[effectiveTenantId] = sampleMap;
       selectedClassFilter = "All";
+      _saveTimetableData();
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text("Jadwalka dhawaaqa ah (Sample Schedule) si guul leh ayaa loo shubay!"),
+        content: Text("Jadwalka muunada ah (Sample Schedule) si guul leh ayaa loo kaysiyay! ✨"),
         backgroundColor: Colors.green,
         behavior: SnackBarBehavior.floating,
       ),
     );
   }
 
-
-
   void _loadSampleScheduleQuietly() {
-    final sampleMap = {
+    timetableData = {
       "Class 2A": [
         ["Arabic", "Somali", "Sport", "Islamic", "English"],
         ["Islamic", "English", "Handwriting", "Arabic", "Maths"],
@@ -247,12 +363,169 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
         ["Somali", "Social", "Maths", "Social", "Arabic"],
       ],
     };
-
-    timetableData = sampleMap;
-    _schoolTimetablesMap[effectiveTenantId] = sampleMap;
   }
 
-  void _uploadImageTimetable(BuildContext context) {
+  void _showUploadTimetableImageDialog(BuildContext context) {
+    String targetClass = selectedClassFilter == "All" ? "General" : selectedClassFilter;
+    final TextEditingController urlController = TextEditingController();
+    final TextEditingController customClassController = TextEditingController();
+    bool isCustomClass = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final List<String> classOptions = [
+              "General",
+              "Class 2A", "Class 3A", "Class 4A", "Class 5A", "Class 6A", "Class 7A", "Class 8A",
+              "Fasal Cusub / Custom Class"
+            ];
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  Icon(Icons.add_photo_alternate_rounded, color: Color(0xFF6366F1)),
+                  SizedBox(width: 10),
+                  Text("Soo Gali Sawirka Jadwalka", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Dooro Fasal-ka ama Xiisada sawirka jadwalka uu u gaarka yahay:",
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: classOptions.contains(targetClass) ? targetClass : (isCustomClass ? "Fasal Cusub / Custom Class" : "General"),
+                      decoration: InputDecoration(
+                        labelText: "Dooro Fasal (Target Class)",
+                        prefixIcon: const Icon(Icons.school_rounded, color: Color(0xFF6366F1)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      items: classOptions.map((c) {
+                        return DropdownMenuItem(
+                          value: c,
+                          child: Text(c == "General" ? "Dhammaan Fasallada (General)" : c),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setDialogState(() {
+                            if (val == "Fasal Cusub / Custom Class") {
+                              isCustomClass = true;
+                              targetClass = "";
+                            } else {
+                              isCustomClass = false;
+                              targetClass = val;
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    if (isCustomClass) ...[
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: customClassController,
+                        decoration: InputDecoration(
+                          labelText: "Magaca Fasalka Cusub (e.g. Form 1B)",
+                          prefixIcon: const Icon(Icons.edit, color: Color(0xFF6366F1)),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onChanged: (val) {
+                          targetClass = val.trim();
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 18),
+                    const Text(
+                      "Waxaad ka soo xuli kartaa sawirka Computer-ka ama waxaad gelin kartaa Link-ka (URL):",
+                      style: TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 14),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          final selectedCls = isCustomClass ? customClassController.text.trim() : targetClass;
+                          final finalClass = selectedCls.isEmpty ? "General" : selectedCls;
+                          Navigator.pop(ctx);
+                          _pickTimetableImageFromComputer(finalClass);
+                        },
+                        icon: const Icon(Icons.folder_open_rounded, size: 20),
+                        label: const Text(
+                          "📁 Ka Xul Computer-ka (Documents/Pictures)",
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6366F1),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        const Expanded(child: Divider()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text("AMA / OR", style: TextStyle(color: Colors.grey.shade600, fontSize: 11, fontWeight: FontWeight.bold)),
+                        ),
+                        const Expanded(child: Divider()),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: urlController,
+                      decoration: InputDecoration(
+                        labelText: "URL Link Sawirka Jadwalka",
+                        hintText: "https://example.com/timetable.jpg",
+                        prefixIcon: const Icon(Icons.link, color: Color(0xFF6366F1)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text("Baaq / Cancel"),
+                ),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F5257),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.cloud_upload_rounded, size: 18),
+                  label: const Text("Gali Link-ka"),
+                  onPressed: () {
+                    final text = urlController.text.trim();
+                    final selectedCls = isCustomClass ? customClassController.text.trim() : targetClass;
+                    final finalClass = selectedCls.isEmpty ? "General" : selectedCls;
+                    if (text.isNotEmpty) {
+                      _addTimetableImage(finalClass, text);
+                      Navigator.pop(ctx);
+                    }
+                  },
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _pickTimetableImageFromComputer(String targetClass) {
     try {
       final uploadInput = html.FileUploadInputElement();
       uploadInput.accept = 'image/*';
@@ -267,22 +540,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
           reader.onLoadEnd.listen((e) {
             final String? result = reader.result as String?;
             if (result != null && result.isNotEmpty) {
-              setState(() {
-                uploadedTimetableImage = result;
-                _schoolTimetableImageMap[effectiveTenantId] = result;
-                showImageView = false; // Always Grid View!
-                if (timetableData.isEmpty) {
-                  _loadSampleScheduleQuietly();
-                }
-              });
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text("Sawirka jadwalka '${file.name}' waa la soo geliyey oo shaxda (Grid View) ayaa loo badalay! ✨"),
-                  backgroundColor: const Color(0xFF6366F1),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+              _addTimetableImage(targetClass, result);
             }
           });
         }
@@ -290,6 +548,45 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
     } catch (e) {
       debugPrint("Error picking timetable image: $e");
     }
+  }
+
+  void _addTimetableImage(String targetClass, String imageStr) {
+    setState(() {
+      if (!classTimetableImagesMap.containsKey(targetClass)) {
+        classTimetableImagesMap[targetClass] = [];
+      }
+      classTimetableImagesMap[targetClass]!.insert(0, imageStr);
+      showImageView = true;
+      _saveTimetableData();
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Sawirka jadwalka ($targetClass) si guul leh ayaa loo kaysiyay (Permanently Saved)! ✨"),
+        backgroundColor: const Color(0xFF6366F1),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _deleteSingleTimetableImage(String targetClass, int index) {
+    setState(() {
+      if (classTimetableImagesMap.containsKey(targetClass)) {
+        classTimetableImagesMap[targetClass]!.removeAt(index);
+        if (classTimetableImagesMap[targetClass]!.isEmpty) {
+          classTimetableImagesMap.remove(targetClass);
+        }
+        _saveTimetableData();
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Sawirka jadwalka si guul leh ayaa loo tirtiray!"),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   void _triggerPrint() {
@@ -424,7 +721,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const Text(
-                    "Beddel ama habee saacadaha xiisadaha Iskuulkaaga (Start - End):",
+                    "Beddel ama habee saacadaha xiisadaha Iskuulka (Start - End):",
                     style: TextStyle(fontSize: 13, color: Colors.grey),
                   ),
                   const SizedBox(height: 16),
@@ -469,12 +766,13 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                   });
                 }
                 setState(() {
-                  _schoolPeriodTimesMap[effectiveTenantId] = updated;
+                  customPeriodTimes = updated;
+                  _saveTimetableData();
                 });
                 Navigator.pop(ctx);
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text("Wakhtiyada xiisadaha iskuulka si guul leh ayaa loo kaysiyay! ✨"),
+                    content: Text("Wakhtiyada xiisadaha dugsiga si guul leh ayaa loo kaysiyay! ✨"),
                     backgroundColor: Color(0xFF0F5257),
                     behavior: SnackBarBehavior.floating,
                   ),
@@ -499,6 +797,8 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
       body: LayoutBuilder(
         builder: (context, constraints) {
           final bool isMobile = constraints.maxWidth < 600;
+          final List<Map<String, dynamic>> imagesList = activeTimetableImages;
+
           return SingleChildScrollView(
             padding: EdgeInsets.all(isMobile ? 12.0 : 20.0),
             child: Column(
@@ -507,12 +807,11 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                 _buildTopBanner(isDark, isMobile),
                 const SizedBox(height: 16),
                 _buildControlsRow(isDark, textColor, cardColor),
-                const SizedBox(height: 16),
-                showImageView && uploadedTimetableImage != null
-                    ? _buildImageViewerContainer(isDark, cardColor, textColor)
-                    : (timetableData.isEmpty
-                        ? _buildEmptyState(isDark, cardColor, textColor)
-                        : _buildTimetableContent(isDark, cardColor, textColor)),
+                // Timetable Grid or Empty State
+                timetableData.isEmpty
+                    ? _buildEmptyState(isDark, cardColor, textColor)
+                    : _buildTimetableContent(isDark, cardColor, textColor),
+
                 const SizedBox(height: 20),
                 _buildPeriodTimesFooter(isDark, cardColor, textColor),
               ],
@@ -630,7 +929,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                       const Icon(Icons.auto_awesome_rounded, color: Colors.amberAccent, size: 12),
                       const SizedBox(width: 6),
                       Text(
-                        "KNOWLEDGE IS POWER • OGAALKU WAA AWOOD",
+                        "KNOWLEDGE IS POWER • AQOONTU WAA AWOOD",
                         style: TextStyle(color: Colors.white, fontSize: isMobile ? 9 : 11, fontWeight: FontWeight.bold),
                       ),
                     ],
@@ -694,9 +993,9 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
               children: [
                 if (canManageTimetable)
                   ElevatedButton.icon(
-                    onPressed: () => _uploadImageTimetable(context),
+                    onPressed: () => _showUploadTimetableImageDialog(context),
                     icon: const Icon(Icons.image_rounded, size: 18),
-                    label: const Text("Upload Sawirka Jadwalka"),
+                    label: Text(selectedClassFilter == "All" ? "Upload Sawirka Jadwalka" : "Upload Sawir ($selectedClassFilter)"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF6366F1),
                       foregroundColor: Colors.white,
@@ -715,8 +1014,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                   ),
                 ),
-
-                if (canManageTimetable && (timetableData.isNotEmpty || uploadedTimetableImage != null))
+                if (canManageTimetable && (timetableData.isNotEmpty || hasTimetableImages))
                   ElevatedButton.icon(
                     onPressed: _confirmDeleteAllTimetable,
                     icon: const Icon(Icons.delete_outline_rounded, size: 18),
@@ -749,40 +1047,90 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
               Text("Tirtir Jadwalka Xiisadaha?"),
             ],
           ),
-          content: const Text(
-            "Ma ziirtaa inaad rabto inaad dhammaan tirtirto jadwalka xiisadaha Iskuulkan? Waxaad ka dib soo upload-gareyn kartaa jadval cusub oo Excel ama Sawir ah.",
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Dooro waxa aad rabto inaad tirtirto (${selectedClassFilter == "All" ? "Dhammaan Iskuulka" : selectedClassFilter}):",
+                style: const TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              if (hasTimetableImages)
+                ListTile(
+                  leading: const Icon(Icons.image_not_supported_rounded, color: Colors.orangeAccent),
+                  title: Text("Tirtir Sawirada Jadwalka ($selectedClassFilter)"),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Colors.white12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      if (selectedClassFilter == "All") {
+                        classTimetableImagesMap.clear();
+                      } else {
+                        classTimetableImagesMap.remove(selectedClassFilter);
+                      }
+                      _saveTimetableData();
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Sawirada jadwalka ($selectedClassFilter) si guul leh ayaa loo tirtiray!"),
+                        backgroundColor: Colors.orangeAccent,
+                      ),
+                    );
+                  },
+                ),
+              const SizedBox(height: 8),
+              if (timetableData.isNotEmpty)
+                ListTile(
+                  leading: const Icon(Icons.table_rows_rounded, color: Colors.redAccent),
+                  title: Text("Tirtir Shaxda Xiisadaha ($selectedClassFilter)"),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Colors.white12)),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      if (selectedClassFilter == "All") {
+                        timetableData.clear();
+                      } else {
+                        timetableData.remove(selectedClassFilter);
+                      }
+                      _saveTimetableData();
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Shaxda xiisadaha ($selectedClassFilter) si guul leh ayaa loo tirtiray!"),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                    );
+                  },
+                ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.delete_forever_rounded, color: Colors.red),
+                title: const Text("Tirtir Dhamaan (Everything)"),
+                subtitle: const Text("Wuxuu tirtirayaa sawirada iyo shaxdaba", style: TextStyle(fontSize: 11)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: Colors.redAccent)),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  setState(() {
+                    timetableData.clear();
+                    classTimetableImagesMap.clear();
+                    selectedClassFilter = "All";
+                    _saveTimetableData();
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Dhammaan jadwalka xiisadaha dugsiga si buuxda ayaa loo tirtiray!"),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                },
+              ),
+            ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
               child: const Text("Baaq / Cancel", style: TextStyle(color: Colors.grey)),
-            ),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.redAccent,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              icon: const Icon(Icons.delete_forever_rounded, size: 18),
-              label: const Text("Tirtir Dhamaan / Delete All"),
-              onPressed: () {
-                setState(() {
-                  timetableData.clear();
-                  uploadedTimetableImage = null;
-                  showImageView = false;
-                  _schoolTimetablesMap.remove(effectiveTenantId);
-                  _schoolTimetableImageMap.remove(effectiveTenantId);
-                  selectedClassFilter = "All";
-                });
-                Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text("Jadwalka xiisadaha iskuulka si buuxda ayaa loo tirtiray!"),
-                    backgroundColor: Colors.redAccent,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              },
             ),
           ],
         );
@@ -790,7 +1138,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
     );
   }
 
-  Widget _buildImageViewerContainer(bool isDark, Color cardColor, Color textColor) {
+  Widget _buildImageViewerGallery(bool isDark, Color cardColor, Color textColor, List<Map<String, dynamic>> imagesList) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -820,7 +1168,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    "SAWIRKA JADWALKA XIISADAHA",
+                    "SAWIRADA JADWALKA XIISADAHA (${imagesList.length} SAWIR)",
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
@@ -830,83 +1178,116 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                   ),
                 ],
               ),
-              Wrap(
-                spacing: 8,
-                children: [
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        showImageView = false;
-                      });
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Waa loo badalay shaxda interaktiv-ka ah ee xiisadaha! ✨"),
-                          backgroundColor: Color(0xFF0F5257),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.auto_awesome_rounded, size: 16),
-                    label: const Text("U Badal Shaxda (Grid View)"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F5257),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
+              if (canManageTimetable)
+                ElevatedButton.icon(
+                  onPressed: () => _showUploadTimetableImageDialog(context),
+                  icon: const Icon(Icons.add_photo_alternate_rounded, size: 16),
+                  label: const Text("Soo Gali Sawir Kale"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  if (canManageTimetable)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
-                      tooltip: "Tirtir Sawirka",
-                      onPressed: () {
-                        setState(() {
-                          uploadedTimetableImage = null;
-                          _schoolTimetableImageMap.remove(effectiveTenantId);
-                          showImageView = false;
-                        });
-                      },
-                    ),
-                ],
-              ),
+                ),
             ],
           ),
           const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Container(
-                  constraints: const BoxConstraints(maxHeight: 550),
-                  width: double.infinity,
-                  color: isDark ? Colors.black38 : Colors.grey.shade100,
-                  child: Image.network(
-                    uploadedTimetableImage!,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Padding(
-                        padding: EdgeInsets.all(40.0),
-                        child: Text("Cilad ayaa ka dhacday soo bandhigida sawirka"),
-                      );
-                    },
+
+          // Display list of timetable images
+          ...imagesList.map((item) {
+            final String clsName = item["class"] as String;
+            final String imgUrl = item["url"] as String;
+            final int imgIndex = item["index"] as int;
+
+            return Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header badge for class image
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F5257).withValues(alpha: 0.1),
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(16),
+                        topRight: Radius.circular(16),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.bookmark_rounded, color: Color(0xFF0F5257), size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              clsName == "General" ? "JADWALKA ALBAABKA / GENERAL TIMETABLE" : "JADWALKA: ${clsName.toUpperCase()}",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                                color: Color(0xFF0F5257),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (canManageTimetable)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 20),
+                            tooltip: "Tirtir sawirkan jadwalka",
+                            onPressed: () => _deleteSingleTimetableImage(clsName, imgIndex),
+                          ),
+                      ],
+                    ),
                   ),
-                ),
-                Positioned(
-                  bottom: 12,
-                  right: 12,
-                  child: FloatingActionButton.small(
-                    heroTag: "zoom_timetable_image",
-                    backgroundColor: Colors.black87,
-                    foregroundColor: Colors.white,
-                    tooltip: "Eeg Mugged Buuxa (Full Screen)",
-                    onPressed: () => _showFullScreenImage(context, uploadedTimetableImage!),
-                    child: const Icon(Icons.zoom_in_rounded),
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 550),
+                          width: double.infinity,
+                          color: isDark ? Colors.black38 : Colors.grey.shade100,
+                          child: Image.network(
+                            imgUrl,
+                            fit: BoxFit.contain,
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Padding(
+                                padding: EdgeInsets.all(40.0),
+                                child: Center(child: Text("Cilad ayaa ka dhacday soo bandhigida sawirka")),
+                              );
+                            },
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 12,
+                          right: 12,
+                          child: FloatingActionButton.small(
+                            heroTag: "zoom_timetable_${clsName}_$imgIndex",
+                            backgroundColor: Colors.black87,
+                            foregroundColor: Colors.white,
+                            tooltip: "Eeg Mugged Buuxa (Full Screen)",
+                            onPressed: () => _showFullScreenImage(context, imgUrl),
+                            child: const Icon(Icons.zoom_in_rounded),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
+                ],
+              ),
+            );
+          }),
         ],
       ),
     );
@@ -960,7 +1341,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
             ],
           ),
           content: Text(
-            "Ma ziirtaa inaad rabto inaad jadwalka $className ka tirtirto nidaamka?",
+            "Ma doonaysaa  inaad jadwalka $className ka tirtirto nidaamka?",
           ),
           actions: [
             TextButton(
@@ -976,9 +1357,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
               onPressed: () {
                 setState(() {
                   timetableData.remove(className);
-                  if (_schoolTimetablesMap.containsKey(effectiveTenantId)) {
-                    _schoolTimetablesMap[effectiveTenantId]!.remove(className);
-                  }
+                  _saveTimetableData();
                   if (!availableClasses.contains(selectedClassFilter)) {
                     selectedClassFilter = "All";
                   }
@@ -1022,7 +1401,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
           ),
           const SizedBox(height: 20),
           Text(
-            "Jadwalka Xiisadaha Iskuulkan Wali Ma La Soo Gelin",
+            "Jadwalka Xiisadaha Dugsiga wali lama soo gelin",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 18,
@@ -1033,8 +1412,8 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
           const SizedBox(height: 8),
           Text(
             canManageTimetable
-                ? "Iskuul walba wuxuu leeyahay jadwalkiisa u gaarka ah. Fadlan ka soo upload-gareey sawirka jadwalka, faylka Excel/CSV ama soo dhig jadwalka xiisadaha iskuulkaaga:"
-                : "Fadlan kala xiriir maamulka iskuulka ama maamulaha si jadwalka xiisadaha la iigu soo geliyo.",
+                ? "Dugsi walba wuxuu leeyahay jadwalkiisa u gaarka ah. Fadlan ka soo upload-gareey sawirka jadwalka ama soo dhig jadwalka xiisadaha iskuulkaaga:"
+                : "Fadlan kala xidhiidh maamulka dugsiga  si jadwalka xiisadaha loo soo geliyo.",
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 13,
@@ -1049,7 +1428,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
               alignment: WrapAlignment.center,
               children: [
                 ElevatedButton.icon(
-                  onPressed: () => _uploadImageTimetable(context),
+                  onPressed: () => _showUploadTimetableImageDialog(context),
                   icon: const Icon(Icons.image_rounded, size: 20),
                   label: const Text("Soo Gali Sawirka Jadwalka"),
                   style: ElevatedButton.styleFrom(
@@ -1062,7 +1441,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                 OutlinedButton.icon(
                   onPressed: _loadSampleSchedule,
                   icon: const Icon(Icons.auto_fix_high_rounded, size: 20),
-                  label: const Text("Shubh Jadval Demo Ah (Sample)"),
+                  label: const Text("Jadwal muunad ah (Sample)"),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: const Color(0xFF0F5257),
                     side: const BorderSide(color: Color(0xFF0F5257)),
@@ -1083,9 +1462,13 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
         ? timetableData.keys.toList()
         : [selectedClassFilter];
 
+    if (activeClasses.isEmpty) return const SizedBox.shrink();
+
     return Column(
       children: activeClasses.map((cls) {
         final List<List<String>> schedule = timetableData[cls] ?? [];
+        if (schedule.isEmpty) return const SizedBox.shrink();
+
         return Container(
           margin: const EdgeInsets.only(bottom: 24),
           decoration: BoxDecoration(
@@ -1316,7 +1699,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
                   Icon(Icons.access_time_filled_rounded, color: Color(0xFF0F5257)),
                   SizedBox(width: 8),
                   Text(
-                    "PERIOD TIMES • WAKHTIYADA XIISADAHA IYO NASASHADA",
+                    "PERIOD TIMES • (WAKHTIYADA XIISADAHA IYO NASASHADA)",
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,

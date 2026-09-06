@@ -536,7 +536,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                 const Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Provision New School System',
+                    Text('Add New School System',
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 18,
@@ -609,7 +609,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       _fieldLabel('Admin Email'),
-                                      _customField(emailCtrl, 'admin@school.com', Icons.email_outlined,
+                                      _customField(emailCtrl, 'smartmind@school.com', Icons.email_outlined,
                                           inputType: TextInputType.emailAddress),
                                     ],
                                   ),
@@ -664,7 +664,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                             const SizedBox(height: 16),
 
                             // SUBSCRIPTION & BILLING SECTION INSIDE THE UNIFIED CARD
-                            const Text('QORSHAHA DIIWAANGELINTA & LACAGTA',
+                            const Text(' DIIWAANGELINTA & LACAGTA',
                                 style: TextStyle(color: Color(0xFF6C63FF), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                             const SizedBox(height: 14),
 
@@ -1003,7 +1003,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                         ),
                         child: const Icon(Icons.add_rounded, color: Color(0xFF6C63FF), size: 18),
                       ),
-                      title: const Text('Provision New School',
+                      title: const Text('Add New School',
                           style: TextStyle(color: Color(0xFF6C63FF), fontSize: 13, fontWeight: FontWeight.bold)),
                     ),
                   ],
@@ -1200,7 +1200,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
               backgroundColor: const Color(0xFF6C63FF),
               elevation: 10,
               icon: const Icon(Icons.add_rounded, color: Colors.white, size: 24),
-              label: const Text('Provision New School',
+              label: const Text('Add New School',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
             ),
           ),

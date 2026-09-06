@@ -37,11 +37,68 @@ class ApiService {
     if (currentTenantId != null) {
       return "${key}_$currentTenantId";
     }
+    if (currentTenantName != null && currentTenantName!.isNotEmpty) {
+      final sanitized = currentTenantName!.toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '_');
+      return "${key}_$sanitized";
+    }
     return key;
   }
 
   static void saveStorage(String key, String data) => _saveToStorage(key, data);
   static String? readStorage(String key) => _readFromStorage(key);
+
+  static void removeStorage(String key) {
+    if (kIsWeb) {
+      try {
+        html.window.localStorage.remove(_scopedKey(key));
+      } catch (e) {
+        log("LocalStorage remove error: $e");
+      }
+    }
+  }
+
+  static Future<void> savePersistentSetting(String key, dynamic data) async {
+    final String strVal = data is String ? data : jsonEncode(data);
+    _saveToStorage(key, strVal);
+
+    if (currentTenantId != null) {
+      try {
+        await http.post(
+          Uri.parse("https://smartschool-web.onrender.com/api/settings/$key"),
+          headers: _headers,
+          body: jsonEncode({"value": strVal}),
+        );
+      } catch (e) {
+        log("Error syncing setting to backend: $e");
+      }
+    }
+  }
+
+  static Future<String?> getPersistentSetting(String key) async {
+    String? local = _readFromStorage(key);
+    if (local != null && local.isNotEmpty) {
+      return local;
+    }
+    if (currentTenantId != null) {
+      try {
+        final response = await http.get(
+          Uri.parse("https://smartschool-web.onrender.com/api/settings/$key"),
+          headers: _headers,
+        );
+        if (response.statusCode == 200) {
+          final body = jsonDecode(response.body);
+          if (body['value'] != null) {
+            String val = body['value'].toString();
+            _saveToStorage(key, val);
+            return val;
+          }
+        }
+      } catch (e) {
+        log("Error fetching setting from backend: $e");
+      }
+    }
+    return null;
+  }
 
   static void _saveToStorage(String key, String data) {
     if (kIsWeb) {
