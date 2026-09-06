@@ -91,9 +91,9 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
     _loadPersistedTimetableData();
   }
 
-  void _loadPersistedTimetableData() {
+  Future<void> _loadPersistedTimetableData() async {
     // 1. Grid Data
-    final String? gridJson = ApiService.readStorage('timetable_grid_data');
+    final String? gridJson = await ApiService.getPersistentSetting('timetable_grid_data');
     if (gridJson != null && gridJson.isNotEmpty) {
       try {
         final Map<String, dynamic> decoded = jsonDecode(gridJson);
@@ -109,8 +109,10 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
             loadedGrid[key] = rows;
           }
         });
-        if (loadedGrid.isNotEmpty) {
-          timetableData = loadedGrid;
+        if (loadedGrid.isNotEmpty && mounted) {
+          setState(() {
+            timetableData = loadedGrid;
+          });
         }
       } catch (e) {
         debugPrint("Error loading timetable grid data: $e");
@@ -118,7 +120,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
     }
 
     // 2. Class Timetable Images
-    final String? imagesJson = ApiService.readStorage('timetable_class_images');
+    final String? imagesJson = await ApiService.getPersistentSetting('timetable_class_images');
     if (imagesJson != null && imagesJson.isNotEmpty) {
       try {
         final Map<String, dynamic> decoded = jsonDecode(imagesJson);
@@ -128,20 +130,26 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
             loadedImages[key] = val.map((e) => e.toString()).toList();
           }
         });
-        classTimetableImagesMap = loadedImages;
+        if (mounted) {
+          setState(() {
+            classTimetableImagesMap = loadedImages;
+          });
+        }
       } catch (e) {
         debugPrint("Error loading class timetable images: $e");
       }
     } else {
       // Legacy single image compatibility
-      final String? oldSingle = ApiService.readStorage('timetable_single_image');
-      if (oldSingle != null && oldSingle.isNotEmpty) {
-        classTimetableImagesMap["General"] = [oldSingle];
+      final String? oldSingle = await ApiService.getPersistentSetting('timetable_single_image');
+      if (oldSingle != null && oldSingle.isNotEmpty && mounted) {
+        setState(() {
+          classTimetableImagesMap["General"] = [oldSingle];
+        });
       }
     }
 
     // 3. Period Times
-    final String? timesJson = ApiService.readStorage('timetable_period_times');
+    final String? timesJson = await ApiService.getPersistentSetting('timetable_period_times');
     if (timesJson != null && timesJson.isNotEmpty) {
       try {
         final List<dynamic> decoded = jsonDecode(timesJson);
@@ -154,16 +162,20 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
             });
           }
         }
-        if (loadedTimes.isNotEmpty) {
-          customPeriodTimes = loadedTimes;
+        if (loadedTimes.isNotEmpty && mounted) {
+          setState(() {
+            customPeriodTimes = loadedTimes;
+          });
         }
       } catch (e) {
         debugPrint("Error loading period times: $e");
       }
     }
 
-    if (timetableData.isEmpty) {
-      _loadSampleScheduleQuietly();
+    if (timetableData.isEmpty && mounted) {
+      setState(() {
+        _loadSampleScheduleQuietly();
+      });
     }
   }
 

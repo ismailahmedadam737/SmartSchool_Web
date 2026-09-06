@@ -61,14 +61,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
     "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRT8ryhfF9HVfusWZhVGw6qSZmsysP2PBHh3A&s",
   ];
 
-  void _loadSavedBannerImages() {
+  Future<void> _loadSavedBannerImages() async {
     try {
-      final String? stored = ApiService.readStorage('dashboard_banner_images');
+      final String? stored = await ApiService.getPersistentSetting('dashboard_banner_images');
       if (stored != null && stored.isNotEmpty) {
         final List<dynamic> list = jsonDecode(stored);
         final List<String> loaded = list.map((e) => e.toString()).toList();
         if (loaded.isNotEmpty) {
-          _bannerImages = loaded;
+          if (mounted) {
+            setState(() {
+              _bannerImages = loaded;
+            });
+          }
         }
       }
     } catch (e) {

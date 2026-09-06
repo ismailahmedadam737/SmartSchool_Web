@@ -76,9 +76,6 @@ class ApiService {
 
   static Future<String?> getPersistentSetting(String key) async {
     String? local = _readFromStorage(key);
-    if (local != null && local.isNotEmpty) {
-      return local;
-    }
     if (currentTenantId != null) {
       try {
         final response = await http.get(
@@ -97,7 +94,7 @@ class ApiService {
         log("Error fetching setting from backend: $e");
       }
     }
-    return null;
+    return local;
   }
 
   static void _saveToStorage(String key, String data) {
