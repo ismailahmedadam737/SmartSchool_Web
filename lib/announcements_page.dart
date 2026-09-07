@@ -148,6 +148,16 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
       _saveAnnouncements();
     }
   }
+  // Helper to keep only announcements from the last 24 hours
+  List<Map<String, dynamic>> _filterRecentAnnouncements(List<Map<String, dynamic>> list) {
+    final now = DateTime.now();
+    return list.where((item) {
+      final createdStr = item['createdAt']?.toString() ?? '';
+      final created = DateTime.tryParse(createdStr);
+      if (created == null) return false;
+      return now.difference(created).inHours < 24;
+    }).toList();
+  }
 
   String _getCountdownText(String? eventDateStr) {
     if (eventDateStr == null || eventDateStr.isEmpty) return "";
