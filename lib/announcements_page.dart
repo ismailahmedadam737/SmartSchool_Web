@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:iftiinshe/Service/api_service.dart';
-
 class AnnouncementsPage extends StatefulWidget {
   final String userRole;
 
@@ -12,6 +12,7 @@ class AnnouncementsPage extends StatefulWidget {
 }
 
 class _AnnouncementsPageState extends State<AnnouncementsPage> {
+  Timer? _cleanupTimer;
   String selectedFilter = "Dhammaan";
   String searchQuery = "";
   List<Map<String, dynamic>> _announcements = [];
@@ -22,6 +23,8 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     super.initState();
     _loadSyncLocalAnnouncements();
     _loadAnnouncements();
+    // Start a periodic timer to purge announcements older than 24h
+    _cleanupTimer = Timer.periodic(const Duration(hours: 1), (_) => _removeExpiredAnnouncements());
   }
 
   void _loadSyncLocalAnnouncements() {
@@ -30,9 +33,13 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
       if (stored != null && stored.isNotEmpty) {
         final List<dynamic> list = jsonDecode(stored);
         final List<Map<String, dynamic>> loaded = list.map((e) => Map<String, dynamic>.from(e)).toList();
-        if (loaded.isNotEmpty) {
-          _announcements = loaded;
+        // Keep only announcements from the last 24 hours
+        final List<Map<String, dynamic>> recent = _filterRecentAnnouncements(loaded);
+        if (recent.isNotEmpty) {
+          _announcements = recent;
           isLoading = false;
+          // Persist the filtered list so old items are removed from storage
+          ApiService.savePersistentSetting('school_announcements', jsonEncode(recent));
         }
       }
     } catch (_) {}
@@ -45,11 +52,15 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
       if (stored != null && stored.isNotEmpty) {
         final List<dynamic> list = jsonDecode(stored);
         final List<Map<String, dynamic>> loaded = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        // Filter out announcements older than 24 hours
+        final List<Map<String, dynamic>> recent = _filterRecentAnnouncements(loaded);
         if (mounted) {
           setState(() {
-            _announcements = loaded;
+            _announcements = recent;
             isLoading = false;
           });
+          // Save the filtered list back to persistent storage
+          ApiService.savePersistentSetting('school_announcements', jsonEncode(recent));
         }
       } else {
         _loadDefaultSampleAnnouncements();
@@ -124,6 +135,17 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
       ApiService.savePersistentSetting('school_announcements', _announcements);
     } catch (e) {
       debugPrint("Error saving announcements: $e");
+    }
+  }
+
+  // Remove announcements older than 24 hours and persist the result
+  void _removeExpiredAnnouncements() {
+    final List<Map<String, dynamic>> recent = _filterRecentAnnouncements(_announcements);
+    if (recent.length != _announcements.length) {
+      setState(() {
+        _announcements = recent;
+      });
+      _saveAnnouncements();
     }
   }
 
