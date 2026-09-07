@@ -55,6 +55,11 @@ class BackupService {
           "expenses": expensesList,
           "incomes": incomesList,
           "users": usersList,
+          "timetable": {
+            "grid": await ApiService.getPersistentSetting('timetable_grid_data') ?? '{}',
+            "images": await ApiService.getPersistentSetting('timetable_class_images') ?? '{}',
+            "period_times": await ApiService.getPersistentSetting('timetable_period_times') ?? '{}',
+          },
         }
       };
 
@@ -160,6 +165,26 @@ class BackupService {
           try {
             await ApiService.createUser(Map<String, dynamic>.from(u));
           } catch (_) {}
+        }
+      }
+
+      // Restore Timetable data
+      final timetableMap = dataMap['timetable'] as Map<String, dynamic>?;
+      if (timetableMap != null) {
+        // grid data
+        final grid = timetableMap['grid'];
+        if (grid != null) {
+          await ApiService.savePersistentSetting('timetable_grid_data', grid);
+        }
+        // images data
+        final images = timetableMap['images'];
+        if (images != null) {
+          await ApiService.savePersistentSetting('timetable_class_images', images);
+        }
+        // period times
+        final periodTimes = timetableMap['period_times'];
+        if (periodTimes != null) {
+          await ApiService.savePersistentSetting('timetable_period_times', periodTimes);
         }
       }
 
