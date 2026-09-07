@@ -515,22 +515,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                             letterSpacing: 0.5,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.redAccent.withValues(alpha: 0.6)),
-                          ),
-                          child: Text(
-                            "${_announcements.length} WARTA CUSUB",
-                            style: const TextStyle(
-                              color: Colors.redAccent,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        SizedBox.shrink(),
                       ],
                     ),
                     const SizedBox(height: 6),
