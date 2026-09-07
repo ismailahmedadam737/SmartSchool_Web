@@ -1,9 +1,13 @@
 // lib/school_detail_screen.dart
 import 'dart:convert';
+import 'dart:developer';
+import 'package:flutter/foundation.dart';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'dashboard_screen.dart';
+import 'Service/backup_service.dart';
 
 const String _baseUrl = 'https://smartschool-web.onrender.com';
 
@@ -174,6 +178,190 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen>
         (route) => false,
       );
     }
+  }
+
+  Future<void> _downloadBackup() async {
+    final int? tId = int.tryParse(_tenant['id']?.toString() ?? '');
+    final String tName = (_tenant['name'] ?? 'School').toString();
+    if (tId == null) return;
+    _snack('⚡ Soo dhalaalinaya backup-ka $tName...', const Color(0xFF6C63FF));
+    try {
+      final data = await BackupService.fetchSchoolBackupData(tId, tName);
+      BackupService.downloadBackupFile(data, tName);
+      if (!mounted) return;
+      _snack('💾 Backup-ka $tName si guul leh ayaa loo soo download-gareeyay!', const Color(0xFF43E97B));
+    } catch (e) {
+      if (!mounted) return;
+      _snack('❌ Backup dhicitaankiisu waayi galay: $e', Colors.redAccent);
+    }
+  }
+
+  void _pickJsonFile(TextEditingController controller, void Function(void Function()) setDlgState, {void Function(String)? onLoaded}) {
+    if (kIsWeb) {
+      try {
+        final uploadInput = html.FileUploadInputElement();
+        uploadInput.accept = '.json,application/json';
+        uploadInput.click();
+
+        uploadInput.onChange.listen((e) {
+          final files = uploadInput.files;
+          if (files != null && files.isNotEmpty) {
+            final file = files[0];
+            final reader = html.FileReader();
+            reader.readAsText(file);
+            reader.onLoadEnd.listen((e) {
+              final String? result = reader.result as String?;
+              if (result != null && result.isNotEmpty) {
+                setDlgState(() {
+                  controller.text = result;
+                });
+                if (onLoaded != null) {
+                  onLoaded(file.name);
+                }
+              }
+            });
+          }
+        });
+      } catch (e) {
+        log("Error picking JSON file: $e");
+      }
+    }
+  }
+
+  void _showRestoreDialog() {
+    final int? tId = int.tryParse(_tenant['id']?.toString() ?? '');
+    final String tName = (_tenant['name'] ?? 'School').toString();
+    if (tId == null) return;
+    final jsonCtrl = TextEditingController();
+    bool restoring = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: const Color(0xFF131826),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Row(
+            children: [
+              const Icon(Icons.settings_backup_restore_rounded, color: Color(0xFF00D2FF), size: 24),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('Restore Backup: $tName',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Soo xul faylka JSON-ka ee ka jira computer-kaaga ama dhaji xogta si dib loogu soo celiyo.',
+                  style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
+                ),
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00D2FF).withOpacity(0.15),
+                      foregroundColor: const Color(0xFF00D2FF),
+                      side: const BorderSide(color: Color(0xFF00D2FF), width: 1.2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      _pickJsonFile(jsonCtrl, setDlgState, onLoaded: (fileName) {
+                        _snack('📁 Faylka JSON-ka ($fileName) si guul leh ayaa loo soo akhriyay!', const Color(0xFF43E97B));
+                      });
+                    },
+                    icon: const Icon(Icons.folder_open_rounded, size: 20),
+                    label: const Text('📁 SOO XUL FAYLKA JSON-KA (SELECT FILE)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: Divider(color: Colors.white.withOpacity(0.15))),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      child: Text('AMA / OR PASTE JSON TEXT', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold)),
+                    ),
+                    Expanded(child: Divider(color: Colors.white.withOpacity(0.15))),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: jsonCtrl,
+                  maxLines: 7,
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontFamily: 'monospace'),
+                  decoration: InputDecoration(
+                    hintText: 'Paste backup JSON content here...',
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.3)),
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: Colors.white.withOpacity(0.15)),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: const BorderSide(color: Color(0xFF00D2FF), width: 1.5),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: restoring ? null : () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00D2FF),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              onPressed: restoring
+                  ? null
+                  : () async {
+                      final rawText = jsonCtrl.text.trim();
+                      if (rawText.isEmpty) {
+                        _snack('⚠️ Fadlan soo geli xogta JSON-ka', Colors.amberAccent);
+                        return;
+                      }
+                      setDlgState(() => restoring = true);
+                      try {
+                        final parsed = jsonDecode(rawText);
+                        if (parsed is! Map<String, dynamic>) {
+                          throw const FormatException('Invalid JSON payload structure');
+                        }
+                        final success = await BackupService.restoreSchoolBackup(tId, tName, parsed);
+                        if (!mounted) return;
+                        Navigator.pop(ctx);
+                        if (success) {
+                          _snack('🎉 Data si guul leh ayaa loogu soo celiyay $tName!', const Color(0xFF43E97B));
+                          _loadStats();
+                        } else {
+                          _snack('❌ Restore-ka waa shaqayn waayay', Colors.redAccent);
+                        }
+                      } catch (e) {
+                        setDlgState(() => restoring = false);
+                        _snack('❌ JSON-ka ma habsona: $e', Colors.redAccent);
+                      }
+                    },
+              child: restoring
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                  : const Text('RESTORE DATA', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showSuspensionDialog() {
@@ -431,6 +619,44 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen>
                   _infoCard(Icons.lock_rounded, 'Password', password,
                       () => _copyToClipboard(password, 'Password')),
 
+                  const SizedBox(height: 24),
+
+                  // Data Backup & Protection Section
+                  _sectionTitle('🛡️ Data Protection & Backup'),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF6C63FF).withOpacity(0.2),
+                            foregroundColor: const Color(0xFF00D2FF),
+                            side: const BorderSide(color: Color(0xFF6C63FF)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: _downloadBackup,
+                          icon: const Icon(Icons.cloud_download_rounded, size: 18),
+                          label: const Text('BACKUP DATA (JSON)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF00D2FF).withOpacity(0.15),
+                            foregroundColor: const Color(0xFF00D2FF),
+                            side: const BorderSide(color: Color(0xFF00D2FF)),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: _showRestoreDialog,
+                          icon: const Icon(Icons.settings_backup_restore_rounded, size: 18),
+                          label: const Text('RESTORE BACKUP', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 24),
 
                   // Impersonation & Renew Main Buttons

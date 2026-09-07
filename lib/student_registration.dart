@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:iftiinshe/Service/api_service.dart';
@@ -27,7 +28,38 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
   @override
   void initState() {
     super.initState();
+    _loadSyncLocalStudents();
     _loadDataFromDatabase(); 
+  }
+
+  void _loadSyncLocalStudents() {
+    final String? stored = ApiService.readStorage('local_students');
+    if (stored != null && stored.isNotEmpty) {
+      try {
+        final List<dynamic> list = jsonDecode(stored);
+        final List<Map<String, String>> loaded = list.map((s) => {
+          "id": s['id']?.toString() ?? '',
+          "name": s['name']?.toString() ?? '',
+          "phone": s['phone']?.toString() ?? '',
+          "district": s['district']?.toString() ?? '',
+          "neighbor": s['neighbor']?.toString() ?? '',
+          "class": s['class']?.toString() ?? s['className']?.toString() ?? '',
+        }).toList();
+
+        if (loaded.isNotEmpty) {
+          students = loaded;
+          _classes = students
+              .map((s) => s['class'] ?? '')
+              .where((c) => c.isNotEmpty)
+              .toSet()
+              .toList();
+          _classes.sort();
+          if (_classes.isNotEmpty && _viewingClass == null) {
+            _viewingClass = _classes.first;
+          }
+        }
+      } catch (_) {}
+    }
   }
 
   Future<void> _loadDataFromDatabase() async {

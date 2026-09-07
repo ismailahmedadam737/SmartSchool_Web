@@ -88,7 +88,77 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
   void initState() {
     super.initState();
     _tabController = TabController(length: defaultClasses.length, vsync: this);
+    _loadSyncLocalTimetableData();
     _loadPersistedTimetableData();
+  }
+
+  void _loadSyncLocalTimetableData() {
+    // 1. Grid Data
+    final String? gridJson = ApiService.readStorage('timetable_grid_data');
+    if (gridJson != null && gridJson.isNotEmpty) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(gridJson);
+        Map<String, List<List<String>>> loadedGrid = {};
+        decoded.forEach((key, val) {
+          if (val is List) {
+            List<List<String>> rows = [];
+            for (var row in val) {
+              if (row is List) {
+                rows.add(row.map((item) => item.toString()).toList());
+              }
+            }
+            loadedGrid[key] = rows;
+          }
+        });
+        if (loadedGrid.isNotEmpty) {
+          timetableData = loadedGrid;
+        }
+      } catch (_) {}
+    }
+
+    // 2. Class Timetable Images
+    final String? imagesJson = ApiService.readStorage('timetable_class_images');
+    if (imagesJson != null && imagesJson.isNotEmpty) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(imagesJson);
+        Map<String, List<String>> loadedImages = {};
+        decoded.forEach((key, val) {
+          if (val is List) {
+            loadedImages[key] = val.map((e) => e.toString()).toList();
+          }
+        });
+        classTimetableImagesMap = loadedImages;
+      } catch (_) {}
+    } else {
+      final String? oldSingle = ApiService.readStorage('timetable_single_image');
+      if (oldSingle != null && oldSingle.isNotEmpty) {
+        classTimetableImagesMap["General"] = [oldSingle];
+      }
+    }
+
+    // 3. Period Times
+    final String? timesJson = ApiService.readStorage('timetable_period_times');
+    if (timesJson != null && timesJson.isNotEmpty) {
+      try {
+        final List<dynamic> decoded = jsonDecode(timesJson);
+        List<Map<String, String>> loadedTimes = [];
+        for (var item in decoded) {
+          if (item is Map) {
+            loadedTimes.add({
+              "period": item["period"]?.toString() ?? "",
+              "time": item["time"]?.toString() ?? "",
+            });
+          }
+        }
+        if (loadedTimes.isNotEmpty) {
+          customPeriodTimes = loadedTimes;
+        }
+      } catch (_) {}
+    }
+
+    if (timetableData.isEmpty) {
+      _loadSampleScheduleQuietly();
+    }
   }
 
   Future<void> _loadPersistedTimetableData() async {

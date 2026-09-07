@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:iftiinshe/Service/api_service.dart';
 
@@ -25,7 +26,21 @@ class _TeachersPageState extends State<TeachersPage> {
   @override
   void initState() {
     super.initState();
+    _loadSyncLocalTeachers();
     _fetchTeachers();
+  }
+
+  void _loadSyncLocalTeachers() {
+    final String? stored = ApiService.readStorage('local_teachers');
+    if (stored != null && stored.isNotEmpty) {
+      try {
+        final List<dynamic> list = jsonDecode(stored);
+        final loaded = list.map((item) => Map<String, String>.from(item)).toList();
+        if (loaded.isNotEmpty) {
+          teachers = loaded;
+        }
+      } catch (_) {}
+    }
   }
 
   // 1. Soo aqri Macalimiinta

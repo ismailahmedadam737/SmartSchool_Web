@@ -20,7 +20,22 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
   @override
   void initState() {
     super.initState();
+    _loadSyncLocalAnnouncements();
     _loadAnnouncements();
+  }
+
+  void _loadSyncLocalAnnouncements() {
+    try {
+      final String? stored = ApiService.readStorage('school_announcements');
+      if (stored != null && stored.isNotEmpty) {
+        final List<dynamic> list = jsonDecode(stored);
+        final List<Map<String, dynamic>> loaded = list.map((e) => Map<String, dynamic>.from(e)).toList();
+        if (loaded.isNotEmpty) {
+          _announcements = loaded;
+          isLoading = false;
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadAnnouncements() async {

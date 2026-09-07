@@ -77,22 +77,20 @@ class ApiService {
   static Future<String?> getPersistentSetting(String key) async {
     String? local = _readFromStorage(key);
     if (currentTenantId != null) {
-      try {
-        final response = await http.get(
-          Uri.parse("https://smartschool-web.onrender.com/api/settings/$key"),
-          headers: _headers,
-        );
+      http.get(
+        Uri.parse("https://smartschool-web.onrender.com/api/settings/$key"),
+        headers: _headers,
+      ).then((response) {
         if (response.statusCode == 200) {
           final body = jsonDecode(response.body);
           if (body['value'] != null) {
             String val = body['value'].toString();
             _saveToStorage(key, val);
-            return val;
           }
         }
-      } catch (e) {
+      }).catchError((e) {
         log("Error fetching setting from backend: $e");
-      }
+      });
     }
     return local;
   }
