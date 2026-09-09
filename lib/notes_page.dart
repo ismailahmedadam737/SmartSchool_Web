@@ -1688,7 +1688,7 @@ class _NotesPageState extends State<NotesPage> {
         "Fasalka: ${student.className}\n"
         "Baaqiga lagu leeyahay: \$${debt.toStringAsFixed(1)}\n"
         "${customNote.isNotEmpty ? 'Note: $customNote\n' : ''}"
-        "Fadlan ku bixi xafiiska dugsiga sida ugu dhakhsaha badan.\nMahadsanid - IFTIINSHE SCHOOLS.";
+        "Fadlan ku bixi xafiiska dugsiga sida ugu dhakhsaha badan.\nMahadsanid - ${ApiService.currentTenantName ?? 'Elite Schools'}.";
 
     showDialog(
       context: context,
@@ -1760,7 +1760,7 @@ class _NotesPageState extends State<NotesPage> {
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                   children: [
-                    pw.Text("IFTIINSHE BILE SCHOOLS", style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
+                    pw.Text(ApiService.currentTenantName ?? "Elite Schools", style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold)),
                     pw.Text("FEE REMINDER STATEMENT", style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
                   ],
                 ),

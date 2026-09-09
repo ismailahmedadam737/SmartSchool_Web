@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:iftiinshe/Service/api_service.dart';
 import 'package:iftiinshe/Service/payment_api_service.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -185,16 +186,22 @@ class _ReceiptPageState extends State<ReceiptPage> {
     );
   }
 
-  Widget _buildHeader() => Container(
+  Widget _buildHeader() {
+    final String schoolName = (ApiService.currentTenantName != null && ApiService.currentTenantName!.isNotEmpty)
+        ? ApiService.currentTenantName!.toUpperCase()
+        : 'ELITE SCHOOLS';
+    return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(border: Border.all(color: receiptBlue, width: 2.5), borderRadius: BorderRadius.circular(8)),
       child: Column(
-        children: const [
-          Text("IFTIINSHE PRIMARY AND KG SCHOOLS", textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: receiptBlue)),
-          Text("Tel: 063-7758927 // 063-4869775 Zaad: 510624", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF004677))),
+        children: [
+          Text(schoolName, textAlign: TextAlign.center, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: receiptBlue)),
+          const Text("Tel: 063-7758927 // 063-4869775 Zaad: 510624", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF004677))),
         ],
-      ));
+      ),
+    );
+  }
 
   Widget _buildContactAndDate(String date, String no) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,

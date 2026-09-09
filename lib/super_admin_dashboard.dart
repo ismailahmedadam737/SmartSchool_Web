@@ -1338,15 +1338,20 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
       backgroundColor: color,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      duration: const Duration(seconds: 5),
     ));
   }
 
   void _handleLogout() {
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (_) => const AuthPage(userRole: '',)),
-      (route) => false,
-    );
+    _snack('Systemka waa la hakiyay, fadlan la xidhiidh shirkada SmartMind Tech.', Colors.redAccent);
+    // Wait briefly so the user sees the message
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const AuthPage(userRole: '',)),
+        (route) => false,
+      );
+    });
   }
 
   Color _statusColor(String? s) {
@@ -1734,6 +1739,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                   )
                 : null,
             title: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.all(8),
@@ -1744,20 +1751,27 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                   child: const Icon(Icons.dashboard_customize_rounded, color: Colors.white, size: 20),
                 ),
                 const SizedBox(width: 12),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('SMARTMIND TECHNOLOGY COMMAND CENTER',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.8)),
-                    Row(
-                      children: [
-                        Icon(Icons.fiber_manual_record, color: Color(0xFF00E676), size: 10),
-                        SizedBox(width: 4),
-                        Text('Platform Status: Operational (Multi-Tenant System)',
-                            style: TextStyle(color: Colors.white38, fontSize: 10)),
-                      ],
-                    ),
-                  ],
+                Flexible(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text('SMARTMIND TECHNOLOGY COMMAND CENTER',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15, letterSpacing: 0.8)),
+                      Row(
+                        children: [
+                          Icon(Icons.fiber_manual_record, color: Color(0xFF00E676), size: 10),
+                          const SizedBox(width: 4),
+                          Flexible(
+                            child: Text('Platform Status: Operational (Multi-Tenant System)',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(color: Colors.white38, fontSize: 10)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -2150,7 +2164,20 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   onSelected: (val) {
                     if (val == 'active' || val == 'suspended' || val == 'cancelled') {
-                      _updateStatus(id, val);
+                      if (val == 'suspended') {
+                        // Debug log
+                        print('Suspend action triggered - showing snackbar');
+                        // Show snackbar after the popup menu closes
+                        Future.delayed(Duration.zero, () {
+                          _snack('Systemka waa la hakiyay, fadlan la xidhiidh shirkada SmartMind Tech.', Colors.redAccent);
+                        });
+                        // Delay status update to let user see snackbar
+                        Future.delayed(const Duration(seconds: 3), () {
+                          _updateStatus(id, val);
+                        });
+                      } else {
+                        _updateStatus(id, val);
+                      }
                     } else if (val == 'delete') {
                       _deleteTenant(id, name);
                     } else if (val == 'copy') {
@@ -2307,6 +2334,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
 
   Widget _buildEmptyView() => Center(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.search_off_rounded, size: 64, color: Colors.white24),
@@ -2315,6 +2343,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
             const SizedBox(height: 6),
             Text(
               _searchQuery.isNotEmpty ? 'No school matching "$_searchQuery"' : 'Click "Add New School" to create your first system.',
+              textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white38, fontSize: 13),
             ),
           ],
@@ -2323,6 +2352,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
 
   Widget _buildErrorView() => Center(
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.error_outline_rounded, size: 64, color: Colors.redAccent),

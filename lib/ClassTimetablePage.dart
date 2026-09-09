@@ -73,7 +73,7 @@ class _ClassTimetablePageState extends State<ClassTimetablePage> with SingleTick
     if (ApiService.currentTenantName != null && ApiService.currentTenantName!.isNotEmpty) {
       return ApiService.currentTenantName!.toUpperCase();
     }
-    return "IFTIINSHE SCHOOLS";
+    return "ELITE SCHOOLS";
   }
 
   bool get canManageTimetable {

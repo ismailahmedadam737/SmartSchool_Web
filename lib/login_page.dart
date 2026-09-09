@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:html' as html;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:iftiinshe/dashboard_screen.dart';
@@ -19,6 +20,10 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+
+  // Magaca iskuulka ee laga helayo URL-ka
+  String _schoolDisplayName = 'Elite Schools';
+  bool _detectingSchool = true;
 
   late AnimationController _bgController;
   late AnimationController _cardController;
@@ -41,6 +46,105 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
 
     _floatController = AnimationController(vsync: this, duration: const Duration(seconds: 4))..repeat(reverse: true);
     _floatAnim = Tween<double>(begin: -10, end: 10).animate(CurvedAnimation(parent: _floatController, curve: Curves.easeInOut));
+
+    // Marka app-ku furmado, magaca iskuulka ka soo qaado URL-ka
+    _detectTenantFromUrl();
+  }
+
+  /// URL-ka browser-ka ka aqriya magaca iskuulka oo server-ka ka xaqiijiya
+  Future<void> _detectTenantFromUrl() async {
+    try {
+      final String currentHref = html.window.location.href;
+      final Uri uri = Uri.parse(currentHref);
+
+      // 1) URL query params - ?school=xxx ama ?tenant=xxx
+      String? candidate = uri.queryParameters['school'] ??
+          uri.queryParameters['tenant'] ??
+          uri.queryParameters['t'];
+
+      // 2) Subdomain - e.g. "alnuur.smartschool.com"
+      if (candidate == null || candidate.isEmpty) {
+        final String host = uri.host;
+        final parts = host.split('.');
+        // Haddii ay 3+ parts yihiin iyo first part-ku aanuu 'www' ahayn
+        if (parts.length >= 3 && parts[0] != 'www' && parts[0] != 'localhost') {
+          candidate = parts[0];
+        }
+      }
+
+      // 3) Path segment - e.g. /school/alnuur ama /tenant/alnuur
+      if (candidate == null || candidate.isEmpty) {
+        final segs = uri.pathSegments;
+        for (int i = 0; i < segs.length - 1; i++) {
+          if (segs[i] == 'school' || segs[i] == 'tenant') {
+            candidate = segs[i + 1];
+            break;
+          }
+        }
+      }
+
+      // Haddii candidate la helay, server-ka ka hubi magaca dhabta ah
+      if (candidate != null && candidate.isNotEmpty && candidate != 'localhost') {
+        try {
+          final response = await http.get(
+            Uri.parse("https://smartschool-web.onrender.com/admin/tenants"),
+            headers: {"Content-Type": "application/json"},
+          ).timeout(const Duration(seconds: 5));
+
+          if (response.statusCode == 200) {
+            final List<dynamic> tenants = jsonDecode(response.body);
+            final lowerCandidate = candidate.toLowerCase();
+
+            // Radi iskuulka URL-ka kula mid ah magaciisa, username-kiisa, ama email-kiisa
+            final match = tenants.firstWhere(
+              (t) =>
+                  (t['name'] ?? '').toString().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '') ==
+                      lowerCandidate.replaceAll(RegExp(r'[^a-z0-9]'), '') ||
+                  (t['admin_username'] ?? '').toString().toLowerCase() == lowerCandidate ||
+                  (t['slug'] ?? '').toString().toLowerCase() == lowerCandidate,
+              orElse: () => null,
+            );
+
+            if (match != null) {
+              final String foundName = (match['name'] ?? '').toString().trim();
+              if (foundName.isNotEmpty) {
+                ApiService.currentTenantId = int.tryParse(match['id'].toString());
+                ApiService.currentTenantName = foundName;
+                if (mounted) {
+                  setState(() {
+                    _schoolDisplayName = foundName;
+                    _detectingSchool = false;
+                  });
+                }
+                return;
+              }
+            }
+          }
+        } catch (_) {}
+
+        // Haddii server-ka la soo gaadhi waayo, candidate-ka laftiisa tus (qurxin)
+        final prettyName = candidate
+            .replaceAll(RegExp(r'[-_]'), ' ')
+            .split(' ')
+            .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+            .join(' ');
+        if (mounted) {
+          setState(() {
+            _schoolDisplayName = prettyName;
+            _detectingSchool = false;
+          });
+        }
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback: haddii URL-ka waxba laga helin
+    if (mounted) {
+      setState(() {
+        _schoolDisplayName = 'Elite Schools';
+        _detectingSchool = false;
+      });
+    }
   }
 
   @override
@@ -307,11 +411,34 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
                   child: const Icon(Icons.school_rounded, size: 40, color: Colors.white),
                 ),
                 const SizedBox(height: 20),
-                const Text("SCHOOLS SYSTEM",
-                    style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 2)),
+                // Magaca iskuulka - dynamic, laga soo qaatay URL-ka
+                _detectingSchool
+                    ? const SizedBox(
+                        height: 28,
+                        child: Center(
+                          child: SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(
+                              color: Colors.white54, strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                      )
+                    : Text(
+                        _schoolDisplayName.toUpperCase(),
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
                 const SizedBox(height: 8),
-                Text("Ku soo dhowow nidaamka",
-                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13)),
+                Text(
+                  _detectingSchool ? '' : 'Ku soo dhowow nidaamka',
+                  style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13),
+                ),
                 const SizedBox(height: 36),
 
                 // Username

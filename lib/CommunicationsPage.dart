@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:iftiinshe/AdminMessagesPage.dart';
+import 'package:iftiinshe/Service/api_service.dart';
 import 'package:iftiinshe/Service/communication_service.dart'; // Hubi in koodhkan uu import yahay
 
 class SchoolCommunicationsPage extends StatefulWidget {
@@ -91,7 +92,7 @@ class _SchoolCommunicationsPageState extends State<SchoolCommunicationsPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    "Iftiinshe Primary and KG Schools. Haddii aad qabto wax su'aal, cabasho ama faallo ah, fadlan fariin toos ah noogu soo reeb.",
+                    "${ApiService.currentTenantName ?? 'Elite Schools'}. Haddii aad qabto wax su'aal, cabasho ama faallo ah, fadlan fariin toos ah noogu soo reeb.",
                     style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
                   ),
                   const SizedBox(height: 20),

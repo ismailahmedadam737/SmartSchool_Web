@@ -142,7 +142,7 @@ class _ExaminationPageState extends State<ExaminationPage> {
                   child: pw.Opacity(
                     opacity: 0.03,
                     child: pw.Text(
-                      "IFTIINSHE",
+                      ApiService.currentTenantName ?? "ELITE SCHOOLS",
                       style: pw.TextStyle(fontSize: 100, fontWeight: pw.FontWeight.bold, color: primaryColor),
                     ),
                   ),
