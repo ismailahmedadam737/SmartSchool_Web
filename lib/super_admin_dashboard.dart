@@ -224,7 +224,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
           SizedBox(width: 12),
           Text('Delete School System?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
         ]),
-        content: Text('Ma ziada tahay inaad tirtirto "$name"? Dhammaan xogta iskuulkaas waa la tirtirayaa.',
+        content: Text('Ma rabtaa  inaad tirtirto "$name"? Dhammaan xogta iskuulkaas waa la tirtirayaa.',
             style: const TextStyle(color: Colors.white70, fontSize: 14, height: 1.5)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel', style: TextStyle(color: Colors.white54))),
@@ -299,7 +299,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
       return;
     }
 
-    _snack('⚡ Soo dhalaalinaya backup-ka $name...', const Color(0xFF6C63FF));
+    _snack('⚡ Soo download-garee backup-ka $name...', const Color(0xFF6C63FF));
 
     try {
       final backupData = await BackupService.fetchSchoolBackupData(id, name);
@@ -308,7 +308,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
       _snack('💾 Backup-ka $name si guul leh ayaa loo soo download-gareeyay!', const Color(0xFF00E676));
     } catch (e) {
       if (!mounted) return;
-      _snack('❌ Backup dhicitaankiisu waayi galay: $e', Colors.redAccent);
+      _snack('❌ Backup : $e', Colors.redAccent);
     }
   }
 
@@ -481,7 +481,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Xogta iskuul walba waa mid si buuxda loogu meeleeyay Tenant ID-giisa gaarka ah. Iskuulna xogta iskuul kale ma arki karo mana qaadi karo.',
+                      'Xogta dugsi walba waa mid si buuxda loogu meeleeyay Tenant ID-giisa gaarka ah. Iskuulna xogta iskuul kale ma arki karo mana qaadi karo.',
                       style: TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
                     ),
                   ),
@@ -489,7 +489,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
               ),
             ),
             const SizedBox(height: 14),
-            Text('Dhammaan ${_tenants.length} Iskuul ee ku jira nidaamka waxay leeyihiin Database Space gaar ah oo la dammaanad qaaday.',
+            Text('Dhammaan ${_tenants.length} dugsi ee ku jira nidaamka waxay leeyihiin Database Space gaar ah oo la dammaanad qaaday.',
                 style: const TextStyle(color: Colors.white70, fontSize: 13)),
           ],
         ),
@@ -500,7 +500,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('OK, WAW FAHMUAY', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+            child: const Text('OK', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -525,7 +525,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              'Dhammaan faylasha backup-ka waxaa loo dhoofiyaa ama loo soo dejiyaa qaab JSON ah oo caalami ah oo leh dhisme nidaamsan:',
+              'Dhammaan faylasha backup-ka waxaa loo download gareynaya ama loo soo dejiyaa qaab JSON ah oo caalami ah oo leh dhisme nidaamsan:',
               style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
             ),
             const SizedBox(height: 12),
@@ -591,7 +591,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
 
   void _showGlobalDataRecoveryDialog() {
     if (_tenants.isEmpty) {
-      _snack('⚠️ Wax iskuul ah oo ka mid ah nidaamka ma jiraan', Colors.amberAccent);
+      _snack('⚠️ Wax dugsi ah oo ka mid ah nidaamka ma jiraan', Colors.amberAccent);
       return;
     }
 
@@ -621,7 +621,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Dooro iskuulka target-ka ah ka dibna soo xul faylka JSON-ka ama dhaji xogta backup-ka.',
+                  'Dooro dugsiga target-ka ah ka dibna soo xul faylka JSON-ka ama dhaji xogta backup-ka.',
                   style: TextStyle(color: Colors.white70, fontSize: 12, height: 1.4),
                 ),
                 const SizedBox(height: 14),
@@ -817,7 +817,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
         "👤 Username: ${school['admin_username']}\n"
         "🔑 Password: ${school['admin_password']}\n"
         "🏷️ Plan: ${(school['subscription_plan'] ?? 'basic').toString().toUpperCase()}\n\n"
-        "Fadlan u dir cinwaannadan maamulaha iskuulka.";
+        "Fadlan u dir cinwaannadan maamulaha dugsiga.";
 
     final ScrollController dialogScrollCtrl = ScrollController();
 
@@ -1082,7 +1082,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Unified Form Header inside Card
-                            const Text('MACLUUMAADKA DIIWAANGELINTA ISKUULKA CUSUB',
+                            const Text('MACLUUMAADKA DIIWAANGELINTA DUGSIGA CUSUB',
                                 style: TextStyle(color: Color(0xFF00D2FF), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
                             const SizedBox(height: 18),
 
@@ -1847,7 +1847,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                     Text('Central Multi-Tenant Data Backups',
                         style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
                     SizedBox(height: 4),
-                    Text('Qaad backup buuxa iskuul walba si gaar ah (Isolated Tenant Backup)',
+                    Text('Qaad backup buuxa dugsi walba si gaar ah (Isolated Tenant Backup)',
                         style: TextStyle(color: Colors.white70, fontSize: 12)),
                   ],
                 ),

@@ -379,7 +379,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 20),
               const Text(
-                "SYSTEM HAKAD LAGU SHUMIYAY",
+                "SYSTEM  WAA LA HAKIYEY",
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.redAccent,
@@ -392,7 +392,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Text(
                 widget.impersonatedTenantName.isNotEmpty
                     ? widget.impersonatedTenantName.toUpperCase()
-                    : (ApiService.currentTenantName ?? "ISKUULKA"),
+                    : (ApiService.currentTenantName ?? "DUGSIGA"),
                 textAlign: TextAlign.center,
                 style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w600),
               ),
@@ -405,7 +405,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   border: Border.all(color: Colors.white12),
                 ),
                 child: const Text(
-                  "Maamule/Isticmaale, Nidaamka Iskuulkiina wuu hakad ku jiraa ama waa la joojiyay (Suspended/Cancelled).\n\n"
+                  "Maamule/Isticmaale, Nidaamka dugsigiina  hakad ayuu ku jiraa ama waa la joojiyay (Suspended/Cancelled).\n\n"
                   "Fadlan la xidhiidh Shirkadda SmartMind Technology si nidaamka dib loogu soo celiyo ama subscribtion-ka loogu cusboonaysiiyo.",
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
@@ -507,7 +507,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Text(
                   isExpired
-                      ? "⚠️ DIGNIIN: Subscribtion-ka Iskuulkiina Wuu Ka Dhacay!"
+                      ? "⚠️ DIGNIIN: Subscribtion-ka Dugsigu Wuu kaa dhacay!"
                       : "⚠️ DIGNIIN: Subscribtion-ka Waxaa Ka Dhiman $days Maalmood!",
                   style: TextStyle(
                     color: bannerColor,
@@ -519,7 +519,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   isExpired
                       ? "Fadlan la xidhiidh SmartMind Technology si aad u cusboonaysiiso."
-                      : "Subscribtion-ku wuu dhowyahay inuu ka dhaco. Fadlan la xidhiidh SmartMind Technology.",
+                      : "Subscribtion-ku wuu dhowyahay inuu kaa dhaco. Fadlan la xidhiidh SmartMind Technology.",
                   style: TextStyle(
                     color: bannerColor.withOpacity(0.85),
                     fontSize: 11,

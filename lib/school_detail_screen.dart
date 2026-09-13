@@ -184,7 +184,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen>
     final int? tId = int.tryParse(_tenant['id']?.toString() ?? '');
     final String tName = (_tenant['name'] ?? 'School').toString();
     if (tId == null) return;
-    _snack('⚡ Soo dhalaalinaya backup-ka $tName...', const Color(0xFF6C63FF));
+    _snack('⚡ Soo download garee backup-ka $tName...', const Color(0xFF6C63FF));
     try {
       final data = await BackupService.fetchSchoolBackupData(tId, tName);
       BackupService.downloadBackupFile(data, tName);
@@ -416,7 +416,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen>
                 child: Column(
                   children: [
                     const Text(
-                      'Xiriirka la xidh:',
+                      'Shirkada la xidh:',
                       style: TextStyle(color: Colors.white54, fontSize: 13),
                     ),
                     const SizedBox(height: 8),
@@ -429,7 +429,7 @@ class _SchoolDetailScreenState extends State<SchoolDetailScreen>
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Nidaamkaaga waa la joojiyay.\nFadlan la xiriir shirkadda SmartMind Tech\nsi aad u sii wato adeegga.',
+                      'Nidaamkaaga waa la joojiyay.\nFadlan la xiriir shirkadda SmartMind Tech\nsi aad u sii wadato adeegga.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.white60, fontSize: 13, height: 1.5),
                     ),

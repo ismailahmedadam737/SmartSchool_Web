@@ -836,7 +836,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          "WARKA UGU DAMBEEYA",
+                          "FARIIN CUSUB!!",
                           style: TextStyle(
                             color: cardAccent,
                             fontSize: 10,
