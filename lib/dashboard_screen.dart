@@ -406,7 +406,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: const Text(
                   "Maamule/Isticmaale, Nidaamka dugsigiina  hakad ayuu ku jiraa ama waa la joojiyay (Suspended/Cancelled).\n\n"
-                  "Fadlan la xidhiidh Shirkadda SmartMind Technology si nidaamka dib loogu soo celiyo ama subscribtion-ka loogu cusboonaysiiyo.",
+                  "Fadlan la xidhiidh Shirkadda SmartMind Technology si nidaamka dib loogu soo celiyo ama subscribtion-ka laguugu cusboonaysiiyo.",
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.5),
                 ),
