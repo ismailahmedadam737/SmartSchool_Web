@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:html' as html;
 import 'dart:ui_web' as ui_web;
 import 'package:flutter/foundation.dart';
@@ -57,13 +58,32 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
     });
   }
 
-  String _formatPdfUrl(String rawUrl) {
+  String _getEmbeddedViewerUrl(String rawUrl) {
     String url = rawUrl.trim();
+    if (url.startsWith('data:application/pdf') || url.startsWith('data:')) {
+      try {
+        final parts = url.split(',');
+        if (parts.length > 1) {
+          final bytes = base64Decode(parts[1]);
+          final blob = html.Blob([bytes], 'application/pdf');
+          return html.Url.createObjectUrlFromBlob(blob);
+        }
+      } catch (e) {
+        debugPrint("Error creating blob URL: $e");
+      }
+      return url;
+    }
     if (url.contains('drive.google.com/file/d/')) {
       if (url.contains('/view')) {
         url = url.replaceAll(RegExp(r'/view.*'), '/preview');
       } else if (!url.endsWith('/preview')) {
         url = '$url/preview';
+      }
+      return url;
+    }
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      if (url.toLowerCase().contains('.pdf')) {
+        return 'https://docs.google.com/gview?embedded=true&url=${Uri.encodeComponent(url)}';
       }
     }
     return url;
@@ -260,12 +280,11 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
                             return;
                           }
                           setModalState(() => isSubmitting = true);
-                          final formatted = _formatPdfUrl(textVal);
                           final ok = await ApiService.uploadNationalExam({
                             'title': titleController.text.trim(),
                             'subject': widget.subjectKey,
                             'year': int.tryParse(yearController.text.trim()) ?? 2026,
-                            'pdf_url': formatted,
+                            'pdf_url': textVal,
                           });
                           setModalState(() => isSubmitting = false);
                           if (context.mounted) {
@@ -296,10 +315,10 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
   void _openPdfViewer(Map<String, dynamic> exam) {
     final String rawPdfUrl = exam['pdf_url'] ?? '';
     final String title = exam['title'] ?? 'National Exam PDF';
-    final String pdfUrl = _formatPdfUrl(rawPdfUrl);
+    final String displayUrl = _getEmbeddedViewerUrl(rawPdfUrl);
 
     if (kIsWeb) {
-      _registerIframeView(pdfUrl);
+      _registerIframeView(displayUrl);
     }
 
     Navigator.push(
@@ -338,13 +357,13 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
                   ),
                   onPressed: () {
                     if (kIsWeb) {
-                      if (pdfUrl.startsWith('data:')) {
-                        final anchor = html.AnchorElement(href: pdfUrl)
+                      if (rawPdfUrl.startsWith('data:')) {
+                        final anchor = html.AnchorElement(href: rawPdfUrl)
                           ..target = '_blank'
                           ..download = '$title.pdf';
                         anchor.click();
                       } else {
-                        html.window.open(pdfUrl, '_blank');
+                        html.window.open(rawPdfUrl, '_blank');
                       }
                     }
                   },
@@ -360,7 +379,7 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
             color: const Color(0xFF1E293B),
             child: kIsWeb
                 ? HtmlElementView(
-                    viewType: 'pdf_iframe_${pdfUrl.hashCode}',
+                    viewType: 'pdf_iframe_${displayUrl.hashCode}',
                   )
                 : Center(
                     child: Column(
@@ -380,13 +399,13 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
                           ),
                           onPressed: () {
                             if (kIsWeb) {
-                              if (pdfUrl.startsWith('data:')) {
-                                final anchor = html.AnchorElement(href: pdfUrl)
+                              if (rawPdfUrl.startsWith('data:')) {
+                                final anchor = html.AnchorElement(href: rawPdfUrl)
                                   ..target = '_blank'
                                   ..download = '$title.pdf';
                                 anchor.click();
                               } else {
-                                html.window.open(pdfUrl, '_blank');
+                                html.window.open(rawPdfUrl, '_blank');
                               }
                             }
                           },
@@ -412,7 +431,8 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
             ..src = url
             ..style.border = 'none'
             ..style.width = '100%'
-            ..style.height = '100%';
+            ..style.height = '100%'
+            ..allow = 'autoplay; encrypted-media; fullscreen';
           return iframe;
         },
       );
