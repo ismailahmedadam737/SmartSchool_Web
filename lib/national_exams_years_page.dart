@@ -318,6 +318,11 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
     final String displayUrl = _getEmbeddedViewerUrl(rawPdfUrl);
 
     if (kIsWeb) {
+      try {
+        html.window.open(displayUrl, '_blank');
+      } catch (e) {
+        debugPrint("Error opening PDF in window: $e");
+      }
       _registerIframeView(displayUrl);
     }
 
