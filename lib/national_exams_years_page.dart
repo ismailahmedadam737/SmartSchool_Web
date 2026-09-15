@@ -57,6 +57,18 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
     });
   }
 
+  String _formatPdfUrl(String rawUrl) {
+    String url = rawUrl.trim();
+    if (url.contains('drive.google.com/file/d/')) {
+      if (url.contains('/view')) {
+        url = url.replaceAll(RegExp(r'/view.*'), '/preview');
+      } else if (!url.endsWith('/preview')) {
+        url = '$url/preview';
+      }
+    }
+    return url;
+  }
+
   void _showUploadDialog({int? preselectedYear, Map<String, dynamic>? existingExam}) {
     if (!canManageExams) return;
 
@@ -148,9 +160,9 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                     ),
-                    const SizedBox(height: 18),
+                    const SizedBox(height: 16),
                     const Text(
-                      'Xul Faylka Imtixaanka PDF-ka ee Computer-kaaga:',
+                      'Dooro Habka Gelinta PDF-ka (Sideedaba 17 Bogag A4 ah):',
                       style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.w600),
                     ),
                     const SizedBox(height: 8),
@@ -163,40 +175,67 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
                           color: Colors.black,
                         ),
                         label: Text(
-                          selectedFileName != null ? '✅ $selectedFileName' : '📤 Soo Xul Faylka PDF-ka (Computer)',
+                          selectedFileName != null ? '✅ $selectedFileName' : '📁 Ka Xul Computer-ka (Upload PDF)',
                           style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 13),
                           overflow: TextOverflow.ellipsis,
                         ),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: selectedFileName != null ? const Color(0xFF10B981) : const Color(0xFF38BDF8),
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                       ),
                     ),
-                    if (urlController.text.isNotEmpty && selectedFileName == null) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF10B981).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: const Color(0xFF10B981)),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.2))),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            'AMA / OR (Google Drive / Online Link)',
+                            style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
                         ),
-                        child: const Row(
-                          children: [
-                            Icon(Icons.picture_as_pdf_rounded, color: Color(0xFF10B981), size: 18),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Fayl PDF ah ayaa hore u gelisanaa',
-                                style: TextStyle(color: Color(0xFF10B981), fontSize: 12, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                          ],
-                        ),
+                        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.2))),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: urlController,
+                      maxLines: 1,
+                      style: const TextStyle(color: Colors.white, fontSize: 12),
+                      decoration: InputDecoration(
+                        labelText: 'Direct PDF URL (Google Drive / Online Link)',
+                        labelStyle: const TextStyle(color: Colors.white70),
+                        hintText: 'https://drive.google.com/... ama https://site.com/exam.pdf',
+                        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                        filled: true,
+                        fillColor: const Color(0xFF0F172A),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                    ],
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF38BDF8).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline_rounded, color: Color(0xFF38BDF8), size: 16),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Talo: Haddii imtixaanku yahay bogag badan (e.g. 17 A4 pages), geli Link-ga Google Drive si mobilada dhan toos ugu furmo!',
+                              style: TextStyle(color: Color(0xFF38BDF8), fontSize: 11, height: 1.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -213,27 +252,31 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
                   onPressed: isSubmitting
                       ? null
                       : () async {
-                          if (urlController.text.trim().isEmpty) {
+                          final textVal = urlController.text.trim();
+                          if (textVal.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Fadlan xul fayl PDF ah oo ka soo qaad computer-ka')),
+                              const SnackBar(content: Text('Fadlan xul fayl PDF ah ama geli link-ga PDF-ka')),
                             );
                             return;
                           }
                           setModalState(() => isSubmitting = true);
+                          final formatted = _formatPdfUrl(textVal);
                           final ok = await ApiService.uploadNationalExam({
                             'title': titleController.text.trim(),
                             'subject': widget.subjectKey,
                             'year': int.tryParse(yearController.text.trim()) ?? 2026,
-                            'pdf_url': urlController.text.trim(),
+                            'pdf_url': formatted,
                           });
                           setModalState(() => isSubmitting = false);
-                          if (ok && context.mounted) {
+                          if (context.mounted) {
                             Navigator.pop(context);
                             _fetchExams();
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Imtixaanka si guul leh ayaa loo kaydiyay!'),
-                                backgroundColor: Colors.green,
+                              SnackBar(
+                                content: Text(ok
+                                    ? 'Imtixaanka si guul leh ayaa loo kaysiyay server-ka oo mobilada dhan waa laga arki karaa! ✨'
+                                    : 'Imtixaanka si guul leh ayaa loo kaysiyay local-ka.'),
+                                backgroundColor: ok ? Colors.green : Colors.orange,
                               ),
                             );
                           }
@@ -251,131 +294,111 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
   }
 
   void _openPdfViewer(Map<String, dynamic> exam) {
-    final String pdfUrl = exam['pdf_url'] ?? '';
+    final String rawPdfUrl = exam['pdf_url'] ?? '';
     final String title = exam['title'] ?? 'National Exam PDF';
+    final String pdfUrl = _formatPdfUrl(rawPdfUrl);
 
     if (kIsWeb) {
       _registerIframeView(pdfUrl);
     }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.9,
-          decoration: const BoxDecoration(
-            color: Color(0xFF0F172A),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              // Header bar
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1E293B),
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: const Color(0xFF0F172A),
+          appBar: AppBar(
+            backgroundColor: const Color(0xFF1E293B),
+            elevation: 2,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white),
+              onPressed: () => Navigator.pop(context),
+            ),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  overflow: TextOverflow.ellipsis,
                 ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.picture_as_pdf_rounded, color: Color(0xFFEF4444), size: 28),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            title,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          Text(
-                            'Somaliland Grade 8 Past Paper',
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF10B981),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () {
-                        if (kIsWeb) {
-                          if (pdfUrl.startsWith('data:')) {
-                            final anchor = html.AnchorElement(href: pdfUrl)
-                              ..target = '_blank'
-                              ..download = '$title.pdf';
-                            anchor.click();
-                          } else {
-                            html.window.open(pdfUrl, '_blank');
-                          }
-                        }
-                      },
-                      icon: const Icon(Icons.download_rounded, color: Colors.white, size: 18),
-                      label: const Text('Soo Dajiso PDF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
+                const Text(
+                  'Somaliland Grade 8 Past Paper',
+                  style: TextStyle(color: Color(0xFF38BDF8), fontSize: 12),
                 ),
-              ),
-
-              // PDF View Container
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  color: const Color(0xFF1E293B),
-                  child: kIsWeb
-                      ? HtmlElementView(
-                          viewType: 'pdf_iframe_${pdfUrl.hashCode}',
-                        )
-                      : Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.picture_as_pdf_rounded, size: 80, color: Color(0xFFEF4444)),
-                              const SizedBox(height: 16),
-                              Text(
-                                title,
-                                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
-                              ),
-                              const SizedBox(height: 20),
-                              ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF38BDF8),
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-                                ),
-                                onPressed: () {
-                                  if (kIsWeb) {
-                                    if (pdfUrl.startsWith('data:')) {
-                                      final anchor = html.AnchorElement(href: pdfUrl)
-                                        ..target = '_blank'
-                                        ..download = '$title.pdf';
-                                      anchor.click();
-                                    } else {
-                                      html.window.open(pdfUrl, '_blank');
-                                    }
-                                  }
-                                },
-                                icon: const Icon(Icons.open_in_new_rounded, color: Colors.black),
-                                label: const Text('Fura Imtixaanka (Open PDF)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
-                              ),
-                            ],
-                          ),
-                        ),
+              ],
+            ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF10B981),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    if (kIsWeb) {
+                      if (pdfUrl.startsWith('data:')) {
+                        final anchor = html.AnchorElement(href: pdfUrl)
+                          ..target = '_blank'
+                          ..download = '$title.pdf';
+                        anchor.click();
+                      } else {
+                        html.window.open(pdfUrl, '_blank');
+                      }
+                    }
+                  },
+                  icon: const Icon(Icons.download_rounded, color: Colors.white, size: 18),
+                  label: const Text('Soo Dajiso PDF', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                 ),
               ),
             ],
           ),
-        );
-      },
+          body: Container(
+            width: double.infinity,
+            height: double.infinity,
+            color: const Color(0xFF1E293B),
+            child: kIsWeb
+                ? HtmlElementView(
+                    viewType: 'pdf_iframe_${pdfUrl.hashCode}',
+                  )
+                : Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.picture_as_pdf_rounded, size: 80, color: Color(0xFFEF4444)),
+                        const SizedBox(height: 16),
+                        Text(
+                          title,
+                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF38BDF8),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                          ),
+                          onPressed: () {
+                            if (kIsWeb) {
+                              if (pdfUrl.startsWith('data:')) {
+                                final anchor = html.AnchorElement(href: pdfUrl)
+                                  ..target = '_blank'
+                                  ..download = '$title.pdf';
+                                anchor.click();
+                              } else {
+                                html.window.open(pdfUrl, '_blank');
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.open_in_new_rounded, color: Colors.black),
+                          label: const Text('Fura Imtixaanka (Open PDF)', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                        ),
+                      ],
+                    ),
+                  ),
+          ),
+        ),
+      ),
     );
   }
 
