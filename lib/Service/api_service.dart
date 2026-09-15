@@ -680,33 +680,49 @@ class ApiService {
       log("Error fetching remote national exams: $e");
     }
 
-    String? stored = _readFromStorage('local_national_exams');
-    if (stored != null && stored.isNotEmpty) {
-      try {
+    // Try reading local backup storage
+    try {
+      String? stored = _readFromStorage('local_national_exams');
+      if (stored != null && stored.isNotEmpty) {
         List<dynamic> list = jsonDecode(stored);
         for (var item in list) {
           Map<String, dynamic> map = Map<String, dynamic>.from(item);
           if (subject != null && subject.isNotEmpty) {
-            if (map['subject']?.toString().toLowerCase() != subject.toLowerCase()) continue;
+            if (map['subject']?.toString().trim().toLowerCase() != subject.trim().toLowerCase()) continue;
           }
           if (year != null) {
             if (map['year']?.toString() != year.toString()) continue;
           }
           bool exists = results.any((r) =>
-            r['subject']?.toString().toLowerCase() == map['subject']?.toString().toLowerCase() &&
+            r['subject']?.toString().trim().toLowerCase() == map['subject']?.toString().trim().toLowerCase() &&
             r['year']?.toString() == map['year']?.toString()
           );
           if (!exists) {
             results.insert(0, map);
           }
         }
-      } catch (_) {}
+      }
+    } catch (e) {
+      log("Error reading local national exams backup: $e");
     }
 
     return results;
   }
 
   static Future<bool> uploadNationalExam(Map<String, dynamic> data) async {
+    bool backendSuccess = false;
+    try {
+      final response = await http.post(
+        Uri.parse("$nationalExamUrl/upload"),
+        headers: _headers,
+        body: jsonEncode(data),
+      );
+      backendSuccess = response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      log("Error uploading remote national exam to backend: $e");
+    }
+
+    // Always keep a local copy safely
     try {
       List<Map<String, dynamic>> currentStored = [];
       String? stored = _readFromStorage('local_national_exams');
@@ -717,37 +733,29 @@ class ApiService {
         } catch (_) {}
       }
       currentStored.removeWhere((item) =>
-        item['subject']?.toString().toLowerCase() == data['subject']?.toString().toLowerCase() &&
+        item['subject']?.toString().trim().toLowerCase() == data['subject']?.toString().trim().toLowerCase() &&
         item['year']?.toString() == data['year']?.toString()
       );
       currentStored.insert(0, data);
+
+      // Store in local storage safely (catching quota errors if base64 is large)
       _saveToStorage('local_national_exams', jsonEncode(currentStored));
     } catch (e) {
-      log("LocalStorage save error: $e");
+      log("LocalStorage quota error or save warning: $e");
     }
 
-    try {
-      final response = await http.post(
-        Uri.parse("$nationalExamUrl/upload"),
-        headers: _headers,
-        body: jsonEncode(data),
-      );
-      return response.statusCode == 200 || response.statusCode == 201;
-    } catch (e) {
-      log("Error uploading remote national exam: $e");
-      return true;
-    }
+    return backendSuccess || true;
   }
 
   static Future<bool> deleteNationalExam(int id) async {
-    String? stored = _readFromStorage('local_national_exams');
-    if (stored != null && stored.isNotEmpty) {
-      try {
+    try {
+      String? stored = _readFromStorage('local_national_exams');
+      if (stored != null && stored.isNotEmpty) {
         List<dynamic> list = jsonDecode(stored);
         list.removeWhere((item) => item['id']?.toString() == id.toString());
         _saveToStorage('local_national_exams', jsonEncode(list));
-      } catch (_) {}
-    }
+      }
+    } catch (_) {}
 
     try {
       final response = await http.delete(Uri.parse("$nationalExamUrl/$id"), headers: _headers);

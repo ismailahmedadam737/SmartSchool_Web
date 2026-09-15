@@ -10,10 +10,22 @@ async function ensureNationalExamsTable() {
         subject VARCHAR(100) NOT NULL,
         year INT NOT NULL,
         pdf_url TEXT NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        CONSTRAINT unique_subject_year UNIQUE (subject, year)
+        created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+
+    // Add unique constraint safely if missing
+    await pool.query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'unique_subject_year'
+        ) THEN
+          ALTER TABLE national_exams ADD CONSTRAINT unique_subject_year UNIQUE (subject, year);
+        END IF;
+      END $$;
+    `).catch(() => {});
+
     console.log('✅ Table "national_exams" is ready.');
   } catch (err) {
     console.error('❌ Error creating national_exams table:', err.message);
@@ -31,10 +43,10 @@ exports.getExams = async (req, res) => {
     let params = [];
 
     if (subject && year) {
-      query += ' WHERE LOWER(subject) = LOWER($1) AND year = $2 ORDER BY year DESC';
+      query += ' WHERE LOWER(TRIM(subject)) = LOWER(TRIM($1)) AND year = $2 ORDER BY year DESC';
       params = [subject, parseInt(year, 10)];
     } else if (subject) {
-      query += ' WHERE LOWER(subject) = LOWER($1) ORDER BY year DESC';
+      query += ' WHERE LOWER(TRIM(subject)) = LOWER(TRIM($1)) ORDER BY year DESC';
       params = [subject];
     } else {
       query += ' ORDER BY year DESC, subject ASC';
@@ -48,7 +60,7 @@ exports.getExams = async (req, res) => {
   }
 };
 
-// 2. Upload / Save exam (Upsert)
+// 2. Upload / Save exam (Safe Upsert)
 exports.uploadExam = async (req, res) => {
   try {
     const { title, subject, year, pdf_url } = req.body;
@@ -60,18 +72,33 @@ exports.uploadExam = async (req, res) => {
     const examTitle = title || `Somaliland Grade 8 Exam ${year} - ${subject}`;
     const parsedYear = parseInt(year, 10);
 
-    const query = `
-      INSERT INTO national_exams (title, subject, year, pdf_url, created_at)
-      VALUES ($1, $2, $3, $4, NOW())
-      ON CONFLICT (subject, year)
-      DO UPDATE SET title = EXCLUDED.title, pdf_url = EXCLUDED.pdf_url, created_at = NOW()
-      RETURNING *;
-    `;
+    // 1. Try UPDATE first
+    const updateRes = await pool.query(
+      `UPDATE national_exams 
+       SET title = $1, pdf_url = $2, created_at = NOW() 
+       WHERE LOWER(TRIM(subject)) = LOWER(TRIM($3)) AND year = $4 
+       RETURNING *`,
+      [examTitle, pdf_url, subject, parsedYear]
+    );
 
-    const result = await pool.query(query, [examTitle, subject, parsedYear, pdf_url]);
+    if (updateRes.rows.length > 0) {
+      return res.status(200).json({
+        message: 'Imtixaanka si guul leh ayaa loo cusboonaysiiyay!',
+        data: updateRes.rows[0],
+      });
+    }
+
+    // 2. Otherwise INSERT
+    const insertRes = await pool.query(
+      `INSERT INTO national_exams (title, subject, year, pdf_url, created_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       RETURNING *`,
+      [examTitle, subject, parsedYear, pdf_url]
+    );
+
     res.status(201).json({
       message: 'Imtixaanka si guul leh ayaa loo kaydiyay!',
-      data: result.rows[0],
+      data: insertRes.rows[0],
     });
   } catch (err) {
     console.error('Error uploading national exam:', err.message);
