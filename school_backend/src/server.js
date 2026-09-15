@@ -18,6 +18,7 @@ const reportRoutes = require('./routes/report_routes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const salaryRoutes = require('./routes/salaryRoutes');
 const communicationRoutes = require('./routes/communicationRoutes');
+const nationalExamRoutes = require('./routes/nationalExamRoutes');
 
 const app = express();
 
@@ -60,6 +61,7 @@ app.use('/api/teachers', teacherRoutes);
 app.use('/api/buses', busRoutes);
 app.use('/api/exam', examRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/national-exams', nationalExamRoutes);
 
 // ✅ DIRECT DELETE ROUTES - BEFORE expenseRoutes (priority routes)
 app.delete('/api/expenses/:id', async (req, res) => {

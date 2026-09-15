@@ -22,6 +22,7 @@ import 'package:iftiinshe/teacher.dart';
 import 'package:iftiinshe/super_admin_dashboard.dart';
 import 'package:iftiinshe/ClassTimetablePage.dart';
 import 'package:iftiinshe/announcements_page.dart';
+import 'package:iftiinshe/national_exams_page.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userRole;
@@ -648,6 +649,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       case "Income & Outcome": return IncomePage();
       case "Buses": return const BusesPage();
       case "Exam & Results": return ExaminationPage(userRole: r);
+      case "National Exams": return NationalExamsPage(userRole: r);
       case "Exam Schedule": return const ExamScheduleGeneratorPage();
       case "Class Timetable": return ClassTimetablePage(userRole: r);
       case "Communications": return const SchoolCommunicationsPage();
@@ -1357,6 +1359,7 @@ Widget _buildPieChart() {
         {"icon": Icons.how_to_reg, "title": "Attendance"},
         {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
         {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
+        {"icon": Icons.workspace_premium_rounded, "title": "National Exams"},
       ];
     } else if (r.contains('teacher') || r.contains('macalin')) {
       return [
@@ -1367,6 +1370,7 @@ Widget _buildPieChart() {
         {"icon": Icons.how_to_reg, "title": "Attendance"},
         {"icon": Icons.chat_rounded, "title": "Communications"},
         {"icon": Icons.book, "title": "Exam & Results"},
+        {"icon": Icons.workspace_premium_rounded, "title": "National Exams"},
       ];
     } else if (r == 'user' || r.contains('student') || r.contains('parent') || r.contains('ardey') || r.contains('waalid')) {
       return [
@@ -1375,6 +1379,7 @@ Widget _buildPieChart() {
         {"icon": Icons.how_to_reg, "title": "Attendance"},
         {"icon": Icons.chat_rounded, "title": "Communications"},
         {"icon": Icons.book, "title": "Exam & Results"},
+        {"icon": Icons.workspace_premium_rounded, "title": "National Exams"},
       ];
     } else if (r == 'admin') {
       return [
@@ -1388,6 +1393,7 @@ Widget _buildPieChart() {
         {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
         {"icon": Icons.bus_alert, "title": "Buses"},
         {"icon": Icons.book, "title": "Exam & Results"},
+        {"icon": Icons.workspace_premium_rounded, "title": "National Exams"},
         {"icon": Icons.edit_calendar_rounded, "title": "Exam Schedule"},
         {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
         {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
@@ -1409,6 +1415,7 @@ Widget _buildPieChart() {
         {"icon": Icons.account_balance_wallet_rounded, "title": "Fees & Accounting"},
         {"icon": Icons.bus_alert, "title": "Buses"},
         {"icon": Icons.book, "title": "Exam & Results"},
+        {"icon": Icons.workspace_premium_rounded, "title": "National Exams"},
         {"icon": Icons.edit_calendar_rounded, "title": "Exam Schedule"},
         {"icon": Icons.account_balance_wallet_rounded, "title": "Income & Outcome"},
         {"icon": Icons.bar_chart_rounded, "title": "General Reports"},
