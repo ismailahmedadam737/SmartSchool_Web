@@ -129,7 +129,7 @@ class _AiLessonPlanPageState extends State<AiLessonPlanPage>
         controller: _scrollController,
         thumbVisibility: true,
         trackVisibility: true,
-        thickness: 6,
+        thickness: 8,
         radius: const Radius.circular(10),
         child: SingleChildScrollView(
           controller: _scrollController,
