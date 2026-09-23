@@ -662,6 +662,24 @@ class ApiService {
   // --- Somaliland 8th Grade National Exams API ---
   static const String nationalExamUrl = "https://smartschool-web.onrender.com/api/national-exams";
 
+  static bool _isExamForCurrentTenant(Map<String, dynamic> exam) {
+    if (currentTenantId != null) {
+      if (exam['tenant_id'] != null) {
+        if (exam['tenant_id'].toString() != currentTenantId.toString()) return false;
+      }
+    }
+    if (currentTenantName != null && currentTenantName!.trim().isNotEmpty) {
+      final curName = currentTenantName!.trim().toLowerCase();
+      if (exam['school_name'] != null && exam['school_name'].toString().trim().isNotEmpty) {
+        if (exam['school_name'].toString().trim().toLowerCase() != curName) return false;
+      }
+      if (exam['tenant_name'] != null && exam['tenant_name'].toString().trim().isNotEmpty) {
+        if (exam['tenant_name'].toString().trim().toLowerCase() != curName) return false;
+      }
+    }
+    return true;
+  }
+
   static Future<List<Map<String, dynamic>>> getNationalExams({String? subject, int? year}) async {
     List<Map<String, dynamic>> results = [];
     try {
@@ -669,24 +687,30 @@ class ApiService {
       List<String> params = [];
       if (subject != null && subject.isNotEmpty) params.add("subject=${Uri.encodeComponent(subject)}");
       if (year != null) params.add("year=$year");
+      if (currentTenantId != null) params.add("tenant_id=$currentTenantId");
+      if (currentTenantName != null && currentTenantName!.isNotEmpty) {
+        params.add("school_name=${Uri.encodeComponent(currentTenantName!)}");
+      }
       if (params.isNotEmpty) queryStr = "?${params.join('&')}";
 
       final response = await http.get(Uri.parse("$nationalExamUrl$queryStr"), headers: _headers);
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        results = List<Map<String, dynamic>>.from(data);
+        final List<Map<String, dynamic>> fetched = List<Map<String, dynamic>>.from(data);
+        results = fetched.where((e) => _isExamForCurrentTenant(e)).toList();
       }
     } catch (e) {
       log("Error fetching remote national exams: $e");
     }
 
-    // Try reading local backup storage
+    // Try reading local backup storage (tenant-scoped)
     try {
       String? stored = _readFromStorage('local_national_exams');
       if (stored != null && stored.isNotEmpty) {
         List<dynamic> list = jsonDecode(stored);
         for (var item in list) {
           Map<String, dynamic> map = Map<String, dynamic>.from(item);
+          if (!_isExamForCurrentTenant(map)) continue;
           if (subject != null && subject.isNotEmpty) {
             if (map['subject']?.toString().trim().toLowerCase() != subject.trim().toLowerCase()) continue;
           }
@@ -710,19 +734,27 @@ class ApiService {
   }
 
   static Future<bool> uploadNationalExam(Map<String, dynamic> data) async {
+    final Map<String, dynamic> payload = Map<String, dynamic>.from(data);
+    if (currentTenantId != null && payload['tenant_id'] == null) {
+      payload['tenant_id'] = currentTenantId;
+    }
+    if (currentTenantName != null && currentTenantName!.isNotEmpty && payload['school_name'] == null) {
+      payload['school_name'] = currentTenantName;
+    }
+
     bool backendSuccess = false;
     try {
       final response = await http.post(
         Uri.parse("$nationalExamUrl/upload"),
         headers: _headers,
-        body: jsonEncode(data),
+        body: jsonEncode(payload),
       );
       backendSuccess = response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       log("Error uploading remote national exam to backend: $e");
     }
 
-    // Always keep a local copy safely
+    // Always keep a local copy safely in tenant-scoped storage
     try {
       List<Map<String, dynamic>> currentStored = [];
       String? stored = _readFromStorage('local_national_exams');
@@ -733,12 +765,12 @@ class ApiService {
         } catch (_) {}
       }
       currentStored.removeWhere((item) =>
-        item['subject']?.toString().trim().toLowerCase() == data['subject']?.toString().trim().toLowerCase() &&
-        item['year']?.toString() == data['year']?.toString()
+        item['subject']?.toString().trim().toLowerCase() == payload['subject']?.toString().trim().toLowerCase() &&
+        item['year']?.toString() == payload['year']?.toString()
       );
-      currentStored.insert(0, data);
+      currentStored.insert(0, payload);
 
-      // Store in local storage safely (catching quota errors if base64 is large)
+      // Store in local storage safely
       _saveToStorage('local_national_exams', jsonEncode(currentStored));
     } catch (e) {
       log("LocalStorage quota error or save warning: $e");

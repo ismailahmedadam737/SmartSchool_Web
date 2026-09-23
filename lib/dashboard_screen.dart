@@ -23,6 +23,7 @@ import 'package:iftiinshe/super_admin_dashboard.dart';
 import 'package:iftiinshe/ClassTimetablePage.dart';
 import 'package:iftiinshe/announcements_page.dart';
 import 'package:iftiinshe/national_exams_page.dart';
+import 'package:iftiinshe/AiLessonPlanPage.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String userRole;
@@ -236,6 +237,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.impersonatedTenantName.isNotEmpty) {
+      ApiService.currentTenantName = widget.impersonatedTenantName.trim();
+    }
     _loadSavedBannerImages();
     _loadSavedAnnouncements();
     String r = activeRole.toLowerCase();
@@ -635,14 +639,63 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Widget _buildAccessDeniedWidget([String message = "Waqtigaan ma laha awood aad ku gasho boggan."]) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+          boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.lock_rounded, color: Colors.redAccent, size: 54),
+            const SizedBox(height: 16),
+            const Text(
+              "AWOOD MA LAHID (ACCESS DENIED)",
+              style: TextStyle(color: Colors.redAccent, fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: textColor.withOpacity(0.8), fontSize: 14),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => setState(() => selectedMenu = "Dashboard"),
+              icon: const Icon(Icons.dashboard_rounded, size: 18),
+              label: const Text("Ku noqo Dashboard-ka"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF6C63FF),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildBodyContent() {
     String r = activeRole;
+    bool isTeacher = r.toLowerCase().contains('teacher') || r.toLowerCase().contains('macalin');
     switch (selectedMenu.trim()) {
       case "Dashboard": return _buildDashboardHome();
       case "Ogeysiisyada": return AnnouncementsPage(userRole: r);
+      case "AI Lesson Plan": return AiLessonPlanPage(userRole: r);
       case "Students": return const StudentRegistrationPage();
       case "Users": return UsersPage(currentRole: r);
-      case "Teachers": return TeachersPage(userRole: r);
+      case "Teachers": 
+        if (isTeacher) {
+          return _buildAccessDeniedWidget("Waqtigaan ma laha awood aad ku gasho bogga macallimiinta.");
+        }
+        return TeachersPage(userRole: r);
       case "Teacher Salary": return const TeacherSalaryPage();
       case "Attendance": return AttendancePage(userRole: r);
       case "Fees & Accounting": return FinancePage();
@@ -940,6 +993,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildScrollingImagesRow() {
+    final bool isTeacherRole = activeRole.toLowerCase().contains('teacher') || activeRole.toLowerCase().contains('macalin');
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1010,21 +1064,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ],
             ),
-            ElevatedButton.icon(
-              onPressed: _showUploadImageDialog,
-              icon: const Icon(Icons.cloud_upload_rounded, size: 18),
-              label: const Text(
-                "Upload File / Soo Gali Sawir",
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+            if (!isTeacherRole)
+              ElevatedButton.icon(
+                onPressed: _showUploadImageDialog,
+                icon: const Icon(Icons.cloud_upload_rounded, size: 18),
+                label: const Text(
+                  "Upload File / Soo Gali Sawir",
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6C63FF),
+                  foregroundColor: Colors.white,
+                  elevation: 3,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF6C63FF),
-                foregroundColor: Colors.white,
-                elevation: 3,
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-            ),
           ],
         ),
         const SizedBox(height: 12),
@@ -1064,24 +1119,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                     ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: Material(
-                        color: Colors.black45,
-                        shape: const CircleBorder(),
-                        child: IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.white, size: 18),
-                          tooltip: "Tirtir Sawirka",
-                          onPressed: () {
-                            setState(() {
-                              _bannerImages.removeAt(index);
-                              _saveBannerImages();
-                            });
-                          },
+                    if (!isTeacherRole)
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: Material(
+                          color: Colors.black45,
+                          shape: const CircleBorder(),
+                          child: IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.white, size: 18),
+                            tooltip: "Tirtir Sawirka",
+                            onPressed: () {
+                              setState(() {
+                                _bannerImages.removeAt(index);
+                                _saveBannerImages();
+                              });
+                            },
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               );
@@ -1091,6 +1147,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ],
     );
   }
+
 
   Widget _buildHeader() {
     return LayoutBuilder(
@@ -1354,6 +1411,7 @@ Widget _buildPieChart() {
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
         {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
+        {"icon": Icons.auto_awesome_rounded, "title": "AI Lesson Plan"},
         {"icon": Icons.people_alt_rounded, "title": "Students"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
@@ -1365,7 +1423,7 @@ Widget _buildPieChart() {
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
         {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
-        {"icon": Icons.school_rounded, "title": "Teachers"},
+        {"icon": Icons.auto_awesome_rounded, "title": "AI Lesson Plan"},
         {"icon": Icons.calendar_month_rounded, "title": "Class Timetable"},
         {"icon": Icons.how_to_reg, "title": "Attendance"},
         {"icon": Icons.chat_rounded, "title": "Communications"},
@@ -1385,6 +1443,7 @@ Widget _buildPieChart() {
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
         {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
+        {"icon": Icons.auto_awesome_rounded, "title": "AI Lesson Plan"},
         {"icon": Icons.people_alt_rounded, "title": "Students"},
         {"icon": Icons.school_rounded, "title": "Teachers"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
@@ -1407,6 +1466,7 @@ Widget _buildPieChart() {
       return [
         {"icon": Icons.grid_view_rounded, "title": "Dashboard"},
         {"icon": Icons.campaign_rounded, "title": "Ogeysiisyada"},
+        {"icon": Icons.auto_awesome_rounded, "title": "AI Lesson Plan"},
         {"icon": Icons.people_alt_rounded, "title": "Students"},
         {"icon": Icons.school_rounded, "title": "Teachers"},
         {"icon": Icons.payments_rounded, "title": "Teacher Salary"},
@@ -1426,6 +1486,7 @@ Widget _buildPieChart() {
       ];
     }
   }
+
 
   Widget _buildSidebar() {
     final navItems = _getNavItemsForRole();

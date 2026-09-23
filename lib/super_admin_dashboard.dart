@@ -808,6 +808,131 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
 
   // ─────────────────────────── DIALOGS & MODALS ───────────────────────────
 
+  Future<void> _showSuperAdminCredentialsDialog() async {
+    String currentUsername = "superadmin";
+    String currentPassword = "superadmin123";
+
+    try {
+      final String? stored = await ApiService.getPersistentSetting('superadmin_credentials');
+      if (stored != null && stored.isNotEmpty) {
+        final Map<String, dynamic> parsed = jsonDecode(stored);
+        if (parsed['username'] != null && parsed['username'].toString().isNotEmpty) {
+          currentUsername = parsed['username'].toString();
+        }
+        if (parsed['password'] != null && parsed['password'].toString().isNotEmpty) {
+          currentPassword = parsed['password'].toString();
+        }
+      }
+    } catch (_) {}
+
+    final userCtrl = TextEditingController(text: currentUsername);
+    final passCtrl = TextEditingController(text: currentPassword);
+    bool obscurePass = true;
+    bool isSaving = false;
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          backgroundColor: const Color(0xFF131826),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Row(
+            children: [
+              Icon(Icons.security_rounded, color: Colors.amberAccent, size: 28),
+              SizedBox(width: 12),
+              Text('SuperAdmin Credentials', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 18)),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Halkan ka sameey ama ka edit-gareey Username-ka iyo Password-ka uu SuperAdmin-ku ku soo galo nidaamka central-ka ah.',
+                  style: TextStyle(color: Colors.white70, fontSize: 13, height: 1.4),
+                ),
+                const SizedBox(height: 20),
+                const Text('SuperAdmin Username:', style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: userCtrl,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.person_rounded, color: Colors.amberAccent),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.amberAccent, width: 1.5)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text('SuperAdmin Password:', style: TextStyle(color: Colors.white54, fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                TextField(
+                  controller: passCtrl,
+                  obscureText: obscurePass,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    prefixIcon: const Icon(Icons.lock_rounded, color: Colors.amberAccent),
+                    suffixIcon: IconButton(
+                      icon: Icon(obscurePass ? Icons.visibility_off : Icons.visibility, color: Colors.white38),
+                      onPressed: () => setDlgState(() => obscurePass = !obscurePass),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15))),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: Colors.amberAccent, width: 1.5)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.amberAccent,
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+              ),
+              onPressed: isSaving ? null : () async {
+                final u = userCtrl.text.trim();
+                final p = passCtrl.text.trim();
+                if (u.isEmpty || p.isEmpty) {
+                  _snack('⚠️ Fadlan soo geli Username iyo Password cusub', Colors.amber);
+                  return;
+                }
+                setDlgState(() => isSaving = true);
+                final creds = {
+                  "username": u,
+                  "password": p,
+                  "updated_at": DateTime.now().toIso8601String(),
+                };
+                await ApiService.savePersistentSetting('superadmin_credentials', creds);
+                if (!mounted) return;
+                Navigator.pop(ctx);
+                _snack('🔑 SuperAdmin Credentials si guul leh ayaa loo cusboonaysiiyay!', const Color(0xFF00E676));
+              },
+              icon: isSaving
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                  : const Icon(Icons.save_rounded, size: 18),
+              label: const Text('KAYSI CREDENTIALS', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showCredentialsDialog(Map<String, dynamic> school) {
     final String loginUrl = "https://smartschool-web.onrender.com";
     final String payloadText =
@@ -1524,6 +1649,22 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
                       title: const Text('Add New School',
                           style: TextStyle(color: Color(0xFF6C63FF), fontSize: 13, fontWeight: FontWeight.bold)),
                     ),
+                    ListTile(
+                      onTap: () {
+                        if (Navigator.canPop(context)) Navigator.pop(context);
+                        _showSuperAdminCredentialsDialog();
+                      },
+                      leading: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.key_rounded, color: Colors.amberAccent, size: 18),
+                      ),
+                      title: const Text('SuperAdmin Credentials',
+                          style: TextStyle(color: Colors.amberAccent, fontSize: 13, fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 ),
               ),
@@ -1776,6 +1917,11 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard>
               ],
             ),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.key_rounded, color: Colors.amberAccent),
+                tooltip: 'SuperAdmin Credentials',
+                onPressed: _showSuperAdminCredentialsDialog,
+              ),
               IconButton(
                 icon: const Icon(Icons.refresh_rounded, color: Colors.white70),
                 tooltip: 'Refresh All Systems',

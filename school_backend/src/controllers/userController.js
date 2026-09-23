@@ -177,12 +177,26 @@ const loginUser = async (req, res) => {
       console.log("Tenants query error:", tErr.message);
     }
 
-    // 3. Fallback SuperAdmin check
+    // 3. Fallback SuperAdmin check & Persistent Settings Check
+    let isSuperAdminCreds = false;
+    try {
+      const setRes = await pool.query("SELECT setting_value FROM persistent_settings WHERE setting_key = 'superadmin_credentials'");
+      if (setRes.rows.length > 0 && setRes.rows[0].setting_value) {
+        const parsed = JSON.parse(setRes.rows[0].setting_value);
+        if (parsed.username && parsed.password) {
+          if (lowerUser === parsed.username.toLowerCase().trim() && trimmedPass === parsed.password.trim()) {
+            isSuperAdminCreds = true;
+          }
+        }
+      }
+    } catch (_) {}
+
     if (
+      isSuperAdminCreds ||
       (lowerUser === 'superadmin' && (trimmedPass === 'superadmin123' || trimmedPass === 'admin123' || trimmedPass === '123456')) ||
       (lowerUser === 'admin' && (trimmedPass === 'admin123' || trimmedPass === '123456'))
     ) {
-      const fallbackRole = lowerUser === 'superadmin' ? 'SuperAdmin' : 'Admin';
+      const fallbackRole = (isSuperAdminCreds || lowerUser === 'superadmin') ? 'SuperAdmin' : 'Admin';
       return res.json({
         message: "Login success",
         user: {

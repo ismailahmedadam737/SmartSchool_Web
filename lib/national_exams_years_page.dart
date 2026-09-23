@@ -285,6 +285,8 @@ class _NationalExamsYearsPageState extends State<NationalExamsYearsPage> {
                             'subject': widget.subjectKey,
                             'year': int.tryParse(yearController.text.trim()) ?? 2026,
                             'pdf_url': textVal,
+                            'tenant_id': ApiService.currentTenantId,
+                            'school_name': ApiService.currentTenantName,
                           });
                           setModalState(() => isSubmitting = false);
                           if (context.mounted) {

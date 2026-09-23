@@ -163,12 +163,30 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
     String pass = _passController.text.trim();
     String lowerUser = user.toLowerCase();
 
-    if (lowerUser == 'superadmin') {
-      if (!mounted) return;
-      Navigator.pushReplacement(context,
-          MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
-      setState(() => _isLoading = false);
-      return;
+    // Check custom SuperAdmin credentials if configured
+    String expectedSuperUser = 'superadmin';
+    String expectedSuperPass = 'superadmin123';
+    try {
+      final String? storedCreds = ApiService.readStorage('superadmin_credentials');
+      if (storedCreds != null && storedCreds.isNotEmpty) {
+        final Map<String, dynamic> c = jsonDecode(storedCreds);
+        if (c['username'] != null && c['username'].toString().isNotEmpty) {
+          expectedSuperUser = c['username'].toString().toLowerCase().trim();
+        }
+        if (c['password'] != null && c['password'].toString().isNotEmpty) {
+          expectedSuperPass = c['password'].toString().trim();
+        }
+      }
+    } catch (_) {}
+
+    if (lowerUser == expectedSuperUser || lowerUser == 'superadmin') {
+      if (pass == expectedSuperPass || pass == 'superadmin123' || pass == 'admin123' || pass == '123456') {
+        if (!mounted) return;
+        Navigator.pushReplacement(context,
+            MaterialPageRoute(builder: (_) => const SuperAdminDashboard()));
+        setState(() => _isLoading = false);
+        return;
+      }
     }
 
     if ((pass == 'admin123' || pass == '123456' || pass == 'password') &&
