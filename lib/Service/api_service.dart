@@ -507,7 +507,29 @@ class ApiService {
 
   static Future<bool> saveExamination(int studentId, String studentName, List<Map<String, dynamic>> grades) async {
     try {
-      final response = await http.post(Uri.parse("$examUrl/save"), headers: _headers, body: jsonEncode({"student_id": studentId, "student_name": studentName, "grades": grades}));
+      var response = await http.post(
+        Uri.parse("$examUrl/save"),
+        headers: _headers,
+        body: jsonEncode({"student_id": studentId, "student_name": studentName, "grades": grades}),
+      );
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return true;
+      }
+
+      // Haddii server-ku ku guuldarraysto (tusaale column-ka PostgreSQL oo ah INT), u dir scores la soo koobay (round)
+      final fallbackGrades = grades.map((g) {
+        final val = g['score'];
+        return {
+          ...g,
+          'score': (val is num) ? val.round() : (num.tryParse(val?.toString() ?? '0')?.round() ?? 0),
+        };
+      }).toList();
+
+      response = await http.post(
+        Uri.parse("$examUrl/save"),
+        headers: _headers,
+        body: jsonEncode({"student_id": studentId, "student_name": studentName, "grades": fallbackGrades}),
+      );
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       return false;

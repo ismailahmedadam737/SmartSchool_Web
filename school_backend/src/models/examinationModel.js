@@ -5,6 +5,7 @@ class Examination {
   // 1. Kaydi ama Update-garee natiijada (tenant-scoped)
   static async saveGrades(studentId, studentName, subject, score, examType, tenantId) {
     await ensureTenantColumn('examination').catch(() => {});
+    await pool.query('ALTER TABLE examination ALTER COLUMN score TYPE NUMERIC(6,2)').catch(() => {});
     let query, values;
     if (tenantId) {
       query = `
@@ -23,7 +24,22 @@ class Examination {
       `;
       values = [studentId, studentName, subject, score, examType];
     }
-    return await pool.query(query, values);
+    try {
+      return await pool.query(query, values);
+    } catch (err) {
+      if (err.message && err.message.includes('integer')) {
+        await pool.query('ALTER TABLE examination ALTER COLUMN score TYPE NUMERIC(6,2)').catch(() => {});
+        try {
+          return await pool.query(query, values);
+        } catch (err2) {
+          const roundedScore = Math.round(Number(score));
+          const fallbackValues = [...values];
+          fallbackValues[3] = roundedScore;
+          return await pool.query(query, fallbackValues);
+        }
+      }
+      throw err;
+    }
   }
 
   // 2. Soo saar natiijooyinka arday gaar ah (tenant-scoped)

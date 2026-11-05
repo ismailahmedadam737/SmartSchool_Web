@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:archive/archive.dart';
+import 'package:xml/xml.dart';
 import 'package:iftiinshe/Service/api_service.dart';
 import '../models/student_model.dart';
 
@@ -40,7 +46,16 @@ class _ExaminationPageState extends State<ExaminationPage> {
   bool isLoading = false;
 
   final List<String> subjects = ["Math", "English", "Somali", "Arabic", "Islamic", "Science", "Social"];
-  Map<String, int> scoresMap = {};
+  Map<String, num> scoresMap = {};
+
+  String studentSearchQuery = '';
+  final TextEditingController _studentSearchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _studentSearchController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -57,7 +72,7 @@ class _ExaminationPageState extends State<ExaminationPage> {
   Future<void> _loadInitialData() async {
     setState(() => isLoading = true);
     try {
-      final students = await ApiService.getAllStudents();
+      final students = await ApiService.getAllStudents(limit: 1000);
       setState(() {
         allStudents = students;
         dynamicClasses = students.map((s) => s.className).toSet().toList()..sort();
@@ -72,6 +87,8 @@ class _ExaminationPageState extends State<ExaminationPage> {
   void _filterStudentsByClass(String className) {
     setState(() {
       selectedClass = className;
+      studentSearchQuery = '';
+      _studentSearchController.clear();
       filteredStudents = allStudents.where((s) => s.className == className).toList();
     });
   }
@@ -85,7 +102,7 @@ class _ExaminationPageState extends State<ExaminationPage> {
         scoresMap = {for (var s in subjects) s: 0};
         for (var res in results) {
           if (res['exam_type'] == selectedExamType && scoresMap.containsKey(res['subject'])) {
-            scoresMap[res['subject']] = res['score'] ?? 0;
+            scoresMap[res['subject']] = (res['score'] is num ? (res['score'] as num) : (num.tryParse(res['score']?.toString() ?? '0') ?? 0));
           }
         }
       });
@@ -96,19 +113,19 @@ class _ExaminationPageState extends State<ExaminationPage> {
     }
   }
 
-  int _calculateCurrentExamTotal() {
-    int total = 0;
+  num _calculateCurrentExamTotal() {
+    num total = 0;
     var filtered = currentStudentResults.where((res) => res['exam_type'] == selectedExamType);
     for (var res in filtered) {
-      total += (res['score'] as int? ?? 0);
+      total += (res['score'] is num ? (res['score'] as num) : (num.tryParse(res['score']?.toString() ?? '0') ?? 0));
     }
     return total;
   }
 
-  int _calculateGrandTotal() {
-    int total = 0;
+  num _calculateGrandTotal() {
+    num total = 0;
     for (var res in currentStudentResults) {
-      total += (res['score'] as int? ?? 0);
+      total += (res['score'] is num ? (res['score'] as num) : (num.tryParse(res['score']?.toString() ?? '0') ?? 0));
     }
     return total;
   }
@@ -121,7 +138,8 @@ class _ExaminationPageState extends State<ExaminationPage> {
     var filteredResults = currentStudentResults.where((res) => res['exam_type'] == selectedExamType).toList();
     int maxPerSubject = examMaxMarks[selectedExamType] ?? 10;
     int examTotalMax = maxPerSubject * 7;
-    int currentTotal = _calculateCurrentExamTotal();
+    num currentTotal = _calculateCurrentExamTotal();
+    String currentTotalStr = (currentTotal % 1 == 0) ? currentTotal.toInt().toString() : currentTotal.toString();
 
     // Palette-ka Midabada rasmiga ah ee Premium-ka ah
     final PdfColor primaryColor = PdfColor.fromHex('#0F172A');   // Slate madow/buluug ah (Aad u modern ah)
@@ -298,7 +316,8 @@ pw.Text(
                           ...filteredResults.asMap().entries.map((entry) {
                             int idx = entry.key;
                             var res = entry.value;
-                            int score = res['score'] ?? 0;
+                            num score = (res['score'] is num ? (res['score'] as num) : (num.tryParse(res['score']?.toString() ?? '0') ?? 0));
+                            String scoreStr = (score % 1 == 0) ? score.toInt().toString() : score.toString();
                             bool isPassed = score >= (maxPerSubject * 0.5);
 
                             return pw.TableRow(
@@ -319,7 +338,7 @@ pw.Text(
                                   padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 15), 
                                   child: pw.Center(
                                     child: pw.Text(
-                                      "$score", 
+                                      scoreStr, 
                                       style: pw.TextStyle(
                                         fontSize: 11,
                                         fontWeight: pw.FontWeight.bold, 
@@ -356,7 +375,7 @@ pw.Text(
                             borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
                           ),
                           child: pw.Text(
-                            "TOTAL SCORE:   $currentTotal / $examTotalMax",
+                            "TOTAL SCORE:   $currentTotalStr / $examTotalMax",
                             style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold, color: PdfColors.white, letterSpacing: 0.5),
                           ),
                         ),
@@ -594,11 +613,14 @@ pw.Text(
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isTeacherView) 
+                      if (isTeacherView) ...[
+                        _buildUploadResultsButton(isCompact: isMobile),
+                        SizedBox(width: isMobile ? 4 : 8),
                         IconButton(
                           icon: const Icon(Icons.settings, color: Colors.grey), 
                           onPressed: _showSettings
                         ),
+                      ],
                       SizedBox(width: isMobile ? 4 : 10),
                       ToggleButtons(
                         isSelected: [isTeacherView, !isTeacherView],
@@ -628,7 +650,7 @@ pw.Text(
                        border: Border.all(color: Colors.green)
                      ),
                      child: Text(
-                       " Total: ${_calculateGrandTotal()} / 700",
+                       " Total: ${_calculateGrandTotal() % 1 == 0 ? _calculateGrandTotal().toInt() : _calculateGrandTotal()} / 700",
                        style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
                      ),
                    ),
@@ -650,64 +672,224 @@ pw.Text(
           crossAxisCount = 4;
         }
 
-        return GridView.builder(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            crossAxisSpacing: 15,
-            mainAxisSpacing: 15,
-            childAspectRatio: constraints.maxWidth < 600 ? 1.4 : 1.0,
-          ),
-          itemCount: dynamicClasses.length,
-          itemBuilder: (context, index) => InkWell(
-            onTap: () => _filterStudentsByClass(dynamicClasses[index]),
-            child: Container(
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Quick Global Student Search bar across all classes
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [Color(0xFF2ECC71), Color(0xFF1B5E20)]),
-                borderRadius: BorderRadius.circular(15),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+                ],
               ),
-              alignment: Alignment.center,
-              child: Text(
-                dynamicClasses[index],
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: constraints.maxWidth < 600 ? 18 : 22,
-                  fontWeight: FontWeight.bold,
+              child: Autocomplete<StudentModel>(
+                optionsBuilder: (TextEditingValue textEditingValue) {
+                  if (textEditingValue.text.trim().isEmpty) {
+                    return const Iterable<StudentModel>.empty();
+                  }
+                  final query = textEditingValue.text.trim().toLowerCase();
+                  return allStudents.where((s) => s.name.toLowerCase().contains(query));
+                },
+                displayStringForOption: (StudentModel s) => s.name,
+                onSelected: (StudentModel s) async {
+                  _filterStudentsByClass(s.className);
+                  if (isUserRole) {
+                    _studentLoginAccess(s);
+                  } else {
+                    int studentId = s.id ?? int.tryParse(s.idString) ?? 0;
+                    await _fetchResults(studentId);
+                    setState(() => selectedStudent = s);
+                  }
+                },
+                fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+                  return TextField(
+                    controller: textEditingController,
+                    focusNode: focusNode,
+                    decoration: InputDecoration(
+                      hintText: "Raadi arday kasta magaciisa (dugsiga oo dhan)...",
+                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                      prefixIcon: const Icon(Icons.person_search_rounded, color: Color(0xFF1E3A8A), size: 20),
+                      suffixIcon: textEditingController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                              onPressed: () => textEditingController.clear(),
+                            )
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5)),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                    style: const TextStyle(fontSize: 13),
+                  );
+                },
+                optionsViewBuilder: (context, onSelected, options) {
+                  return Align(
+                    alignment: Alignment.topLeft,
+                    child: Material(
+                      elevation: 6,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        width: constraints.maxWidth > 500 ? 450 : constraints.maxWidth - 30,
+                        constraints: const BoxConstraints(maxHeight: 250),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          shrinkWrap: true,
+                          itemCount: options.length,
+                          separatorBuilder: (ctx, i) => const Divider(height: 1),
+                          itemBuilder: (context, index) {
+                            final s = options.elementAt(index);
+                            return ListTile(
+                              dense: true,
+                              leading: const CircleAvatar(
+                                radius: 14,
+                                backgroundColor: Color(0xFF1E3A8A),
+                                child: Icon(Icons.person, size: 16, color: Colors.white),
+                              ),
+                              title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                              subtitle: Text("Fasalka: ${s.className}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                              onTap: () => onSelected(s),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: crossAxisCount,
+                  crossAxisSpacing: 15,
+                  mainAxisSpacing: 15,
+                  childAspectRatio: constraints.maxWidth < 600 ? 1.4 : 1.0,
+                ),
+                itemCount: dynamicClasses.length,
+                itemBuilder: (context, index) => InkWell(
+                  onTap: () => _filterStudentsByClass(dynamicClasses[index]),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFF2ECC71), Color(0xFF1B5E20)]),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    alignment: Alignment.center,
+                    child: Text(
+                      dynamicClasses[index],
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: constraints.maxWidth < 600 ? 18 : 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         );
       },
     );
   }
 
   Widget _buildStudentList() {
+    final displayedStudents = studentSearchQuery.trim().isEmpty
+        ? filteredStudents
+        : filteredStudents.where((s) => s.name.toLowerCase().contains(studentSearchQuery.trim().toLowerCase())).toList();
+
     return Column(
       children: [
         Row(children: [
-          IconButton(onPressed: () => setState(() => selectedClass = null), icon: const Icon(Icons.arrow_back_ios)),
+          IconButton(onPressed: () => setState(() {
+            selectedClass = null;
+            studentSearchQuery = '';
+            _studentSearchController.clear();
+          }), icon: const Icon(Icons.arrow_back_ios)),
           Text("Students $selectedClass", style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
           const Spacer(),
-          if(isTeacherView && !isUserRole) _buildExamTypeDropdown(),
+          if(isTeacherView && !isUserRole) ...[
+            _buildUploadResultsButton(),
+            const SizedBox(width: 8),
+            _buildExamTypeDropdown(),
+          ],
         ]),
-        Expanded(
-          child: ListView.builder(
-            itemCount: filteredStudents.length,
-            itemBuilder: (context, index) => ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(filteredStudents[index].name),
-              trailing: const Icon(Icons.arrow_forward_ios),
-              onTap: () async {
-                if (isUserRole) {
-                  _studentLoginAccess(filteredStudents[index]);
-                } else {
-                  int studentId = filteredStudents[index].id ?? int.tryParse(filteredStudents[index].idString) ?? 0;
-                  await _fetchResults(studentId);
-                  setState(() => selectedStudent = filteredStudents[index]);
-                }
-              },
+        const SizedBox(height: 10),
+        // Search bar for class student list
+        Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: TextField(
+            controller: _studentSearchController,
+            onChanged: (val) => setState(() => studentSearchQuery = val),
+            decoration: InputDecoration(
+              hintText: "Raadi magaca ardayga ($selectedClass)...",
+              hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFF1E3A8A), size: 20),
+              suffixIcon: studentSearchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                      onPressed: () {
+                        _studentSearchController.clear();
+                        setState(() => studentSearchQuery = '');
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5)),
             ),
           ),
+        ),
+        Expanded(
+          child: displayedStudents.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person_search_outlined, size: 48, color: Colors.grey.shade400),
+                      const SizedBox(height: 8),
+                      Text(
+                        studentSearchQuery.isNotEmpty ? "Arday magacaas leh lama helin" : "Fasalkan arday kuma jiraan",
+                        style: TextStyle(color: Colors.grey.shade600, fontSize: 14),
+                      ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: displayedStudents.length,
+                  itemBuilder: (context, index) => ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text(displayedStudents[index].name),
+                    trailing: const Icon(Icons.arrow_forward_ios),
+                    onTap: () async {
+                      if (isUserRole) {
+                        _studentLoginAccess(displayedStudents[index]);
+                      } else {
+                        int studentId = displayedStudents[index].id ?? int.tryParse(displayedStudents[index].idString) ?? 0;
+                        await _fetchResults(studentId);
+                        setState(() => selectedStudent = displayedStudents[index]);
+                      }
+                    },
+                  ),
+                ),
         ),
       ],
     );
@@ -799,8 +981,10 @@ pw.Text(
                     width: 70,
                     child: TextFormField(
                       key: Key("${selectedExamType}_$subject"),
-                      initialValue: (scoresMap[subject] ?? 0).toString(),
-                      keyboardType: TextInputType.number,
+                      initialValue: (scoresMap[subject] != null && scoresMap[subject]! % 1 == 0)
+                          ? scoresMap[subject]!.toInt().toString()
+                          : (scoresMap[subject]?.toString() ?? '0'),
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       textAlign: TextAlign.center,
                       decoration: InputDecoration(
                         hintText: "0-$maxAllowed",
@@ -812,7 +996,7 @@ pw.Text(
                         ),
                       ),
                       onChanged: (val) {
-                        int value = int.tryParse(val) ?? 0;
+                        num value = _BulkUploadDialogState._parseScore(val) ?? 0;
                         if (value > maxAllowed) {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -841,7 +1025,7 @@ pw.Text(
   Widget _buildStudentView() {
     int maxPerSubject = examMaxMarks[selectedExamType] ?? 10;
     int examTotalMax = maxPerSubject * 7; 
-    int currentTotalKept = _calculateCurrentExamTotal();
+    num currentTotalKept = _calculateCurrentExamTotal();
 
     List<Map<String, dynamic>> displaySubjectList = subjects.map((subj) {
       final match = currentStudentResults.firstWhere(
@@ -849,7 +1033,7 @@ pw.Text(
         orElse: () => <String, dynamic>{},
       );
       bool hasRecord = match.isNotEmpty && match.containsKey('score') && match['score'] != null;
-      int score = hasRecord ? (match['score'] as int? ?? 0) : 0;
+      num score = hasRecord ? ((match['score'] is num ? (match['score'] as num) : (num.tryParse(match['score']?.toString() ?? '0') ?? 0))) : 0;
       return {
         'subject': subj,
         'score': score,
@@ -986,7 +1170,8 @@ pw.Text(
                 itemBuilder: (context, index) {
                   final res = displaySubjectList[index];
                   bool hasRecord = res['hasRecord'] as bool;
-                  int score = res['score'] as int;
+                  num score = (res['score'] is num ? (res['score'] as num) : (num.tryParse(res['score']?.toString() ?? '0') ?? 0));
+                  String scoreDisplay = (score % 1 == 0) ? score.toInt().toString() : score.toString();
                   
                   Color statusColor;
                   String statusText;
@@ -1044,7 +1229,7 @@ pw.Text(
                               crossAxisAlignment: CrossAxisAlignment.baseline,
                               textBaseline: TextBaseline.alphabetic,
                               children: [
-                                Text(hasRecord && score > 0 ? "$score" : "-", style: TextStyle(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold, color: statusColor)),
+                                Text(hasRecord ? scoreDisplay : "-", style: TextStyle(fontSize: isMobile ? 18 : 22, fontWeight: FontWeight.bold, color: statusColor)),
                                 Text("/$maxPerSubject", style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500)),
                               ],
                             ),
@@ -1093,7 +1278,7 @@ pw.Text(
   void _showStudentResultPopupDialog(StudentModel student) {
     int maxPerSubject = examMaxMarks[selectedExamType] ?? 10;
     int examTotalMax = maxPerSubject * 7;
-    int currentTotal = _calculateCurrentExamTotal();
+    num currentTotal = _calculateCurrentExamTotal();
     double percentage = examTotalMax > 0 ? (currentTotal / examTotalMax) : 0.0;
 
     Color primaryThemeColor;
@@ -1201,7 +1386,7 @@ pw.Text(
                             const Text("Wadarta Dhibcaha", style: TextStyle(fontSize: 11, color: Colors.grey)),
                             const SizedBox(height: 4),
                             Text(
-                              "$currentTotal / $examTotalMax",
+                              "${(currentTotal % 1 == 0) ? currentTotal.toInt() : currentTotal} / $examTotalMax",
                               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: primaryThemeColor),
                             ),
                           ],
@@ -1335,6 +1520,1518 @@ pw.Text(
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // >>> BULK EXAM RESULTS UPLOAD (WORD DOCUMENT) <<<
+
+  Widget _buildUploadResultsButton({bool isCompact = false}) {
+    return ElevatedButton.icon(
+      onPressed: _openBulkUploadDialog,
+      icon: const Icon(Icons.upload_file_rounded, size: 16, color: Colors.white),
+      label: Text(
+        isCompact ? "Upload" : "Upload Results",
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF1E3A8A), // Professional Deep Navy Blue
+        foregroundColor: Colors.white,
+        elevation: 1.5,
+        padding: EdgeInsets.symmetric(horizontal: isCompact ? 10 : 14, vertical: 9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _openBulkUploadDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _BulkUploadDialog(
+        availableClasses: dynamicClasses,
+        initialClass: selectedClass ?? (dynamicClasses.isNotEmpty ? dynamicClasses.first : null),
+        allStudents: allStudents,
+        examTypes: examTypes,
+        selectedExamType: selectedExamType,
+        examMaxMarks: examMaxMarks,
+        subjects: subjects,
+        onImportCompleted: (String? importedClass, String? savedExamType, int? firstStudentId) async {
+          if (savedExamType != null && savedExamType.isNotEmpty) {
+            selectedExamType = savedExamType;
+          }
+          await _loadInitialData();
+          if (importedClass != null) {
+            _filterStudentsByClass(importedClass);
+          } else if (selectedClass != null) {
+            _filterStudentsByClass(selectedClass!);
+          }
+          if (firstStudentId != null) {
+            final matches = allStudents.where((s) => (s.id ?? int.tryParse(s.idString)) == firstStudentId).toList();
+            if (matches.isNotEmpty) {
+              selectedStudent = matches.first;
+              await _fetchResults(firstStudentId);
+            }
+          } else if (selectedStudent != null) {
+            int sId = selectedStudent!.id ?? int.tryParse(selectedStudent!.idString) ?? 0;
+            await _fetchResults(sId);
+          }
+          setState(() {});
+        },
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BULK UPLOAD MODAL DIALOG & DOCX PARSER
+// ─────────────────────────────────────────────────────────────────────────────
+
+class _ExtractedRow {
+  String docId;
+  String docName;
+  num? docTotal;
+  StudentModel? matchedStudent;
+  Map<String, num?> scores;
+  Map<String, TextEditingController> scoreControllers;
+  bool isDuplicate = false;
+
+  _ExtractedRow({
+    this.docId = '',
+    required this.docName,
+    this.docTotal,
+    this.matchedStudent,
+    Map<String, num?>? scores,
+  })  : scores = scores ?? {},
+        scoreControllers = {};
+
+  void initControllers(List<String> subjects) {
+    scoreControllers.clear();
+    for (var s in subjects) {
+      num? val = scores[s];
+      String text = val == null
+          ? ''
+          : ((val % 1 == 0) ? val.toInt().toString() : val.toString());
+      scoreControllers[s] = TextEditingController(text: text);
+    }
+  }
+
+  void dispose() {
+    for (var c in scoreControllers.values) {
+      c.dispose();
+    }
+  }
+
+  bool hasExceedingScore(num maxAllowed, List<String> subjects) {
+    for (var s in subjects) {
+      num? score = scores[s];
+      if (score != null && (score < 0 || score > maxAllowed)) return true;
+    }
+    return false;
+  }
+}
+
+class _BulkUploadDialog extends StatefulWidget {
+  final List<String> availableClasses;
+  final String? initialClass;
+  final List<StudentModel> allStudents;
+  final List<String> examTypes;
+  final String selectedExamType;
+  final Map<String, int> examMaxMarks;
+  final List<String> subjects;
+  final Future<void> Function(String? importedClass, String? savedExamType, int? firstStudentId) onImportCompleted;
+
+  const _BulkUploadDialog({
+    required this.availableClasses,
+    required this.initialClass,
+    required this.allStudents,
+    required this.examTypes,
+    required this.selectedExamType,
+    required this.examMaxMarks,
+    required this.subjects,
+    required this.onImportCompleted,
+  });
+
+  @override
+  State<_BulkUploadDialog> createState() => _BulkUploadDialogState();
+}
+
+class _BulkUploadDialogState extends State<_BulkUploadDialog> {
+  String? currentClass;
+  late String currentExamType;
+  String? uploadedFileName;
+  bool isProcessingFile = false;
+  bool isSaving = false;
+  double saveProgress = 0.0;
+  String saveProgressText = '';
+  String? errorMessage;
+
+  List<List<List<String>>> _extractedTables = [];
+  final List<_ExtractedRow> _parsedRows = [];
+
+  @override
+  void initState() {
+    super.initState();
+    currentClass = widget.initialClass ?? (widget.availableClasses.isNotEmpty ? widget.availableClasses.first : null);
+    currentExamType = widget.selectedExamType;
+  }
+
+  @override
+  void dispose() {
+    for (var r in _parsedRows) {
+      r.dispose();
+    }
+    super.dispose();
+  }
+
+  num get maxAllowed => widget.examMaxMarks[currentExamType] ?? 100;
+
+  static num? _parseScore(String raw) {
+    final trimmed = raw.trim();
+    if (trimmed.isEmpty) return null;
+    if (trimmed == '-' ||
+        trimmed == '—' ||
+        trimmed == '/' ||
+        trimmed.toLowerCase() == 'n/a' ||
+        trimmed.toLowerCase() == 'abs' ||
+        trimmed.toLowerCase() == 'none' ||
+        trimmed.toLowerCase() == 'x') {
+      return null;
+    }
+    String cleaned = trimmed.replaceAll(',', '.');
+    final match = RegExp(r'[0-9]+(?:\.[0-9]+)?').firstMatch(cleaned);
+    if (match != null) {
+      num? parsed = num.tryParse(match.group(0)!);
+      if (parsed != null) {
+        return (parsed % 1 == 0) ? parsed.toInt() : parsed;
+      }
+    }
+    return null;
+  }
+
+  List<StudentModel> get currentClassStudents {
+    if (currentClass == null) return [];
+    final target = currentClass!.trim().toLowerCase();
+    return widget.allStudents.where((s) {
+      final cName = s.className?.trim().toLowerCase() ?? '';
+      return cName == target ||
+             cName.replaceAll(' ', '') == target.replaceAll(' ', '');
+    }).toList();
+  }
+
+  static String _cleanSomaliName(String name) {
+    String s = name.toLowerCase().trim();
+    // Expand prefixes before removing punctuation (e.g. c/raxmaan -> cabdiraxmaan, a.qani -> abdiqani)
+    s = s.replaceAll(RegExp(r'\bc[/\.]([a-z])'), 'cabdi\$1');
+    s = s.replaceAll(RegExp(r'\bc[/\.]\s+([a-z])'), 'cabdi\$1');
+    s = s.replaceAll(RegExp(r'\ba[/\.]([a-z])'), 'abdi\$1');
+    s = s.replaceAll(RegExp(r'\ba[/\.]\s+([a-z])'), 'abdi\$1');
+    s = s.replaceAll(RegExp(r"['`’‘\-]"), ' ');
+    s = s.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
+    s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
+    return s;
+  }
+
+  static String _canonicalSomaliToken(String token) {
+    String t = token.toLowerCase().trim();
+    if (t.isEmpty) return t;
+
+    if (t.startsWith('cabdi')) {
+      t = 'abdi${t.substring(5)}';
+    } else if (t.startsWith('cabd')) {
+      t = 'abd${t.substring(4)}';
+    }
+
+    if (t == 'cali' || t == 'ali') return 'ali';
+    if (t == 'cumar' || t == 'omar' || t == 'umar' || t == 'omer') return 'omar';
+    if (t == 'cismaan' || t == 'cusmaan' || t == 'osman' || t == 'usman') return 'osman';
+    if (t == 'maxamed' || t == 'mohamed' || t == 'muhamed' || t == 'muhammed' || t == 'mohamud' || t == 'maxamuud' || t == 'mohamd') return 'mohamed';
+    if (t == 'axmed' || t == 'ahmed') return 'ahmed';
+    if (t == 'xasan' || t == 'hassan' || t == 'hasan') return 'hassan';
+    if (t == 'xuseen' || t == 'hussein' || t == 'huseen') return 'hussein';
+    if (t == 'jaamac' || t == 'jama') return 'jama';
+    if (t == 'faarax' || t == 'farah') return 'farah';
+    if (t == 'yuusuf' || t == 'yusuf') return 'yusuf';
+    if (t == 'yaasiin' || t == 'yasin' || t == 'yasiin') return 'yasin';
+    if (t == 'khadar' || t == 'qadar' || t == 'khader') return 'qadar';
+    if (t == 'daahir' || t == 'dahir' || t == 'tahar') return 'dahir';
+    if (t == 'ismaaciil' || t == 'ismail') return 'ismail';
+    if (t == 'ibraahim' || t == 'ibrahim') return 'ibrahim';
+    if (t == 'aadan' || t == 'adan' || t == 'adem' || t == 'aadem') return 'adan';
+    if (t == 'saleebaan' || t == 'suleyman' || t == 'sulaymaan' || t == 'suleiman') return 'suleiman';
+    if (t == 'deeq' || t == 'deeqo') return 'deeq';
+    if (t == 'yaxye' || t == 'yahye') return 'yahye';
+    if (t == 'mustafe' || t == 'mustafa' || t == 'mostafa' || t == 'mustapha') return 'mustafe';
+    if (t == 'muxumed' || t == 'muxumad') return 'muxumed';
+    if (t == 'mawliid' || t == 'mawlid' || t == 'mowliid') return 'mawlid';
+    if (t == 'idriis' || t == 'idiris') return 'idris';
+    if (t == 'sudaysi' || t == 'sudeysi') return 'sudaysi';
+    if (t == 'muuse' || t == 'muse' || t == 'musa') return 'muse';
+    if (t == 'mataan' || t == 'matan') return 'mataan';
+    if (t == 'nuur' || t == 'nur') return 'nur';
+    if (t == 'nasriin' || t == 'nasrin') return 'nasrin';
+    if (t == 'haani' || t == 'hani') return 'hani';
+    if (t == 'nimcaan' || t == 'nimcan') return 'nimcan';
+
+    t = t.replaceAll('aa', 'a')
+         .replaceAll('ee', 'e')
+         .replaceAll('ii', 'i')
+         .replaceAll('oo', 'o')
+         .replaceAll('uu', 'u');
+
+    t = t.replaceAll('x', 'h');
+    t = t.replaceAll('c', '');
+
+    return t;
+  }
+
+  static StudentModel? _findBestStudentMatch(
+    String docName,
+    String docId,
+    List<StudentModel> classStudents,
+  ) {
+    if (classStudents.isEmpty) return null;
+
+    if (docId.isNotEmpty) {
+      for (final s in classStudents) {
+        if ((s.id != null && s.id.toString() == docId) ||
+            s.idString == docId ||
+            s.stringId == docId) {
+          return s;
+        }
+      }
+    }
+
+    final cleanDoc = _cleanSomaliName(docName);
+    if (cleanDoc.isEmpty) return null;
+
+    final exactMatches = classStudents.where((s) => _cleanSomaliName(s.name) == cleanDoc).toList();
+    if (exactMatches.length == 1) {
+      return exactMatches.first;
+    }
+
+    final docTokens = cleanDoc.split(' ').where((t) => t.isNotEmpty).toList();
+    if (docTokens.isEmpty) return null;
+    final docCanonical = docTokens.map(_canonicalSomaliToken).toList();
+
+    StudentModel? bestCandidate;
+    double bestScore = 0.0;
+    int candidatesWithBestScore = 0;
+
+    for (final student in classStudents) {
+      final cleanDb = _cleanSomaliName(student.name);
+      final dbTokens = cleanDb.split(' ').where((t) => t.isNotEmpty).toList();
+      if (dbTokens.isEmpty) continue;
+      final dbCanonical = dbTokens.map(_canonicalSomaliToken).toList();
+
+      int matchCount = 0;
+      bool firstNameMatches = (docCanonical.isNotEmpty &&
+          dbCanonical.isNotEmpty &&
+          docCanonical[0] == dbCanonical[0]);
+
+      for (int i = 0; i < docCanonical.length; i++) {
+        if (dbCanonical.contains(docCanonical[i])) {
+          matchCount++;
+        }
+      }
+
+      int positionMatches = 0;
+      int minLen = docCanonical.length < dbCanonical.length ? docCanonical.length : dbCanonical.length;
+      for (int i = 0; i < minLen; i++) {
+        if (docCanonical[i] == dbCanonical[i]) {
+          positionMatches++;
+        }
+      }
+
+      double tokenScore = matchCount / (docCanonical.length > dbCanonical.length ? docCanonical.length : dbCanonical.length);
+      double posScore = positionMatches / (minLen > 0 ? minLen : 1);
+      double totalScore = (tokenScore * 0.6) + (posScore * 0.4);
+
+      if (firstNameMatches) {
+        totalScore += 0.25;
+      }
+
+      bool isSufficientMatch = false;
+      if (matchCount >= 2 && firstNameMatches && totalScore >= 0.60) {
+        isSufficientMatch = true;
+      } else if (matchCount >= 3 && totalScore >= 0.60) {
+        isSufficientMatch = true;
+      } else if (docCanonical.length == 1 && matchCount == 1 && dbCanonical.length == 1) {
+        isSufficientMatch = true;
+      }
+
+      if (isSufficientMatch) {
+        if (totalScore > bestScore + 0.05) {
+          bestScore = totalScore;
+          bestCandidate = student;
+          candidatesWithBestScore = 1;
+        } else if ((totalScore - bestScore).abs() <= 0.05) {
+          candidatesWithBestScore++;
+        }
+      }
+    }
+
+    if (candidatesWithBestScore > 1) {
+      debugPrint('[BulkUpload] Ambiguous match for "$docName". Leaving for manual confirmation.');
+      return null;
+    }
+
+    return bestCandidate;
+  }
+
+  void _checkDuplicates() {
+    final seenIds = <int>{};
+    for (var r in _parsedRows) {
+      if (r.matchedStudent != null) {
+        int id = r.matchedStudent!.id ?? int.tryParse(r.matchedStudent!.idString) ?? -1;
+        if (id != -1 && seenIds.contains(id)) {
+          r.isDuplicate = true;
+        } else {
+          r.isDuplicate = false;
+          if (id != -1) seenIds.add(id);
+        }
+      } else {
+        r.isDuplicate = false;
+      }
+    }
+  }
+
+  Future<void> _pickAndParseWordDoc() async {
+    try {
+      final file = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['docx'],
+      );
+
+      if (file == null) return;
+
+      Uint8List bytes = await file.readAsBytes();
+      if (bytes.isEmpty && !kIsWeb && file.path != null) {
+        bytes = await File(file.path!).readAsBytes();
+      }
+
+      if (bytes.isEmpty) {
+        setState(() {
+          errorMessage = "Faylka lama akhrin karo ama waa madhan yahay (Cannot read file).";
+        });
+        return;
+      }
+
+      setState(() {
+        isProcessingFile = true;
+        uploadedFileName = file.name;
+        errorMessage = null;
+      });
+
+      // 1. Unzip .docx and find word/document.xml
+      final archive = ZipDecoder().decodeBytes(bytes);
+      ArchiveFile? docXmlFile;
+      for (final f in archive) {
+        if (f.name == 'word/document.xml') {
+          docXmlFile = f;
+          break;
+        }
+      }
+
+      if (docXmlFile == null) {
+        throw Exception("Faylku maaha Microsoft Word document (.docx) sax ah.");
+      }
+
+      final List<int> rawBytes = docXmlFile.content;
+      final xmlString = utf8.decode(rawBytes, allowMalformed: true);
+
+      // 2. Extract tables from Word XML
+      final extractedTables = _extractTablesFromWordXml(xmlString);
+
+      if (extractedTables.isEmpty) {
+        throw Exception("Wax natiijo ama shax ah lagama helin dokumentiga Word-ka ah.");
+      }
+
+      _extractedTables = extractedTables;
+      _processExtractedData();
+    } catch (e) {
+      setState(() {
+        errorMessage = "Khalad: $e";
+      });
+    } finally {
+      setState(() {
+        isProcessingFile = false;
+      });
+    }
+  }
+
+  static String? _getXmlAttr(XmlElement el, String name) {
+    for (final attr in el.attributes) {
+      if (attr.name.local == name || attr.name.qualified == name) {
+        return attr.value;
+      }
+    }
+    return null;
+  }
+
+  List<List<List<String>>> _extractTablesFromWordXml(String xmlString) {
+    List<List<List<String>>> tables = [];
+    try {
+      final doc = XmlDocument.parse(xmlString);
+      final tblElements = doc.findAllElements('w:tbl').toList();
+      for (final tbl in tblElements) {
+        List<List<String>> tableRows = [];
+        // Only direct child rows to prevent nested duplication
+        for (final tr in tbl.children.whereType<XmlElement>().where((e) => e.name.local == 'tr')) {
+          List<String> rowCells = [];
+          for (final tc in tr.children.whereType<XmlElement>().where((e) => e.name.local == 'tc')) {
+            int span = 1;
+            for (final tcPr in tc.children.whereType<XmlElement>().where((e) => e.name.local == 'tcPr')) {
+              for (final gs in tcPr.children.whereType<XmlElement>().where((e) => e.name.local == 'gridSpan')) {
+                final v = _getXmlAttr(gs, 'val');
+                if (v != null) span = int.tryParse(v) ?? 1;
+              }
+            }
+
+            final textList = tc.findAllElements('w:t').map((t) => t.innerText).toList();
+            String cellText = textList.join('').replaceAll('\u00A0', ' ').trim();
+            rowCells.add(cellText);
+            for (int k = 1; k < span; k++) {
+              rowCells.add('');
+            }
+          }
+          if (rowCells.any((c) => c.isNotEmpty)) {
+            tableRows.add(rowCells);
+          }
+        }
+        if (tableRows.isNotEmpty) {
+          tables.add(tableRows);
+        }
+      }
+    } catch (e) {
+      debugPrint('[BulkUpload] XmlDocument parse fallback: $e');
+    }
+
+    if (tables.isEmpty) {
+      final tblReg = RegExp(r'<w:tbl(?:\s+[^>]*)?>(.*?)</w:tbl>', dotAll: true);
+      final trReg = RegExp(r'<w:tr(?:\s+[^>]*)?>(.*?)</w:tr>', dotAll: true);
+      final tcReg = RegExp(r'<w:tc(?:\s+[^>]*)?>(.*?)</w:tc>', dotAll: true);
+      final tReg = RegExp(r'<w:t(?:\s+[^>]*)?>(.*?)</w:t>', dotAll: true);
+      final spanReg = RegExp(r'<w:gridSpan[^>]*(?:w:)?val="(\d+)"');
+
+      for (final tblMatch in tblReg.allMatches(xmlString)) {
+        final tblXml = tblMatch.group(1) ?? '';
+        List<List<String>> tableRows = [];
+        for (final trMatch in trReg.allMatches(tblXml)) {
+          final trXml = trMatch.group(1) ?? '';
+          List<String> rowCells = [];
+          for (final tcMatch in tcReg.allMatches(trXml)) {
+            final tcXml = tcMatch.group(1) ?? '';
+            int span = 1;
+            final spanMatch = spanReg.firstMatch(tcXml);
+            if (spanMatch != null) {
+              span = int.tryParse(spanMatch.group(1)!) ?? 1;
+            }
+
+            final sb = StringBuffer();
+            for (final tMatch in tReg.allMatches(tcXml)) {
+              sb.write(tMatch.group(1) ?? '');
+            }
+            final clean = sb.toString()
+                .replaceAll('&amp;', '&')
+                .replaceAll('&lt;', '<')
+                .replaceAll('&gt;', '>')
+                .replaceAll('&quot;', '"')
+                .replaceAll('&apos;', "'")
+                .replaceAll('\u00A0', ' ')
+                .trim();
+            rowCells.add(clean);
+            for (int k = 1; k < span; k++) {
+              rowCells.add('');
+            }
+          }
+          if (rowCells.any((c) => c.isNotEmpty)) {
+            tableRows.add(rowCells);
+          }
+        }
+        if (tableRows.isNotEmpty) {
+          tables.add(tableRows);
+        }
+      }
+    }
+
+    return tables;
+  }
+
+  void _processExtractedData() {
+    if (_extractedTables.isEmpty) return;
+
+    // 1. Dictionaries for accurate detection
+    final Map<String, List<String>> subjectKeywords = {
+      "Math": [
+        "xis", "xisaab", "xisab", "math", "mathematics", "maths", "hisab", "hisaab", "matematik"
+      ],
+      "English": [
+        "eng", "english", "ingiriisi", "ingiris", "ing", "english language"
+      ],
+      "Somali": [
+        "som", "somali", "soomaali", "af-soomaali", "af soomaali", "afsoomaali", "somalia", "hooyo", "afka hooyo"
+      ],
+      "Arabic": [
+        "carab", "carabi", "carabiga", "arabic", "arab", "af-carabi", "af carabi", "luqada carabiga", "al-carabiya", "luqad carabi"
+      ],
+      "Islamic": [
+        "diin", "diinta", "tarbiya", "tarbiyo", "tarbiyad", "tarbiyah", "tarbiya islamiyah",
+        "islamic", "islamic studies", "islaam", "islam", "tawxiid", "fiqi", "diin & tarbiya", "tarbiya & diin", "tarbiyada"
+      ],
+      "Science": [
+        "say", "saynis", "sayniska", "science", "sci", "general science", "saynis guud", "sayniska guud"
+      ],
+      "Social": [
+        "c/b", "cb", "c.b", "c b", "c/bulshada", "cilmiga bulshada", "cilmi bulsho",
+        "social", "social studies", "social science", "soc studies", "soc science", "soc sci", "soc",
+        "bulsho", "bulshada", "juqraafi", "taariikh", "tar & juq", "taariikh & juqraafi", "tar/juq", "juqraafiyad", "tarikh"
+      ],
+    };
+
+    final totalKeywords = [
+      "wadar", "wadarta", "total", "sum", "grand total", "natiijo"
+    ];
+
+    final nameKeywords = [
+      "magaca", "magac", "name", "student", "student name", "arday", "ardayda", "full name", "magaca ardayga"
+    ];
+
+    final ignoreColKeywords = [
+      "fasal", "class", "grade", "sno", "s/no", "no", "no.", "tirsiga", "tirsi", "#", "id", "student id", "code"
+    ];
+
+    final titleKeywords = [
+      "dugsiga", "degmada", "gobolka", "jamhuuriyadda", "republic", "somaliland",
+      "bile primary", "primary", "secondary", "school"
+    ];
+
+    // Auto-detect exam type from document if present
+    for (final table in _extractedTables) {
+      for (final row in table.take(3)) {
+        final rowText = row.join(' ').toLowerCase();
+        if (rowText.contains('monthly')) {
+          currentExamType = "Monthly Exam";
+          break;
+        } else if (rowText.contains('term 1') || rowText.contains('term1')) {
+          currentExamType = "Term 1";
+          break;
+        } else if (rowText.contains('pre-final') || rowText.contains('pre final')) {
+          currentExamType = "Pre-Final";
+          break;
+        } else if (rowText.contains('final')) {
+          currentExamType = "Final Exam";
+          break;
+        }
+      }
+    }
+
+    // 2. Identify header row across tables (strictly ignoring title rows)
+    List<String>? detectedHeaderRow;
+    int? headerTableIdx;
+    int? headerRowIdx;
+    int bestHeaderScore = -1;
+
+    for (int tIdx = 0; tIdx < _extractedTables.length; tIdx++) {
+      final table = _extractedTables[tIdx];
+      for (int r = 0; r < table.length && r < 10; r++) {
+        final row = table[r];
+        final rowText = row.join(' ').toLowerCase();
+
+        // Must NOT be a title row
+        if (titleKeywords.any((k) => rowText.contains(k))) continue;
+
+        int score = 0;
+        bool hasName = false;
+        int subjectMatches = 0;
+
+        for (final cell in row) {
+          final lower = cell.toLowerCase().trim();
+          final clean = lower.replaceAll(RegExp(r'[^a-z0-9\s/]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+          if (clean.isEmpty) continue;
+
+          if (nameKeywords.any((k) => clean == k || clean.contains(k))) {
+            hasName = true;
+            score += 5;
+          }
+          if (totalKeywords.any((k) => clean == k || clean == 'total')) {
+            score += 2;
+          }
+          for (final entry in subjectKeywords.entries) {
+            if (entry.value.any((k) => clean == k || lower == k || clean.split(' ').contains(k))) {
+              subjectMatches++;
+              score += 3;
+              break;
+            }
+          }
+        }
+
+        if (hasName && subjectMatches >= 2 && score > bestHeaderScore) {
+          bestHeaderScore = score;
+          detectedHeaderRow = row;
+          headerTableIdx = tIdx;
+          headerRowIdx = r;
+        }
+      }
+    }
+
+    // Fallback if strict header not found
+    if (detectedHeaderRow == null) {
+      for (int tIdx = 0; tIdx < _extractedTables.length; tIdx++) {
+        final table = _extractedTables[tIdx];
+        for (int r = 0; r < table.length && r < 5; r++) {
+          final row = table[r];
+          int score = 0;
+          for (final cell in row) {
+            final lower = cell.toLowerCase().trim();
+            for (final entry in subjectKeywords.entries) {
+              if (entry.value.any((k) => lower == k || lower.contains(k))) score += 2;
+            }
+          }
+          if (score > bestHeaderScore) {
+            bestHeaderScore = score;
+            detectedHeaderRow = row;
+            headerTableIdx = tIdx;
+            headerRowIdx = r;
+          }
+        }
+      }
+    }
+
+    if (detectedHeaderRow == null) return;
+
+    // 3. Map columns from detected header row
+    int? nameColIdx;
+    int? idColIdx;
+    int? totalColIdx;
+    Map<String, int> subjectColMap = {};
+
+    for (int col = 0; col < detectedHeaderRow.length; col++) {
+      final raw = detectedHeaderRow[col].trim();
+      final lower = raw.toLowerCase();
+      final clean = lower.replaceAll(RegExp(r'[^a-z0-9\s/]'), ' ').replaceAll(RegExp(r'\s+'), ' ').trim();
+
+      if (clean.isEmpty) continue;
+
+      // Check Wadarta / Total first so it is never confused with a subject
+      if (totalKeywords.any((k) => clean == k || lower == k)) {
+        totalColIdx = col;
+        continue;
+      }
+
+      // Check Name
+      if (nameColIdx == null && nameKeywords.any((k) => clean == k || lower == k || clean.contains(k))) {
+        nameColIdx = col;
+        continue;
+      }
+
+      // Check ID / Sno / Fasal to ignore as subjects
+      if (ignoreColKeywords.any((k) => clean == k || lower == k)) {
+        if (idColIdx == null && (clean == 'id' || clean.contains('student id'))) {
+          idColIdx = col;
+        }
+        continue;
+      }
+
+      // Check Subjects
+      for (final subj in ["Social", "Islamic", "Math", "English", "Somali", "Arabic", "Science"]) {
+        if (!subjectColMap.containsKey(subj) && !subjectColMap.values.contains(col)) {
+          final keywords = subjectKeywords[subj]!;
+          bool isMatch = false;
+
+          if (subj == "Science") {
+            if (clean.contains("social") || clean.contains("c/b") || clean.contains("cb") || clean.contains("bulsho")) {
+              continue;
+            }
+          }
+
+          isMatch = keywords.any((k) => lower == k || clean == k || clean.split(' ').contains(k));
+          if (isMatch) {
+            subjectColMap[subj] = col;
+            break;
+          }
+        }
+      }
+    }
+
+    if (nameColIdx == null) {
+      for (int c = 0; c < detectedHeaderRow.length; c++) {
+        if (c != idColIdx && c != totalColIdx && !subjectColMap.values.contains(c)) {
+          nameColIdx = c;
+          break;
+        }
+      }
+    }
+    nameColIdx ??= 0;
+
+    debugPrint('[BulkUpload] Mapped Header: Name=$nameColIdx, ID=$idColIdx, Total=$totalColIdx, Subjects=$subjectColMap');
+
+    // 4. Extract data rows across all tables/pages
+    final classStudents = currentClassStudents;
+    for (var r in _parsedRows) {
+      r.dispose();
+    }
+    _parsedRows.clear();
+
+    for (int tIdx = 0; tIdx < _extractedTables.length; tIdx++) {
+      final table = _extractedTables[tIdx];
+      int startR = (tIdx == headerTableIdx) ? (headerRowIdx! + 1) : 0;
+
+      for (int r = startR; r < table.length; r++) {
+        final row = table[r];
+        if (row.isEmpty || !row.any((c) => c.trim().isNotEmpty)) continue;
+
+        String docName = (nameColIdx < row.length) ? row[nameColIdx].trim() : '';
+        String docId = (idColIdx != null && idColIdx < row.length) ? row[idColIdx].trim() : '';
+        String docTotalRaw = (totalColIdx != null && totalColIdx < row.length) ? row[totalColIdx].trim() : '';
+
+        final normName = docName.toLowerCase().trim();
+        if (normName.isEmpty) continue;
+
+        // Skip headers or repeated headers across multi-page tables
+        if (nameKeywords.any((k) => normName == k || normName.contains(k))) continue;
+        if (ignoreColKeywords.any((k) => normName == k)) continue;
+        if (titleKeywords.any((k) => normName.contains(k))) continue;
+        if (totalKeywords.any((k) => normName == k || normName.startsWith(k))) continue;
+        if (normName.contains('tirada ardayda') || normName.contains('signature') ||
+            normName.contains('saxeex') || normName.contains('macallin') || normName.contains('teacher')) {
+          continue;
+        }
+
+        // Extract scores for each subject
+        Map<String, num?> scores = {};
+        bool hasAtLeastOneNumericScore = false;
+        for (final subj in widget.subjects) {
+          if (subjectColMap.containsKey(subj)) {
+            int colIdx = subjectColMap[subj]!;
+            if (colIdx < row.length) {
+              final parsed = _parseScore(row[colIdx]);
+              scores[subj] = parsed;
+              if (parsed != null) hasAtLeastOneNumericScore = true;
+            } else {
+              scores[subj] = null;
+            }
+          } else {
+            scores[subj] = null;
+          }
+        }
+
+        num? docTotal = _parseScore(docTotalRaw);
+
+        // Filter out stray banner or non-student rows that lack scores
+        if (!hasAtLeastOneNumericScore && docTotal == null) {
+          if (normName.length < 3 || titleKeywords.any((k) => normName.contains(k))) continue;
+        }
+
+        StudentModel? matched = _findBestStudentMatch(docName, docId, classStudents);
+
+        final extractedRow = _ExtractedRow(
+          docId: docId,
+          docName: docName,
+          docTotal: docTotal,
+          matchedStudent: matched,
+          scores: scores,
+        );
+        extractedRow.initControllers(widget.subjects);
+        _parsedRows.add(extractedRow);
+      }
+    }
+
+    _checkDuplicates();
+  }
+
+  Future<void> _confirmAndSave() async {
+    if (_parsedRows.isEmpty) {
+      _showSnack("Fadlan marka hore soo geli faylka Word-ka ah (.docx)", isError: true);
+      return;
+    }
+
+    final exceedingRows = _parsedRows.where((r) => r.hasExceedingScore(maxAllowed, widget.subjects)).toList();
+    if (exceedingRows.isNotEmpty) {
+      _showSnack("Digniin: ${exceedingRows.length} arday dhibcahoodu waxay ka badan yihiin xadka $maxAllowed! Fadlan sax intaadan kaydin.", isError: true);
+      return;
+    }
+
+    final duplicateRows = _parsedRows.where((r) => r.isDuplicate).toList();
+    if (duplicateRows.isNotEmpty) {
+      _showSnack("Digniin: Waxaa jira arday laba jeer ku celis ah. Fadlan sax ardayda isku beegantay.", isError: true);
+      return;
+    }
+
+    final validRows = _parsedRows.where((r) => r.matchedStudent != null).toList();
+    if (validRows.isEmpty) {
+      _showSnack("Ma jiro hal arday oo ku beegmay fasalka $currentClass. Fadlan gacanta ku beeg ardayda.", isError: true);
+      return;
+    }
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: const [
+            Icon(Icons.security, color: Color(0xFF1E3A8A)),
+            SizedBox(width: 10),
+            Text("Xaqiijinta Kaydinta", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Ma hubtaa inaad rabto inaad kaydiso natiijooyinka ${validRows.length} arday?"),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.amber.shade400),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.info_outline, color: Colors.amber, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Fasalka: $currentClass\nImtixaanka: $currentExamType (Xadka ugu sarreeya: $maxAllowed)\nHaddii ardaygu hore natiijo u lahaa waa la cusboonaysiin doonaa (Overwrite).",
+                      style: TextStyle(fontSize: 12, color: Colors.amber.shade900, height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text("Ka noqo", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1E3A8A),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text("Haa, Kaydi"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() {
+      isSaving = true;
+      saveProgress = 0.0;
+      saveProgressText = "Bilaabaya kaydinta...";
+    });
+
+    int successCount = 0;
+    int failedCount = 0;
+
+    for (int i = 0; i < validRows.length; i++) {
+      final row = validRows[i];
+      setState(() {
+        saveProgress = (i + 1) / validRows.length;
+        saveProgressText = "Waxaa la kaydinayaa (${i + 1}/${validRows.length}): ${row.matchedStudent!.name}...";
+      });
+
+      // Import only marks that actually exist for that student!
+      // If a subject was blank/missing, do not force 0 or save it.
+      final List<Map<String, dynamic>> grades = [];
+      for (final subj in widget.subjects) {
+        final score = row.scores[subj];
+        if (score != null) {
+          grades.add({
+            "subject": subj,
+            "score": score,
+            "exam_type": currentExamType,
+          });
+        }
+      }
+
+      if (grades.isEmpty) {
+        continue;
+      }
+
+      int studentId = row.matchedStudent!.id ?? int.tryParse(row.matchedStudent!.idString) ?? 0;
+      bool ok = await ApiService.saveExamination(
+        studentId,
+        row.matchedStudent!.name,
+        grades,
+      );
+
+      if (ok) {
+        successCount++;
+      } else {
+        failedCount++;
+      }
+    }
+
+    setState(() {
+      isSaving = false;
+    });
+
+    int? firstSavedStudentId = validRows.isNotEmpty
+        ? (validRows.first.matchedStudent!.id ?? int.tryParse(validRows.first.matchedStudent!.idString))
+        : null;
+
+    await widget.onImportCompleted(currentClass, currentExamType, firstSavedStudentId);
+
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Guul: $successCount arday natiijadooda imtixaanka ($currentExamType) si toos ah ayaa loo kaydiyey!${failedCount > 0 ? ' ($failedCount lama kaydin karin)' : ''}",
+          ),
+          backgroundColor: Colors.green.shade700,
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  void _showSnack(String msg, {bool isError = false}) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        backgroundColor: isError ? Colors.red.shade700 : Colors.green.shade700,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isMobile = MediaQuery.of(context).size.width < 700;
+    final totalCount = _parsedRows.length;
+    final matchedCount = _parsedRows.where((r) => r.matchedStudent != null).length;
+    final unmatchedCount = _parsedRows.where((r) => r.matchedStudent == null).length;
+    final exceedingCount = _parsedRows.where((r) => r.hasExceedingScore(maxAllowed, widget.subjects)).length;
+    final duplicateCount = _parsedRows.where((r) => r.isDuplicate).length;
+
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 30, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1050, maxHeight: 750),
+        child: Padding(
+          padding: EdgeInsets.all(isMobile ? 16 : 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. HEADER
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E3A8A).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.description, color: Color(0xFF1E3A8A), size: 24),
+                      ),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                "Bulk Exam Results Upload",
+                                style: TextStyle(
+                                  fontSize: isMobile ? 16 : 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: const Color(0xFF1E293B),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF2563EB),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  ".DOCX",
+                                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            "Soo geli shaxda natiijooyinka ardayda oo dhan adigoo isticmaalaya faylka Word-ka",
+                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.grey),
+                    onPressed: isSaving ? null : () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              const Divider(height: 24),
+
+              // 2. CONTROLS BAR (Class, Exam Type, File Picker)
+              Wrap(
+                spacing: 12,
+                runSpacing: 10,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  // Class Selector
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.white,
+                    ),
+                    child: DropdownButton<String>(
+                      value: currentClass,
+                      underline: const SizedBox(),
+                      hint: const Text("Dooro Fasalka"),
+                      items: widget.availableClasses.map((c) => DropdownMenuItem(value: c, child: Text("Fasalka: $c"))).toList(),
+                      onChanged: isSaving
+                          ? null
+                          : (val) {
+                              setState(() {
+                                currentClass = val;
+                                _processExtractedData();
+                              });
+                            },
+                    ),
+                  ),
+
+                  // Exam Type Selector
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade300),
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.white,
+                    ),
+                    child: DropdownButton<String>(
+                      value: currentExamType,
+                      underline: const SizedBox(),
+                      items: widget.examTypes
+                          .map((t) => DropdownMenuItem(value: t, child: Text("$t (Max: ${widget.examMaxMarks[t] ?? 100})")))
+                          .toList(),
+                      onChanged: isSaving
+                          ? null
+                          : (val) {
+                              setState(() {
+                                currentExamType = val!;
+                              });
+                            },
+                    ),
+                  ),
+
+                  // File Picker Button
+                  ElevatedButton.icon(
+                    onPressed: isSaving || isProcessingFile ? null : _pickAndParseWordDoc,
+                    icon: isProcessingFile
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.upload_file, size: 18),
+                    label: Text(
+                      uploadedFileName == null ? "Dooro Faylka Word (.docx)" : "Beddel Faylka",
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A8A),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+
+                  if (uploadedFileName != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.green.shade300),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle, size: 16, color: Colors.green),
+                          const SizedBox(width: 6),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 180),
+                            child: Text(
+                              uploadedFileName!,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.green.shade800),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+
+              if (errorMessage != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, color: Colors.red, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(errorMessage!, style: TextStyle(color: Colors.red.shade800, fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // 3. STATS SUMMARY BADGES
+              if (totalCount > 0) ...[
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    _buildSummaryBadge("Ardayda Word-ka: $totalCount", Colors.blueGrey, Icons.people_outline),
+                    _buildSummaryBadge("Isku Beegmay: $matchedCount", Colors.green, Icons.check_circle_outline),
+                    if (unmatchedCount > 0)
+                      _buildSummaryBadge("Lama Helin: $unmatchedCount", Colors.orange, Icons.warning_amber_rounded),
+                    if (exceedingCount > 0)
+                      _buildSummaryBadge("Dhibco Dheer: $exceedingCount (Max: $maxAllowed)", Colors.red, Icons.error_outline),
+                    if (duplicateCount > 0)
+                      _buildSummaryBadge("Ku-celis: $duplicateCount", Colors.red, Icons.content_copy),
+                  ],
+                ),
+              ],
+
+              // 4. PREVIEW TABLE OR EMPTY STATE
+              const SizedBox(height: 12),
+              Expanded(
+                child: totalCount == 0
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.drive_folder_upload, size: 64, color: Colors.grey.shade400),
+                            const SizedBox(height: 12),
+                            const Text(
+                              "Fadlan dooro faylka Word-ka (.docx) ee natiijooyinka fasalka",
+                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              "Dokumentigu waa inuu leeyahay shax ay ku jiraan magacyada iyo dhibcaha maadooyinka.",
+                              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade200),
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.white,
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: ConstrainedBox(
+                              constraints: BoxConstraints(minWidth: isMobile ? 850 : 1000),
+                              child: SingleChildScrollView(
+                                child: DataTable(
+                                  columnSpacing: 14,
+                                  headingRowHeight: 42,
+                                  dataRowMinHeight: 48,
+                                  dataRowMaxHeight: 52,
+                                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF1F5F9)),
+                                  columns: [
+                                    const DataColumn(label: Text("#", style: TextStyle(fontWeight: FontWeight.bold))),
+                                    const DataColumn(label: Text("Magaca (Word Doc)", style: TextStyle(fontWeight: FontWeight.bold))),
+                                    DataColumn(label: Text("Ardayga Database-ka ($currentClass)", style: const TextStyle(fontWeight: FontWeight.bold))),
+                                    ...widget.subjects.map((s) => DataColumn(
+                                      label: Text(s, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    )),
+                                    const DataColumn(label: Text("Wadar (Word)", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)))),
+                                     const DataColumn(label: Text("Tirtir", style: TextStyle(fontWeight: FontWeight.bold))),
+                                  ],
+                                  rows: _parsedRows.asMap().entries.map((entry) {
+                                    final index = entry.key;
+                                    final row = entry.value;
+                                    final isMatched = row.matchedStudent != null;
+                                    final hasExceeding = row.hasExceedingScore(maxAllowed, widget.subjects);
+
+                                    return DataRow(
+                                      color: WidgetStateProperty.all(
+                                        row.isDuplicate
+                                            ? Colors.red.shade50
+                                            : hasExceeding
+                                                ? Colors.amber.shade50
+                                                : (!isMatched ? Colors.orange.shade50.withOpacity(0.4) : Colors.white),
+                                      ),
+                                      cells: [
+                                        DataCell(Text("${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold))),
+                                        // Doc Name & ID
+                                        DataCell(
+                                          Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(row.docName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                              if (row.docId.isNotEmpty)
+                                                Text("ID: ${row.docId}", style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+                                            ],
+                                          ),
+                                        ),
+                                        // Matched Database Student Cell (Interactive Selector)
+                                        DataCell(
+                                          isMatched
+                                              ? Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.green.withOpacity(0.1),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    border: Border.all(color: Colors.green.shade400, width: 1),
+                                                  ),
+                                                  child: Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      const Icon(Icons.check_circle, size: 14, color: Colors.green),
+                                                      const SizedBox(width: 4),
+                                                      Text(
+                                                        row.matchedStudent!.name,
+                                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green.shade800),
+                                                      ),
+                                                      PopupMenuButton<StudentModel>(
+                                                        icon: const Icon(Icons.arrow_drop_down, size: 16, color: Colors.green),
+                                                        tooltip: "Beddel ardayga",
+                                                        onSelected: (selected) {
+                                                          setState(() {
+                                                            row.matchedStudent = selected;
+                                                            _checkDuplicates();
+                                                          });
+                                                        },
+                                                        itemBuilder: (ctx) => currentClassStudents.map((s) => PopupMenuItem(
+                                                          value: s,
+                                                          child: Text(s.name, style: const TextStyle(fontSize: 13)),
+                                                        )).toList(),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                )
+                                              : Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.orange.withOpacity(0.12),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    border: Border.all(color: Colors.orange.shade400, width: 1),
+                                                  ),
+                                                  child: DropdownButton<StudentModel>(
+                                                    isDense: true,
+                                                    underline: const SizedBox(),
+                                                    hint: Row(
+                                                      mainAxisSize: MainAxisSize.min,
+                                                      children: const [
+                                                        Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange),
+                                                        SizedBox(width: 4),
+                                                        Text("Dooro Ardayga", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                                      ],
+                                                    ),
+                                                    items: currentClassStudents.map((s) => DropdownMenuItem(
+                                                      value: s,
+                                                      child: Text(s.name, style: const TextStyle(fontSize: 12)),
+                                                    )).toList(),
+                                                    onChanged: (selected) {
+                                                      setState(() {
+                                                        row.matchedStudent = selected;
+                                                        _checkDuplicates();
+                                                      });
+                                                    },
+                                                  ),
+                                                ),
+                                        ),
+                                        // Subject Score Cells (Editable & Validated)
+                                        ...widget.subjects.map((subj) {
+                                          num? score = row.scores[subj];
+                                          bool isOver = score != null && (score < 0 || score > maxAllowed);
+
+                                          return DataCell(
+                                            SizedBox(
+                                              width: 52,
+                                              height: 34,
+                                              child: TextFormField(
+                                                controller: row.scoreControllers[subj],
+                                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                textAlign: TextAlign.center,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isOver ? Colors.red : Colors.black87,
+                                                ),
+                                                decoration: InputDecoration(
+                                                  contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                                  filled: true,
+                                                  fillColor: isOver
+                                                      ? Colors.red.shade50
+                                                      : (score == null ? Colors.amber.shade50.withOpacity(0.3) : Colors.grey.shade100),
+                                                  hintText: "-",
+                                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                                                  enabledBorder: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    borderSide: BorderSide(
+                                                      color: isOver ? Colors.red : Colors.grey.shade300,
+                                                      width: isOver ? 1.5 : 1,
+                                                    ),
+                                                  ),
+                                                  focusedBorder: OutlineInputBorder(
+                                                    borderRadius: BorderRadius.circular(6),
+                                                    borderSide: BorderSide(
+                                                      color: isOver ? Colors.red : const Color(0xFF1E3A8A),
+                                                      width: 1.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                                onChanged: (val) {
+                                                  setState(() {
+                                                    row.scores[subj] = _parseScore(val);
+                                                  });
+                                                },
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                        // Wadar (Word Total) Cell
+                                        DataCell(
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                                              borderRadius: BorderRadius.circular(6),
+                                              border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.2)),
+                                            ),
+                                            child: Text(
+                                              row.docTotal != null
+                                                  ? ((row.docTotal! % 1 == 0) ? row.docTotal!.toInt().toString() : row.docTotal!.toString())
+                                                  : '-',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.bold,
+                                                color: Color(0xFF1E3A8A),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        // Delete / Exclude row
+                                        DataCell(
+                                          IconButton(
+                                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                                            tooltip: "Ka saar liiska",
+                                            onPressed: () {
+                                              setState(() {
+                                                row.dispose();
+                                                _parsedRows.removeAt(index);
+                                                _checkDuplicates();
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+
+              // 5. FOOTER & SAVE ACTION
+              const SizedBox(height: 12),
+              if (isSaving) ...[
+                LinearProgressIndicator(value: saveProgress, color: const Color(0xFF1E3A8A)),
+                const SizedBox(height: 6),
+                Center(
+                  child: Text(
+                    saveProgressText,
+                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: isSaving ? null : () => Navigator.pop(context),
+                    child: const Text("Ka noqo (Cancel)", style: TextStyle(color: Colors.grey)),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: (isSaving || matchedCount == 0 || exceedingCount > 0 || duplicateCount > 0)
+                        ? null
+                        : _confirmAndSave,
+                    icon: isSaving
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.save_alt_rounded, size: 18),
+                    label: Text(
+                      isSaving
+                          ? "Waxaa la kaydinayaa..."
+                          : "Xaqiiji & Kaydi ($matchedCount Arday)",
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1E3A8A),
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: Colors.grey.shade300,
+                      disabledForegroundColor: Colors.grey.shade600,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryBadge(String label, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: color)),
+        ],
       ),
     );
   }
