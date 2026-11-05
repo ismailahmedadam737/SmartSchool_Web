@@ -663,143 +663,141 @@ pw.Text(
   }
 
   Widget _buildClassGrid() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        int crossAxisCount = 6;
-        if (constraints.maxWidth < 600) {
-          crossAxisCount = 2;
-        } else if (constraints.maxWidth < 900) {
-          crossAxisCount = 4;
-        }
+    final screenWidth = MediaQuery.of(context).size.width;
+    int crossAxisCount = 6;
+    if (screenWidth < 600) {
+      crossAxisCount = 2;
+    } else if (screenWidth < 900) {
+      crossAxisCount = 4;
+    }
+    final double optionsWidth = screenWidth > 500 ? 450 : screenWidth - 60;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Quick Global Student Search bar across all classes
-            Container(
-              margin: const EdgeInsets.only(bottom: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
-                ],
-              ),
-              child: Autocomplete<StudentModel>(
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  if (textEditingValue.text.trim().isEmpty) {
-                    return const Iterable<StudentModel>.empty();
-                  }
-                  final query = textEditingValue.text.trim().toLowerCase();
-                  return allStudents.where((s) => s.name.toLowerCase().contains(query));
-                },
-                displayStringForOption: (StudentModel s) => s.name,
-                onSelected: (StudentModel s) async {
-                  _filterStudentsByClass(s.className);
-                  if (isUserRole) {
-                    _studentLoginAccess(s);
-                  } else {
-                    int studentId = s.id ?? int.tryParse(s.idString) ?? 0;
-                    await _fetchResults(studentId);
-                    setState(() => selectedStudent = s);
-                  }
-                },
-                fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
-                  return TextField(
-                    controller: textEditingController,
-                    focusNode: focusNode,
-                    decoration: InputDecoration(
-                      hintText: "Raadi arday kasta magaciisa (dugsiga oo dhan)...",
-                      hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-                      prefixIcon: const Icon(Icons.person_search_rounded, color: Color(0xFF1E3A8A), size: 20),
-                      suffixIcon: textEditingController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
-                              onPressed: () => textEditingController.clear(),
-                            )
-                          : null,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
-                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5)),
-                      filled: true,
-                      fillColor: Colors.white,
-                    ),
-                    style: const TextStyle(fontSize: 13),
-                  );
-                },
-                optionsViewBuilder: (context, onSelected, options) {
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      elevation: 6,
-                      borderRadius: BorderRadius.circular(12),
-                      child: Container(
-                        width: constraints.maxWidth > 500 ? 450 : constraints.maxWidth - 30,
-                        constraints: const BoxConstraints(maxHeight: 250),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: ListView.separated(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          shrinkWrap: true,
-                          itemCount: options.length,
-                          separatorBuilder: (ctx, i) => const Divider(height: 1),
-                          itemBuilder: (context, index) {
-                            final s = options.elementAt(index);
-                            return ListTile(
-                              dense: true,
-                              leading: const CircleAvatar(
-                                radius: 14,
-                                backgroundColor: Color(0xFF1E3A8A),
-                                child: Icon(Icons.person, size: 16, color: Colors.white),
-                              ),
-                              title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                              subtitle: Text("Fasalka: ${s.className}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                              onTap: () => onSelected(s),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            Expanded(
-              child: GridView.builder(
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: crossAxisCount,
-                  crossAxisSpacing: 15,
-                  mainAxisSpacing: 15,
-                  childAspectRatio: constraints.maxWidth < 600 ? 1.4 : 1.0,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Quick Global Student Search bar across all classes
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Autocomplete<StudentModel>(
+            optionsBuilder: (TextEditingValue textEditingValue) {
+              if (textEditingValue.text.trim().isEmpty) {
+                return const Iterable<StudentModel>.empty();
+              }
+              final query = textEditingValue.text.trim().toLowerCase();
+              return allStudents.where((s) => s.name.toLowerCase().contains(query));
+            },
+            displayStringForOption: (StudentModel s) => s.name,
+            onSelected: (StudentModel s) async {
+              _filterStudentsByClass(s.className);
+              if (isUserRole) {
+                _studentLoginAccess(s);
+              } else {
+                int studentId = s.id ?? int.tryParse(s.idString) ?? 0;
+                await _fetchResults(studentId);
+                setState(() => selectedStudent = s);
+              }
+            },
+            fieldViewBuilder: (context, textEditingController, focusNode, onFieldSubmitted) {
+              return TextField(
+                controller: textEditingController,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  hintText: "Raadi arday kasta magaciisa (dugsiga oo dhan)...",
+                  hintStyle: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+                  prefixIcon: const Icon(Icons.person_search_rounded, color: Color(0xFF1E3A8A), size: 20),
+                  suffixIcon: textEditingController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 18, color: Colors.grey),
+                          onPressed: () => textEditingController.clear(),
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade200)),
+                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF1E3A8A), width: 1.5)),
+                  filled: true,
+                  fillColor: Colors.white,
                 ),
-                itemCount: dynamicClasses.length,
-                itemBuilder: (context, index) => InkWell(
-                  onTap: () => _filterStudentsByClass(dynamicClasses[index]),
+                style: const TextStyle(fontSize: 13),
+              );
+            },
+            optionsViewBuilder: (context, onSelected, options) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 6,
+                  borderRadius: BorderRadius.circular(12),
                   child: Container(
+                    width: optionsWidth,
+                    constraints: const BoxConstraints(maxHeight: 250),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFF2ECC71), Color(0xFF1B5E20)]),
-                      borderRadius: BorderRadius.circular(15),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      dynamicClasses[index],
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: constraints.maxWidth < 600 ? 18 : 22,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      separatorBuilder: (ctx, i) => const Divider(height: 1),
+                      itemBuilder: (context, index) {
+                        final s = options.elementAt(index);
+                        return ListTile(
+                          dense: true,
+                          leading: const CircleAvatar(
+                            radius: 14,
+                            backgroundColor: Color(0xFF1E3A8A),
+                            child: Icon(Icons.person, size: 16, color: Colors.white),
+                          ),
+                          title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          subtitle: Text("Fasalka: ${s.className}", style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                          onTap: () => onSelected(s),
+                        );
+                      },
                     ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Expanded(
+          child: GridView.builder(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              crossAxisSpacing: 15,
+              mainAxisSpacing: 15,
+              childAspectRatio: screenWidth < 600 ? 1.4 : 1.0,
+            ),
+            itemCount: dynamicClasses.length,
+            itemBuilder: (context, index) => InkWell(
+              onTap: () => _filterStudentsByClass(dynamicClasses[index]),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFF2ECC71), Color(0xFF1B5E20)]),
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  dynamicClasses[index],
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: screenWidth < 600 ? 18 : 22,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
-          ],
-        );
-      },
+          ),
+        ),
+      ],
     );
   }
 
@@ -1041,13 +1039,12 @@ pw.Text(
       };
     }).toList();
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final bool isMobile = constraints.maxWidth < 600;
-        final bool isTablet = constraints.maxWidth < 900;
-        final int crossAxisCount = isMobile ? 2 : (isTablet ? 4 : 7);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isMobile = screenWidth < 600;
+    final bool isTablet = screenWidth < 900;
+    final int crossAxisCount = isMobile ? 2 : (isTablet ? 4 : 7);
 
-        return Column(
+    return Column(
           children: [
             // Top Bar with Back button, Student info, Print button, and Total score badge
             Container(
@@ -1258,8 +1255,6 @@ pw.Text(
             ),
           ],
         );
-      },
-    );
   }
 
   IconData _getSubjectIcon(String subject) {
