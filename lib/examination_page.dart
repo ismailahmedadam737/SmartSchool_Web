@@ -1298,7 +1298,7 @@ pw.Text(
       primaryThemeColor = Colors.red.shade700;
       gradientColors = [const Color(0xFFFF416C), const Color(0xFFFF4B2B)];
       headerIcon = Icons.sentiment_very_dissatisfied_rounded;
-      statusTitle = "⚠️ Ka Xunnahey! Waad Dhacday!";
+      statusTitle = "⚠️ Sorry! Waad Dhacday!";
       statusSubtitle = "Natiijadaadu waxay ka hooseysaa 50%. Fadlan dadaal dheeraad ah samee.";
     }
 
