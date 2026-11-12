@@ -1287,7 +1287,7 @@ pw.Text(
       gradientColors = [const Color(0xFF11998E), const Color(0xFF38EF7D)];
       headerIcon = Icons.emoji_events_rounded;
       statusTitle = "🎉 Hambalyo! Waad Baastey!";
-      statusSubtitle = "Waxaad keentay darajo sare oo heer sare ah (Distinction)!";
+      statusSubtitle = "Waxaad keentay darajo sare oo heer sare ah (Star)!";
     } else if (percentage >= 0.5) {
       primaryThemeColor = Colors.amber.shade900;
       gradientColors = [const Color(0xFFF2994A), const Color(0xFFF2C94C)];
@@ -1590,6 +1590,7 @@ class _ExtractedRow {
   Map<String, num?> scores;
   Map<String, TextEditingController> scoreControllers;
   bool isDuplicate = false;
+  String duplicateReason = '';
 
   _ExtractedRow({
     this.docId = '',
@@ -1597,6 +1598,8 @@ class _ExtractedRow {
     this.docTotal,
     this.matchedStudent,
     Map<String, num?>? scores,
+    this.isDuplicate = false,
+    this.duplicateReason = '',
   })  : scores = scores ?? {},
         scoreControllers = {};
 
@@ -1661,6 +1664,12 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
   String saveProgressText = '';
   String? errorMessage;
 
+  final ScrollController _horizontalScrollController = ScrollController();
+  final ScrollController _verticalScrollController = ScrollController();
+  final TextEditingController _tableSearchController = TextEditingController();
+  String _tableSearchQuery = '';
+  String _activeFilter = 'all'; // 'all', 'matched', 'unmatched', 'duplicate'
+
   List<List<List<String>>> _extractedTables = [];
   final List<_ExtractedRow> _parsedRows = [];
 
@@ -1673,6 +1682,9 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
 
   @override
   void dispose() {
+    _horizontalScrollController.dispose();
+    _verticalScrollController.dispose();
+    _tableSearchController.dispose();
     for (var r in _parsedRows) {
       r.dispose();
     }
@@ -1721,6 +1733,9 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
     s = s.replaceAll(RegExp(r'\bc[/\.]\s+([a-z])'), 'cabdi\$1');
     s = s.replaceAll(RegExp(r'\ba[/\.]([a-z])'), 'abdi\$1');
     s = s.replaceAll(RegExp(r'\ba[/\.]\s+([a-z])'), 'abdi\$1');
+    // If written as two words: "c/ raxmaan" or "cabdi raxmaan" or "abdi rahman" -> "abdirahman"
+    s = s.replaceAll(RegExp(r'\bcabdi\s+([a-z])'), 'cabdi\$1');
+    s = s.replaceAll(RegExp(r'\babdi\s+([a-z])'), 'abdi\$1');
     s = s.replaceAll(RegExp(r"['`’‘\-]"), ' ');
     s = s.replaceAll(RegExp(r'[^a-z0-9\s]'), ' ');
     s = s.replaceAll(RegExp(r'\s+'), ' ').trim();
@@ -1731,43 +1746,190 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
     String t = token.toLowerCase().trim();
     if (t.isEmpty) return t;
 
+    // Normalize abdi/cabdi prefixes
     if (t.startsWith('cabdi')) {
       t = 'abdi${t.substring(5)}';
     } else if (t.startsWith('cabd')) {
       t = 'abd${t.substring(4)}';
+    } else if (t.startsWith('abdul')) {
+      t = 'abdi${t.substring(5)}';
+    } else if (t.startsWith('abdel')) {
+      t = 'abdi${t.substring(5)}';
     }
 
-    if (t == 'cali' || t == 'ali') return 'ali';
-    if (t == 'cumar' || t == 'omar' || t == 'umar' || t == 'omer') return 'omar';
-    if (t == 'cismaan' || t == 'cusmaan' || t == 'osman' || t == 'usman') return 'osman';
-    if (t == 'maxamed' || t == 'mohamed' || t == 'muhamed' || t == 'muhammed' || t == 'mohamud' || t == 'maxamuud' || t == 'mohamd') return 'mohamed';
-    if (t == 'axmed' || t == 'ahmed') return 'ahmed';
-    if (t == 'xasan' || t == 'hassan' || t == 'hasan') return 'hassan';
-    if (t == 'xuseen' || t == 'hussein' || t == 'huseen') return 'hussein';
-    if (t == 'jaamac' || t == 'jama') return 'jama';
-    if (t == 'faarax' || t == 'farah') return 'farah';
-    if (t == 'yuusuf' || t == 'yusuf') return 'yusuf';
-    if (t == 'yaasiin' || t == 'yasin' || t == 'yasiin') return 'yasin';
-    if (t == 'khadar' || t == 'qadar' || t == 'khader') return 'qadar';
-    if (t == 'daahir' || t == 'dahir' || t == 'tahar') return 'dahir';
-    if (t == 'ismaaciil' || t == 'ismail') return 'ismail';
-    if (t == 'ibraahim' || t == 'ibrahim') return 'ibrahim';
-    if (t == 'aadan' || t == 'adan' || t == 'adem' || t == 'aadem') return 'adan';
-    if (t == 'saleebaan' || t == 'suleyman' || t == 'sulaymaan' || t == 'suleiman') return 'suleiman';
-    if (t == 'deeq' || t == 'deeqo') return 'deeq';
-    if (t == 'yaxye' || t == 'yahye') return 'yahye';
-    if (t == 'mustafe' || t == 'mustafa' || t == 'mostafa' || t == 'mustapha') return 'mustafe';
-    if (t == 'muxumed' || t == 'muxumad') return 'muxumed';
-    if (t == 'mawliid' || t == 'mawlid' || t == 'mowliid') return 'mawlid';
-    if (t == 'idriis' || t == 'idiris') return 'idris';
-    if (t == 'sudaysi' || t == 'sudeysi') return 'sudaysi';
-    if (t == 'muuse' || t == 'muse' || t == 'musa') return 'muse';
-    if (t == 'mataan' || t == 'matan') return 'mataan';
-    if (t == 'nuur' || t == 'nur') return 'nur';
-    if (t == 'nasriin' || t == 'nasrin') return 'nasrin';
-    if (t == 'haani' || t == 'hani') return 'hani';
-    if (t == 'nimcaan' || t == 'nimcan') return 'nimcan';
+    // Direct dictionary of common Somali & English/Arabic spelling variants
+    const Map<String, String> commonAliases = {
+      // Mohamed / Maxamed
+      'maxamed': 'mohamed', 'mohamed': 'mohamed', 'muhamed': 'mohamed',
+      'muhammed': 'mohamed', 'mohamud': 'mohamed', 'maxamuud': 'mohamed',
+      'mohamd': 'mohamed', 'moxamed': 'mohamed', 'maxamad': 'mohamed',
 
+      // Ahmed / Axmed
+      'axmed': 'ahmed', 'ahmed': 'ahmed', 'axmad': 'ahmed', 'ahmet': 'ahmed',
+
+      // Ali / Cali
+      'cali': 'ali', 'ali': 'ali', 'aly': 'ali',
+
+      // Hassan / Xasan
+      'xasan': 'hassan', 'hassan': 'hassan', 'hasan': 'hassan',
+
+      // Hussein / Xuseen
+      'xuseen': 'hussein', 'hussein': 'hussein', 'huseen': 'hussein',
+      'husein': 'hussein', 'xusen': 'hussein',
+
+      // Omar / Cumar
+      'cumar': 'omar', 'omar': 'omar', 'umar': 'omar', 'omer': 'omar',
+
+      // Osman / Cismaan
+      'cismaan': 'osman', 'cusmaan': 'osman', 'osman': 'osman',
+      'usman': 'osman', 'othman': 'osman',
+
+      // Jama / Jaamac
+      'jaamac': 'jama', 'jama': 'jama', 'jamac': 'jama',
+
+      // Farah / Faarax
+      'faarax': 'farah', 'farah': 'farah',
+
+      // Yusuf / Yuusuf
+      'yuusuf': 'yusuf', 'yusuf': 'yusuf', 'yousef': 'yusuf', 'yousuf': 'yusuf',
+
+      // Yasin / Yaasiin
+      'yaasiin': 'yasin', 'yasin': 'yasin', 'yaseen': 'yasin', 'yasiin': 'yasin',
+
+      // Khadar / Qadar
+      'khadar': 'qadar', 'qadar': 'qadar', 'khader': 'qadar', 'kadar': 'qadar',
+
+      // Dahir / Daahir
+      'daahir': 'dahir', 'dahir': 'dahir', 'tahar': 'dahir',
+
+      // Ismail / Ismaaciil
+      'ismaaciil': 'ismail', 'ismail': 'ismail', 'ismaciil': 'ismail',
+
+      // Ibrahim / Ibraahim
+      'ibraahim': 'ibrahim', 'ibrahim': 'ibrahim', 'ibraahiim': 'ibrahim',
+
+      // Adan / Aadan
+      'aadan': 'adan', 'adan': 'adan', 'adem': 'adan', 'aden': 'adan', 'aadem': 'adan',
+
+      // Suleiman / Saleebaan
+      'saleebaan': 'suleiman', 'suleyman': 'suleiman', 'sulaymaan': 'suleiman',
+      'suleiman': 'suleiman', 'solomon': 'suleiman',
+
+      // Mustafe / Mustafa
+      'mustafe': 'mustafa', 'mustafa': 'mustafa', 'mostafa': 'mustafa', 'mustapha': 'mustafa',
+
+      // Idris / Idriis
+      'idriis': 'idris', 'idiris': 'idris', 'idris': 'idris',
+
+      // Yahye / Yaxye
+      'yaxye': 'yahye', 'yahye': 'yahye', 'yehya': 'yahye',
+
+      // Guleed / Guuleed
+      'guuleed': 'guleed', 'guleed': 'guleed', 'guleid': 'guleed',
+
+      // Liban / Liibaan
+      'liibaan': 'liban', 'liban': 'liban',
+
+      // Muse / Muuse
+      'muuse': 'muse', 'muse': 'muse', 'musa': 'muse',
+
+      // Nur / Nuur
+      'nuur': 'nur', 'nur': 'nur',
+
+      // Hamse / Xamse
+      'xamse': 'hamse', 'hamse': 'hamse', 'hamza': 'hamse',
+
+      // Shuaib / Shucayb
+      'shucayb': 'shuaib', 'shuaib': 'shuaib', 'shuayb': 'shuaib',
+
+      // Faisal / Faysal
+      'faysal': 'faisal', 'feysal': 'faisal', 'faisal': 'faisal',
+
+      // Bashir / Bashiir
+      'bashiir': 'bashir', 'bashir': 'bashir',
+
+      // Mahad / Maxad
+      'mahad': 'mahad', 'maxad': 'mahad',
+
+      // Barkhad / Barqad
+      'barkhad': 'barkhad', 'barqad': 'barkhad', 'barhad': 'barkhad',
+
+      // Said / Saciid
+      'saciid': 'said', 'said': 'said', 'saeed': 'said',
+
+      // Muxumed / Maxamuud
+      'muxumed': 'muxumed', 'muxumad': 'muxumed',
+
+      // Mawlid / Mawliid
+      'mawliid': 'mawlid', 'mawlid': 'mawlid', 'mowliid': 'mawlid',
+
+      // Zakaria / Sakariye
+      'zakariye': 'zakaria', 'sakariye': 'zakaria', 'zakaria': 'zakaria',
+
+      // Qasim / Qaasim
+      'qaasim': 'qasim', 'qasim': 'qasim', 'kasim': 'qasim',
+
+      // Khalid / Khaalid
+      'khaalid': 'khalid', 'khalid': 'khalid', 'qaalid': 'khalid',
+
+      // Khalif / Khaliif
+      'khaliif': 'khalif', 'khalif': 'khalif', 'qaliif': 'khalif',
+
+      // Female names
+      'caasho': 'asha', 'caasha': 'asha', 'asha': 'asha', 'aisha': 'asha',
+      'faadumo': 'fadumo', 'fadumo': 'fadumo', 'fatima': 'fadumo', 'faduma': 'fadumo',
+      'xaliimo': 'halimo', 'halimo': 'halimo', 'halima': 'halimo',
+      'safiyo': 'safiyo', 'safia': 'safiyo', 'safiya': 'safiyo',
+      'saynab': 'zaynab', 'zaynab': 'zaynab', 'zainab': 'zaynab',
+      'naciimo': 'naima', 'naciima': 'naima', 'naima': 'naima', 'naimo': 'naima',
+      'khadra': 'khadra', 'khadro': 'khadra', 'qadro': 'khadra',
+      'maryan': 'maryan', 'maryam': 'maryan', 'mariam': 'maryan',
+      'aamina': 'amina', 'amina': 'amina', 'aaminah': 'amina',
+      'xaawo': 'hawa', 'hawa': 'hawa', 'hawaa': 'hawa',
+      'ruqiyo': 'ruqiya', 'ruqiya': 'ruqiya', 'ruqaya': 'ruqiya',
+      'fardowsa': 'fardowsa', 'fardowso': 'fardowsa', 'ferdous': 'fardowsa',
+      'ikraan': 'ikran', 'ikran': 'ikran',
+      'suhur': 'suhur', 'suxur': 'suhur',
+      'deeq': 'deeq', 'deeqo': 'deeq', 'deka': 'deeq', 'deqa': 'deeq',
+      'hodan': 'hodan', 'hodo': 'hodan', 'hoodo': 'hodan',
+      'hani': 'hani', 'haani': 'hani',
+      'nasra': 'nasra', 'nasro': 'nasra', 'nasriin': 'nasrin', 'nasrin': 'nasrin',
+      'sahra': 'sahra', 'zahra': 'sahra',
+      'nimco': 'nimco', 'nimcaan': 'nimcan', 'nimcan': 'nimcan',
+    };
+
+    if (commonAliases.containsKey(t)) {
+      return commonAliases[t]!;
+    }
+
+    // Abdi composite names (e.g. abdirahman, cabdiraxmaan, abdirashid, etc.)
+    if (t.startsWith('abdi') || t.startsWith('cabdi')) {
+      String suffix = t.startsWith('cabdi') ? t.substring(5) : t.substring(4);
+      suffix = suffix.replaceAll('x', 'h')
+                     .replaceAll('c', '')
+                     .replaceAll('aa', 'a')
+                     .replaceAll('ee', 'e')
+                     .replaceAll('ii', 'i')
+                     .replaceAll('oo', 'o')
+                     .replaceAll('uu', 'u');
+      if (suffix == 'raxmaan' || suffix == 'rahman' || suffix == 'rahmaan') return 'abdirahman';
+      if (suffix == 'laahi' || suffix == 'llaahi' || suffix == 'lahi' || suffix == 'llahi') return 'abdullahi';
+      if (suffix == 'qaadir' || suffix == 'kadir' || suffix == 'qadir') return 'abdikadir';
+      if (suffix == 'salaam' || suffix == 'salaan' || suffix == 'salan' || suffix == 'salam') return 'abdisalan';
+      if (suffix == 'fataax' || suffix == 'fatah' || suffix == 'fataah') return 'abdifatah';
+      if (suffix == 'rashiid' || suffix == 'rashid') return 'abdirashid';
+      if (suffix == 'risaaq' || suffix == 'rizaaq' || suffix == 'rizak' || suffix == 'razaq') return 'abdirizak';
+      if (suffix == 'majiid' || suffix == 'majid') return 'abdimajid';
+      if (suffix == 'shakuur' || suffix == 'shakur') return 'abdishakur';
+      if (suffix == 'weli' || suffix == 'wali') return 'abdiwali';
+      if (suffix == 'kariim' || suffix == 'karim') return 'abdikarim';
+      if (suffix == 'naasir' || suffix == 'nasir') return 'abdinasir';
+      if (suffix == 'xakiim' || suffix == 'hakiim' || suffix == 'hakim') return 'abdihakim';
+      if (suffix == 'casiis' || suffix == 'aziiz' || suffix == 'asis' || suffix == 'aziz') return 'abdiaziz';
+      return 'abdi$suffix';
+    }
+
+    // General phonetic rules Somali <-> English
     t = t.replaceAll('aa', 'a')
          .replaceAll('ee', 'e')
          .replaceAll('ii', 'i')
@@ -1775,7 +1937,9 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
          .replaceAll('uu', 'u');
 
     t = t.replaceAll('x', 'h');
+    t = t.replaceAll('kh', 'k');
     t = t.replaceAll('c', '');
+    t = t.replaceAll('q', 'k');
 
     return t;
   }
@@ -1787,6 +1951,7 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
   ) {
     if (classStudents.isEmpty) return null;
 
+    // 1. First Priority: Student ID Match if docId exists
     if (docId.isNotEmpty) {
       for (final s in classStudents) {
         if ((s.id != null && s.id.toString() == docId) ||
@@ -1800,6 +1965,7 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
     final cleanDoc = _cleanSomaliName(docName);
     if (cleanDoc.isEmpty) return null;
 
+    // 2. Second Priority: Clean exact string match
     final exactMatches = classStudents.where((s) => _cleanSomaliName(s.name) == cleanDoc).toList();
     if (exactMatches.length == 1) {
       return exactMatches.first;
@@ -1818,6 +1984,11 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
       final dbTokens = cleanDb.split(' ').where((t) => t.isNotEmpty).toList();
       if (dbTokens.isEmpty) continue;
       final dbCanonical = dbTokens.map(_canonicalSomaliToken).toList();
+
+      // Check if canonical forms are identical (e.g. "Mohamed Ali Hassan" == "Maxamed Cali Xasan")
+      if (docCanonical.join(' ') == dbCanonical.join(' ')) {
+        return student; // 100% exact canonical match!
+      }
 
       int matchCount = 0;
       bool firstNameMatches = (docCanonical.isNotEmpty &&
@@ -1838,29 +2009,35 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
         }
       }
 
-      double tokenScore = matchCount / (docCanonical.length > dbCanonical.length ? docCanonical.length : dbCanonical.length);
+      double maxLen = (docCanonical.length > dbCanonical.length ? docCanonical.length : dbCanonical.length).toDouble();
+      double tokenScore = matchCount / (maxLen > 0 ? maxLen : 1);
       double posScore = positionMatches / (minLen > 0 ? minLen : 1);
       double totalScore = (tokenScore * 0.6) + (posScore * 0.4);
 
       if (firstNameMatches) {
-        totalScore += 0.25;
+        totalScore += 0.30;
+      }
+
+      // If all doc tokens match in DB name (e.g. doc has "Mohamed Ali" and DB has "Mohamed Ali Hassan")
+      if (docCanonical.length >= 2 && matchCount == docCanonical.length && firstNameMatches) {
+        totalScore += 0.20;
       }
 
       bool isSufficientMatch = false;
-      if (matchCount >= 2 && firstNameMatches && totalScore >= 0.60) {
+      if (firstNameMatches && matchCount >= 2 && totalScore >= 0.65) {
         isSufficientMatch = true;
-      } else if (matchCount >= 3 && totalScore >= 0.60) {
+      } else if (matchCount >= 3 && totalScore >= 0.65) {
         isSufficientMatch = true;
       } else if (docCanonical.length == 1 && matchCount == 1 && dbCanonical.length == 1) {
         isSufficientMatch = true;
       }
 
       if (isSufficientMatch) {
-        if (totalScore > bestScore + 0.05) {
+        if (totalScore > bestScore + 0.08) {
           bestScore = totalScore;
           bestCandidate = student;
           candidatesWithBestScore = 1;
-        } else if ((totalScore - bestScore).abs() <= 0.05) {
+        } else if ((totalScore - bestScore).abs() <= 0.08) {
           candidatesWithBestScore++;
         }
       }
@@ -1875,18 +2052,60 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
   }
 
   void _checkDuplicates() {
-    final seenIds = <int>{};
+    // 1. Reset all duplicate flags
     for (var r in _parsedRows) {
+      r.isDuplicate = false;
+      r.duplicateReason = '';
+    }
+
+    // 2. Identify duplicates by matched student ID (two or more rows pointing to the same student)
+    final studentIdMap = <int, List<int>>{};
+    for (int i = 0; i < _parsedRows.length; i++) {
+      final r = _parsedRows[i];
       if (r.matchedStudent != null) {
         int id = r.matchedStudent!.id ?? int.tryParse(r.matchedStudent!.idString) ?? -1;
-        if (id != -1 && seenIds.contains(id)) {
-          r.isDuplicate = true;
-        } else {
-          r.isDuplicate = false;
-          if (id != -1) seenIds.add(id);
+        if (id != -1) {
+          studentIdMap.putIfAbsent(id, () => []).add(i);
         }
-      } else {
-        r.isDuplicate = false;
+      }
+    }
+
+    for (final entry in studentIdMap.entries) {
+      if (entry.value.length > 1) {
+        for (int idx in entry.value) {
+          final row = _parsedRows[idx];
+          row.isDuplicate = true;
+          final others = entry.value
+              .where((x) => x != idx)
+              .map((x) => "#${x + 1} (${_parsedRows[x].docName})")
+              .join(", ");
+          row.duplicateReason = "Ardaygan waxaa loo qoondeeyay in ka badan hal mar! (Wuxuu sidoo kale ku jiraa Safka $others)";
+        }
+      }
+    }
+
+    // 3. Identify duplicates by raw Doc Name in Word doc
+    final docNameMap = <String, List<int>>{};
+    for (int i = 0; i < _parsedRows.length; i++) {
+      final clean = _cleanSomaliName(_parsedRows[i].docName);
+      if (clean.isNotEmpty) {
+        docNameMap.putIfAbsent(clean, () => []).add(i);
+      }
+    }
+
+    for (final entry in docNameMap.entries) {
+      if (entry.value.length > 1) {
+        for (int idx in entry.value) {
+          final row = _parsedRows[idx];
+          row.isDuplicate = true;
+          final others = entry.value
+              .where((x) => x != idx)
+              .map((x) => "#${x + 1}")
+              .join(", ");
+          if (row.duplicateReason.isEmpty) {
+            row.duplicateReason = "Magacan laba jeer ayuu ku soo noqnoqday faylka Word-ka (Safka $others)";
+          }
+        }
       }
     }
   }
@@ -2510,13 +2729,33 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
     final exceedingCount = _parsedRows.where((r) => r.hasExceedingScore(maxAllowed, widget.subjects)).length;
     final duplicateCount = _parsedRows.where((r) => r.isDuplicate).length;
 
+    // Filtered rows for inspection and searching
+    final filteredDisplayEntries = _parsedRows.asMap().entries.where((entry) {
+      final row = entry.value;
+      if (_tableSearchQuery.trim().isNotEmpty) {
+        final q = _tableSearchQuery.trim().toLowerCase();
+        final inDocName = row.docName.toLowerCase().contains(q);
+        final inDocId = row.docId.toLowerCase().contains(q);
+        final inMatchedName = row.matchedStudent?.name.toLowerCase().contains(q) ?? false;
+        if (!inDocName && !inDocId && !inMatchedName) return false;
+      }
+      if (_activeFilter == 'matched') {
+        return row.matchedStudent != null;
+      } else if (_activeFilter == 'unmatched') {
+        return row.matchedStudent == null;
+      } else if (_activeFilter == 'duplicate') {
+        return row.isDuplicate;
+      }
+      return true;
+    }).toList();
+
     return Dialog(
-      insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 30, vertical: 24),
+      insetPadding: EdgeInsets.symmetric(horizontal: isMobile ? 10 : 24, vertical: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1050, maxHeight: 750),
+        constraints: const BoxConstraints(maxWidth: 1180, maxHeight: 820),
         child: Padding(
-          padding: EdgeInsets.all(isMobile ? 16 : 24),
+          padding: EdgeInsets.all(isMobile ? 14 : 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2564,7 +2803,7 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
                           ),
                           const SizedBox(height: 2),
                           const Text(
-                            "Soo geli shaxda natiijooyinka ardayda oo dhan adigoo isticmaalaya faylka Word-ka",
+                            "Soo geli shaxda natiijooyinka ardayda adigoo isticmaalaya Word Doc (Soomaali & English automatic match)",
                             style: TextStyle(fontSize: 12, color: Colors.grey),
                           ),
                         ],
@@ -2577,7 +2816,7 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
                   ),
                 ],
               ),
-              const Divider(height: 24),
+              const Divider(height: 20),
 
               // 2. CONTROLS BAR (Class, Exam Type, File Picker)
               Wrap(
@@ -2699,27 +2938,115 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
                 ),
               ],
 
-              // 3. STATS SUMMARY BADGES
+              // 3. DUPLICATE ALERT BANNER (If any duplicates detected)
+              if (duplicateCount > 0) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade400, width: 1.5),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 22),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          "Digniin: Waxaa la helay $duplicateCount saf oo kucelis ah (Duplicates)! Fadlan hubi safafka midabka cas leh, waxaad beddeli kartaa ardayga ama tirtiri kartaa safka kuceliska ah (🗑️) intaadan kaydin.",
+                          style: TextStyle(color: Colors.red.shade900, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red.shade900,
+                          backgroundColor: Colors.red.shade100,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _activeFilter = 'duplicate';
+                          });
+                        },
+                        icon: const Icon(Icons.filter_alt, size: 14),
+                        label: const Text("Tus Ku-celiska", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+
+              // 4. STATS SUMMARY BADGES & FILTER TOOLBAR
               if (totalCount > 0) ...[
-                const SizedBox(height: 14),
-                Wrap(
-                  spacing: 10,
-                  runSpacing: 8,
+                const SizedBox(height: 10),
+                Row(
                   children: [
-                    _buildSummaryBadge("Ardayda Word-ka: $totalCount", Colors.blueGrey, Icons.people_outline),
-                    _buildSummaryBadge("Isku Beegmay: $matchedCount", Colors.green, Icons.check_circle_outline),
-                    if (unmatchedCount > 0)
-                      _buildSummaryBadge("Lama Helin: $unmatchedCount", Colors.orange, Icons.warning_amber_rounded),
-                    if (exceedingCount > 0)
-                      _buildSummaryBadge("Dhibco Dheer: $exceedingCount (Max: $maxAllowed)", Colors.red, Icons.error_outline),
-                    if (duplicateCount > 0)
-                      _buildSummaryBadge("Ku-celis: $duplicateCount", Colors.red, Icons.content_copy),
+                    // Filter Chips
+                    Expanded(
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [
+                            _buildFilterTab("Dhammaan ($totalCount)", 'all', Icons.people_outline, Colors.blueGrey),
+                            const SizedBox(width: 6),
+                            _buildFilterTab("Isku Beegmay ($matchedCount)", 'matched', Icons.check_circle_outline, Colors.green),
+                            const SizedBox(width: 6),
+                            if (unmatchedCount > 0) ...[
+                              _buildFilterTab("Lama Helin ($unmatchedCount)", 'unmatched', Icons.warning_amber_rounded, Colors.orange),
+                              const SizedBox(width: 6),
+                            ],
+                            if (duplicateCount > 0) ...[
+                              _buildFilterTab("⚠️ Ku-celis ($duplicateCount)", 'duplicate', Icons.content_copy, Colors.red),
+                              const SizedBox(width: 6),
+                            ],
+                            if (exceedingCount > 0)
+                              _buildSummaryBadge("Dhibco Dheer: $exceedingCount", Colors.red, Icons.error_outline),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // In-Table Search Field
+                    SizedBox(
+                      width: 220,
+                      height: 36,
+                      child: TextField(
+                        controller: _tableSearchController,
+                        onChanged: (val) {
+                          setState(() {
+                            _tableSearchQuery = val;
+                          });
+                        },
+                        style: const TextStyle(fontSize: 12),
+                        decoration: InputDecoration(
+                          hintText: "Raadi arday shaxda...",
+                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 11),
+                          prefixIcon: const Icon(Icons.search, size: 16, color: Color(0xFF1E3A8A)),
+                          suffixIcon: _tableSearchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: const Icon(Icons.clear, size: 14, color: Colors.grey),
+                                  onPressed: () {
+                                    _tableSearchController.clear();
+                                    setState(() {
+                                      _tableSearchQuery = '';
+                                    });
+                                  },
+                                )
+                              : null,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 8),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ],
 
-              // 4. PREVIEW TABLE OR EMPTY STATE
-              const SizedBox(height: 12),
+              // 5. PREVIEW TABLE OR EMPTY STATE (WITH DUAL HORIZONTAL & VERTICAL SCROLLBARS)
+              const SizedBox(height: 10),
               Expanded(
                 child: totalCount == 0
                     ? Center(
@@ -2742,216 +3069,285 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
                       )
                     : Container(
                         decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade200),
+                          border: Border.all(color: Colors.grey.shade300),
                           borderRadius: BorderRadius.circular(12),
                           color: Colors.white,
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: ConstrainedBox(
-                              constraints: BoxConstraints(minWidth: isMobile ? 850 : 1000),
-                              child: SingleChildScrollView(
-                                child: DataTable(
-                                  columnSpacing: 14,
-                                  headingRowHeight: 42,
-                                  dataRowMinHeight: 48,
-                                  dataRowMaxHeight: 52,
-                                  headingRowColor: WidgetStateProperty.all(const Color(0xFFF1F5F9)),
-                                  columns: [
-                                    const DataColumn(label: Text("#", style: TextStyle(fontWeight: FontWeight.bold))),
-                                    const DataColumn(label: Text("Magaca (Word Doc)", style: TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text("Ardayga Database-ka ($currentClass)", style: const TextStyle(fontWeight: FontWeight.bold))),
-                                    ...widget.subjects.map((s) => DataColumn(
-                                      label: Text(s, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    )),
-                                    const DataColumn(label: Text("Wadar (Word)", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)))),
-                                     const DataColumn(label: Text("Tirtir", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  ],
-                                  rows: _parsedRows.asMap().entries.map((entry) {
-                                    final index = entry.key;
-                                    final row = entry.value;
-                                    final isMatched = row.matchedStudent != null;
-                                    final hasExceeding = row.hasExceedingScore(maxAllowed, widget.subjects);
+                          child: Scrollbar(
+                            controller: _horizontalScrollController,
+                            thumbVisibility: true,
+                            trackVisibility: true,
+                            child: SingleChildScrollView(
+                              controller: _horizontalScrollController,
+                              scrollDirection: Axis.horizontal,
+                              child: ConstrainedBox(
+                                constraints: BoxConstraints(minWidth: isMobile ? 850 : 1150),
+                                child: Scrollbar(
+                                  controller: _verticalScrollController,
+                                  thumbVisibility: true,
+                                  trackVisibility: true,
+                                  child: SingleChildScrollView(
+                                    controller: _verticalScrollController,
+                                    scrollDirection: Axis.vertical,
+                                    child: DataTable(
+                                      columnSpacing: 14,
+                                      headingRowHeight: 42,
+                                      dataRowMinHeight: 48,
+                                      dataRowMaxHeight: 56,
+                                      headingRowColor: WidgetStateProperty.all(const Color(0xFFF1F5F9)),
+                                      columns: [
+                                        const DataColumn(label: Text("#", style: TextStyle(fontWeight: FontWeight.bold))),
+                                        const DataColumn(label: Text("Magaca (Word Doc)", style: TextStyle(fontWeight: FontWeight.bold))),
+                                        DataColumn(label: Text("Ardayga Database-ka ($currentClass)", style: const TextStyle(fontWeight: FontWeight.bold))),
+                                        ...widget.subjects.map((s) => DataColumn(
+                                          label: Text(s, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                        )),
+                                        const DataColumn(label: Text("Wadar (Word)", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1E3A8A)))),
+                                        const DataColumn(label: Text("Tirtir", style: TextStyle(fontWeight: FontWeight.bold))),
+                                      ],
+                                      rows: filteredDisplayEntries.map((entry) {
+                                        final originalIndex = entry.key;
+                                        final row = entry.value;
+                                        final isMatched = row.matchedStudent != null;
+                                        final hasExceeding = row.hasExceedingScore(maxAllowed, widget.subjects);
 
-                                    return DataRow(
-                                      color: WidgetStateProperty.all(
-                                        row.isDuplicate
-                                            ? Colors.red.shade50
-                                            : hasExceeding
-                                                ? Colors.amber.shade50
-                                                : (!isMatched ? Colors.orange.shade50.withOpacity(0.4) : Colors.white),
-                                      ),
-                                      cells: [
-                                        DataCell(Text("${index + 1}", style: const TextStyle(fontWeight: FontWeight.bold))),
-                                        // Doc Name & ID
-                                        DataCell(
-                                          Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(row.docName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                                              if (row.docId.isNotEmpty)
-                                                Text("ID: ${row.docId}", style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
-                                            ],
+                                        return DataRow(
+                                          color: WidgetStateProperty.all(
+                                            row.isDuplicate
+                                                ? Colors.red.shade50
+                                                : hasExceeding
+                                                    ? Colors.amber.shade50
+                                                    : (!isMatched ? Colors.orange.shade50.withOpacity(0.4) : Colors.white),
                                           ),
-                                        ),
-                                        // Matched Database Student Cell (Interactive Selector)
-                                        DataCell(
-                                          isMatched
-                                              ? Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.green.withOpacity(0.1),
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    border: Border.all(color: Colors.green.shade400, width: 1),
-                                                  ),
-                                                  child: Row(
+                                          cells: [
+                                            DataCell(Text("${originalIndex + 1}", style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              color: row.isDuplicate ? Colors.red.shade900 : Colors.black87,
+                                            ))),
+                                            // Doc Name & ID Cell
+                                            DataCell(
+                                              Column(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
                                                     mainAxisSize: MainAxisSize.min,
                                                     children: [
-                                                      const Icon(Icons.check_circle, size: 14, color: Colors.green),
-                                                      const SizedBox(width: 4),
                                                       Text(
-                                                        row.matchedStudent!.name,
-                                                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green.shade800),
+                                                        row.docName,
+                                                        style: TextStyle(
+                                                          fontWeight: FontWeight.bold,
+                                                          fontSize: 13,
+                                                          color: row.isDuplicate ? Colors.red.shade900 : Colors.black87,
+                                                        ),
                                                       ),
-                                                      PopupMenuButton<StudentModel>(
-                                                        icon: const Icon(Icons.arrow_drop_down, size: 16, color: Colors.green),
-                                                        tooltip: "Beddel ardayga",
-                                                        onSelected: (selected) {
+                                                      if (row.isDuplicate) ...[
+                                                        const SizedBox(width: 6),
+                                                        Container(
+                                                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                                          decoration: BoxDecoration(
+                                                            color: Colors.red.shade100,
+                                                            borderRadius: BorderRadius.circular(4),
+                                                            border: Border.all(color: Colors.red.shade400),
+                                                          ),
+                                                          child: const Text(
+                                                            "⚠️ KUCELIS",
+                                                            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 9),
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ],
+                                                  ),
+                                                  if (row.docId.isNotEmpty)
+                                                    Text("ID: ${row.docId}", style: TextStyle(fontSize: 10, color: Colors.grey.shade600)),
+                                                ],
+                                              ),
+                                            ),
+                                            // Matched Database Student Cell (Interactive Selector)
+                                            DataCell(
+                                              isMatched
+                                                  ? Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                      decoration: BoxDecoration(
+                                                        color: row.isDuplicate ? Colors.red.withOpacity(0.12) : Colors.green.withOpacity(0.1),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        border: Border.all(
+                                                          color: row.isDuplicate ? Colors.red.shade400 : Colors.green.shade400,
+                                                          width: 1,
+                                                        ),
+                                                      ),
+                                                      child: Column(
+                                                        mainAxisSize: MainAxisSize.min,
+                                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                                        children: [
+                                                          Row(
+                                                            mainAxisSize: MainAxisSize.min,
+                                                            children: [
+                                                              Icon(
+                                                                row.isDuplicate ? Icons.warning_amber_rounded : Icons.check_circle,
+                                                                size: 14,
+                                                                color: row.isDuplicate ? Colors.red : Colors.green,
+                                                              ),
+                                                              const SizedBox(width: 4),
+                                                              Text(
+                                                                row.matchedStudent!.name,
+                                                                style: TextStyle(
+                                                                  fontWeight: FontWeight.bold,
+                                                                  fontSize: 12,
+                                                                  color: row.isDuplicate ? Colors.red.shade900 : Colors.green.shade800,
+                                                                ),
+                                                              ),
+                                                              PopupMenuButton<StudentModel>(
+                                                                icon: Icon(Icons.arrow_drop_down, size: 16, color: row.isDuplicate ? Colors.red : Colors.green),
+                                                                tooltip: "Beddel ardayga",
+                                                                onSelected: (selected) {
+                                                                  setState(() {
+                                                                    row.matchedStudent = selected;
+                                                                    _checkDuplicates();
+                                                                  });
+                                                                },
+                                                                itemBuilder: (ctx) => currentClassStudents.map((s) => PopupMenuItem(
+                                                                  value: s,
+                                                                  child: Text(s.name, style: const TextStyle(fontSize: 13)),
+                                                                )).toList(),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                          if (row.isDuplicate && row.duplicateReason.isNotEmpty)
+                                                            Text(
+                                                              row.duplicateReason,
+                                                              style: TextStyle(fontSize: 10, color: Colors.red.shade800, fontWeight: FontWeight.bold),
+                                                            ),
+                                                        ],
+                                                      ),
+                                                    )
+                                                  : Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.orange.withOpacity(0.12),
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        border: Border.all(color: Colors.orange.shade400, width: 1),
+                                                      ),
+                                                      child: DropdownButton<StudentModel>(
+                                                        isDense: true,
+                                                        underline: const SizedBox(),
+                                                        hint: Row(
+                                                          mainAxisSize: MainAxisSize.min,
+                                                          children: const [
+                                                            Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange),
+                                                            SizedBox(width: 4),
+                                                            Text("Dooro Ardayga", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange)),
+                                                          ],
+                                                        ),
+                                                        items: currentClassStudents.map((s) => DropdownMenuItem(
+                                                          value: s,
+                                                          child: Text(s.name, style: const TextStyle(fontSize: 12)),
+                                                        )).toList(),
+                                                        onChanged: (selected) {
                                                           setState(() {
                                                             row.matchedStudent = selected;
                                                             _checkDuplicates();
                                                           });
                                                         },
-                                                        itemBuilder: (ctx) => currentClassStudents.map((s) => PopupMenuItem(
-                                                          value: s,
-                                                          child: Text(s.name, style: const TextStyle(fontSize: 13)),
-                                                        )).toList(),
                                                       ),
-                                                    ],
-                                                  ),
-                                                )
-                                              : Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                                  decoration: BoxDecoration(
-                                                    color: Colors.orange.withOpacity(0.12),
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    border: Border.all(color: Colors.orange.shade400, width: 1),
-                                                  ),
-                                                  child: DropdownButton<StudentModel>(
-                                                    isDense: true,
-                                                    underline: const SizedBox(),
-                                                    hint: Row(
-                                                      mainAxisSize: MainAxisSize.min,
-                                                      children: const [
-                                                        Icon(Icons.warning_amber_rounded, size: 14, color: Colors.orange),
-                                                        SizedBox(width: 4),
-                                                        Text("Dooro Ardayga", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange)),
-                                                      ],
                                                     ),
-                                                    items: currentClassStudents.map((s) => DropdownMenuItem(
-                                                      value: s,
-                                                      child: Text(s.name, style: const TextStyle(fontSize: 12)),
-                                                    )).toList(),
-                                                    onChanged: (selected) {
+                                            ),
+                                            // Subject Score Cells (Editable & Validated)
+                                            ...widget.subjects.map((subj) {
+                                              num? score = row.scores[subj];
+                                              bool isOver = score != null && (score < 0 || score > maxAllowed);
+
+                                              return DataCell(
+                                                SizedBox(
+                                                  width: 52,
+                                                  height: 34,
+                                                  child: TextFormField(
+                                                    controller: row.scoreControllers[subj],
+                                                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                                    textAlign: TextAlign.center,
+                                                    style: TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.bold,
+                                                      color: isOver ? Colors.red : Colors.black87,
+                                                    ),
+                                                    decoration: InputDecoration(
+                                                      contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                                                      filled: true,
+                                                      fillColor: isOver
+                                                          ? Colors.red.shade50
+                                                          : (score == null ? Colors.amber.shade50.withOpacity(0.3) : Colors.grey.shade100),
+                                                      hintText: "-",
+                                                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+                                                      enabledBorder: OutlineInputBorder(
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        borderSide: BorderSide(
+                                                          color: isOver ? Colors.red : Colors.grey.shade300,
+                                                          width: isOver ? 1.5 : 1,
+                                                        ),
+                                                      ),
+                                                      focusedBorder: OutlineInputBorder(
+                                                        borderRadius: BorderRadius.circular(6),
+                                                        borderSide: BorderSide(
+                                                          color: isOver ? Colors.red : const Color(0xFF1E3A8A),
+                                                          width: 1.5,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    onChanged: (val) {
                                                       setState(() {
-                                                        row.matchedStudent = selected;
-                                                        _checkDuplicates();
+                                                        row.scores[subj] = _parseScore(val);
                                                       });
                                                     },
                                                   ),
                                                 ),
-                                        ),
-                                        // Subject Score Cells (Editable & Validated)
-                                        ...widget.subjects.map((subj) {
-                                          num? score = row.scores[subj];
-                                          bool isOver = score != null && (score < 0 || score > maxAllowed);
-
-                                          return DataCell(
-                                            SizedBox(
-                                              width: 52,
-                                              height: 34,
-                                              child: TextFormField(
-                                                controller: row.scoreControllers[subj],
-                                                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                                textAlign: TextAlign.center,
-                                                style: TextStyle(
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: isOver ? Colors.red : Colors.black87,
+                                              );
+                                            }),
+                                            // Wadar (Word Total) Cell
+                                            DataCell(
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                                                  borderRadius: BorderRadius.circular(6),
+                                                  border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.2)),
                                                 ),
-                                                decoration: InputDecoration(
-                                                  contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                                                  filled: true,
-                                                  fillColor: isOver
-                                                      ? Colors.red.shade50
-                                                      : (score == null ? Colors.amber.shade50.withOpacity(0.3) : Colors.grey.shade100),
-                                                  hintText: "-",
-                                                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 12),
-                                                  enabledBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    borderSide: BorderSide(
-                                                      color: isOver ? Colors.red : Colors.grey.shade300,
-                                                      width: isOver ? 1.5 : 1,
-                                                    ),
-                                                  ),
-                                                  focusedBorder: OutlineInputBorder(
-                                                    borderRadius: BorderRadius.circular(6),
-                                                    borderSide: BorderSide(
-                                                      color: isOver ? Colors.red : const Color(0xFF1E3A8A),
-                                                      width: 1.5,
-                                                    ),
+                                                child: Text(
+                                                  row.docTotal != null
+                                                      ? ((row.docTotal! % 1 == 0) ? row.docTotal!.toInt().toString() : row.docTotal!.toString())
+                                                      : '-',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: Color(0xFF1E3A8A),
                                                   ),
                                                 ),
-                                                onChanged: (val) {
+                                              ),
+                                            ),
+                                            // Delete / Exclude row
+                                            DataCell(
+                                              IconButton(
+                                                icon: Icon(
+                                                  row.isDuplicate ? Icons.delete_forever : Icons.delete_outline,
+                                                  size: row.isDuplicate ? 20 : 18,
+                                                  color: Colors.red,
+                                                ),
+                                                tooltip: row.isDuplicate ? "Tirtir safkan kuceliska ah" : "Ka saar liiska",
+                                                onPressed: () {
                                                   setState(() {
-                                                    row.scores[subj] = _parseScore(val);
+                                                    row.dispose();
+                                                    _parsedRows.removeAt(originalIndex);
+                                                    _checkDuplicates();
                                                   });
                                                 },
                                               ),
                                             ),
-                                          );
-                                        }),
-                                        // Wadar (Word Total) Cell
-                                        DataCell(
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: const Color(0xFF1E3A8A).withOpacity(0.08),
-                                              borderRadius: BorderRadius.circular(6),
-                                              border: Border.all(color: const Color(0xFF1E3A8A).withOpacity(0.2)),
-                                            ),
-                                            child: Text(
-                                              row.docTotal != null
-                                                  ? ((row.docTotal! % 1 == 0) ? row.docTotal!.toInt().toString() : row.docTotal!.toString())
-                                                  : '-',
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
-                                                color: Color(0xFF1E3A8A),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        // Delete / Exclude row
-                                        DataCell(
-                                          IconButton(
-                                            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                                            tooltip: "Ka saar liiska",
-                                            onPressed: () {
-                                              setState(() {
-                                                row.dispose();
-                                                _parsedRows.removeAt(index);
-                                                _checkDuplicates();
-                                              });
-                                            },
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }).toList(),
+                                          ],
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
@@ -3007,6 +3403,44 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterTab(String label, String filterKey, IconData icon, Color color) {
+    final bool isSelected = _activeFilter == filterKey;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _activeFilter = filterKey;
+        });
+      },
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? color : color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color, width: isSelected ? 1.5 : 1),
+          boxShadow: isSelected
+              ? [BoxShadow(color: color.withOpacity(0.25), blurRadius: 4, offset: const Offset(0, 2))]
+              : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 14, color: isSelected ? Colors.white : color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: isSelected ? Colors.white : color,
+              ),
+            ),
+          ],
         ),
       ),
     );
