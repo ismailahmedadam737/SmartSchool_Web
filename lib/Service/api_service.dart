@@ -128,24 +128,41 @@ class ApiService {
       log("Error fetching remote students: $e");
     }
 
-    String? stored = _readFromStorage('local_students');
-    if (stored != null && stored.isNotEmpty) {
-      try {
-        List<dynamic> list = jsonDecode(stored);
-        for (var item in list) {
-          StudentModel st = StudentModel.fromJson(item);
-          bool exists = results.any((r) => r.name == st.name && r.phone == st.phone);
-          if (!exists) {
-            results.insert(0, st);
+    if (results.isEmpty) {
+      // Offline mode: load from LocalStorage
+      String? stored = _readFromStorage('local_students');
+      if (stored != null && stored.isNotEmpty) {
+        try {
+          List<dynamic> list = jsonDecode(stored);
+          for (var item in list) {
+            results.add(StudentModel.fromJson(item));
           }
+        } catch (_) {}
+      }
+      for (var st in _localStudents) {
+        if (!results.any((r) => r.name.trim().toLowerCase() == st.name.trim().toLowerCase())) {
+          results.add(st);
         }
-      } catch (_) {}
-    }
-
-    for (var st in _localStudents) {
-      bool exists = results.any((r) => r.name == st.name && r.phone == st.phone);
-      if (!exists) {
-        results.insert(0, st);
+      }
+    } else {
+      // Remote data is the single source of truth:
+      // Only add pending local students that genuinely have no remote ID and do not exist remotely
+      String? stored = _readFromStorage('local_students');
+      if (stored != null && stored.isNotEmpty) {
+        try {
+          List<dynamic> list = jsonDecode(stored);
+          for (var item in list) {
+            StudentModel st = StudentModel.fromJson(item);
+            bool isAlreadyInResults = results.any((r) =>
+              (r.id != null && st.id != null && r.id == st.id) ||
+              (r.idString.isNotEmpty && st.idString.isNotEmpty && r.idString == st.idString) ||
+              (r.name.trim().toLowerCase() == st.name.trim().toLowerCase())
+            );
+            if (!isAlreadyInResults && (st.id == null || st.id == 0) && st.idString.isEmpty) {
+              results.insert(0, st);
+            }
+          }
+        } catch (_) {}
       }
     }
 
@@ -153,7 +170,7 @@ class ApiService {
   }
 
   static Future<bool> registerStudent(StudentModel student) async {
-    _localStudents.removeWhere((s) => s.name == student.name && s.phone == student.phone);
+    _localStudents.removeWhere((s) => s.name.trim().toLowerCase() == student.name.trim().toLowerCase());
     _localStudents.insert(0, student);
 
     List<Map<String, dynamic>> currentStored = [];
@@ -163,7 +180,7 @@ class ApiService {
         currentStored = List<Map<String, dynamic>>.from(jsonDecode(stored));
       } catch (_) {}
     }
-    currentStored.removeWhere((s) => s['name'] == student.name && s['phone'] == student.phone);
+    currentStored.removeWhere((s) => s['name']?.toString().trim().toLowerCase() == student.name.trim().toLowerCase());
     currentStored.insert(0, student.toJson());
     _saveToStorage('local_students', jsonEncode(currentStored));
 
@@ -180,14 +197,17 @@ class ApiService {
     }
   }
 
-  static Future<bool> updateStudent(String id, StudentModel student) async {
-    int idx = _localStudents.indexWhere((s) => s.idString == id || s.name == student.name);
-    if (idx != -1) {
-      _localStudents[idx] = student;
-    } else {
-      _localStudents.insert(0, student);
-    }
-    
+  static Future<bool> updateStudent(String id, StudentModel student, {String? oldName}) async {
+    // 1. Remove old version from in-memory cache to prevent duplicate listings
+    _localStudents.removeWhere((s) =>
+      (s.id != null && s.id.toString() == id) ||
+      (s.idString.isNotEmpty && s.idString == id) ||
+      (oldName != null && oldName.trim().isNotEmpty && s.name.trim().toLowerCase() == oldName.trim().toLowerCase()) ||
+      s.name.trim().toLowerCase() == student.name.trim().toLowerCase()
+    );
+    _localStudents.insert(0, student);
+
+    // 2. Remove old version from LocalStorage
     List<Map<String, dynamic>> currentStored = [];
     String? stored = _readFromStorage('local_students');
     if (stored != null && stored.isNotEmpty) {
@@ -195,27 +215,40 @@ class ApiService {
         currentStored = List<Map<String, dynamic>>.from(jsonDecode(stored));
       } catch (_) {}
     }
-    int storedIdx = currentStored.indexWhere((s) => s['name'] == student.name || s['id']?.toString() == id);
-    if (storedIdx != -1) {
-      currentStored[storedIdx] = student.toJson();
-    } else {
-      currentStored.insert(0, student.toJson());
-    }
+    currentStored.removeWhere((s) =>
+      (s['id'] != null && s['id'].toString() == id) ||
+      (s['_id'] != null && s['_id'].toString() == id) ||
+      s['student_id']?.toString() == id ||
+      (oldName != null && oldName.trim().isNotEmpty && s['name']?.toString().trim().toLowerCase() == oldName.trim().toLowerCase()) ||
+      s['name']?.toString().trim().toLowerCase() == student.name.trim().toLowerCase()
+    );
+    currentStored.insert(0, student.toJson());
     _saveToStorage('local_students', jsonEncode(currentStored));
 
+    // 3. Send update to Backend with tenant headers
     try {
-      final headers = {"Content-Type": "application/json"};
-      final body = jsonEncode(student.toJson());
+      final payload = student.toJson();
+      if (oldName != null && oldName.trim().isNotEmpty) {
+        payload['old_name'] = oldName.trim();
+        payload['previous_name'] = oldName.trim();
+      }
+      final body = jsonEncode(payload);
 
-      var response = await http.put(Uri.parse("$baseUrl/update/$id"), headers: headers, body: body);
-      if (response.statusCode == 200 || response.statusCode == 201) return true;
+      if (id.isNotEmpty && id != 'null') {
+        var response = await http.put(Uri.parse("$baseUrl/update/$id"), headers: _headers, body: body);
+        if (response.statusCode == 200 || response.statusCode == 201) return true;
 
-      response = await http.put(Uri.parse("$baseUrl/$id"), headers: headers, body: body);
-      if (response.statusCode == 200 || response.statusCode == 201) return true;
+        response = await http.put(Uri.parse("$baseUrl/$id"), headers: _headers, body: body);
+        if (response.statusCode == 200 || response.statusCode == 201) return true;
 
-      response = await http.post(Uri.parse("$baseUrl/update/$id"), headers: headers, body: body);
+        response = await http.post(Uri.parse("$baseUrl/update/$id"), headers: _headers, body: body);
+        if (response.statusCode == 200 || response.statusCode == 201) return true;
+      }
+
+      var response = await http.post(Uri.parse("$baseUrl/update"), headers: _headers, body: body);
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
+      log("❌ Update Student Error: $e");
       return true;
     }
   }

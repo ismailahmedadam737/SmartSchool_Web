@@ -65,7 +65,7 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
   Future<void> _loadDataFromDatabase() async {
     setState(() => _isSyncing = true);
     try {
-      final List<StudentModel> fetched = await ApiService.getAllStudents();
+      final List<StudentModel> fetched = await ApiService.getAllStudents(limit: 1000);
       setState(() {
         List<Map<String, String>> newFetched = fetched.map((s) => {
           "id": s.idString,
@@ -76,16 +76,7 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
           "class": s.className,
         }).toList();
 
-        for (var localStudent in students) {
-          bool exists = newFetched.any((f) => 
-            (f['name'] == localStudent['name'] && f['phone'] == localStudent['phone']) ||
-            (localStudent['id'] != null && localStudent['id']!.isNotEmpty && f['id'] == localStudent['id'])
-          );
-          if (!exists) {
-            newFetched.insert(0, localStudent);
-          }
-        }
-
+        // Server-ka ayaa ah ilaha rasmiga ah si aanay magacyadii hore ee la beddelay dib ugu soo laaban
         students = newFetched;
 
         _classes = students
@@ -108,6 +99,8 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
   }
 
   String? _editingStudentId;
+  String? _editingOriginalName;
+  String? _editingOriginalPhone;
 
   void _addNewClassDialog() {
     TextEditingController classController = TextEditingController();
@@ -155,10 +148,23 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
       return;
     }
 
-    bool isEditing = _editingStudentId != null && _editingStudentId!.isNotEmpty;
-    debugPrint("🔍 _saveStudent called | isEditing: $isEditing | editingStudentId: $_editingStudentId");
+    bool isEditing = (_editingStudentId != null && _editingStudentId!.isNotEmpty) ||
+                     (_editingOriginalName != null && _editingOriginalName!.isNotEmpty);
+    debugPrint("🔍 _saveStudent called | isEditing: $isEditing | editingStudentId: $_editingStudentId | oldName: $_editingOriginalName");
 
-    String newId = isEditing ? _editingStudentId! : DateTime.now().millisecondsSinceEpoch.toString();
+    String currentId = _editingStudentId ?? '';
+    if (isEditing && (currentId.isEmpty || currentId == 'null')) {
+      final match = students.firstWhere(
+        (s) => s['name'] == _editingOriginalName && (s['id']?.isNotEmpty ?? false),
+        orElse: () => <String, String>{},
+      );
+      if (match.isNotEmpty && match['id'] != null) {
+        currentId = match['id']!;
+        _editingStudentId = currentId;
+      }
+    }
+
+    String newId = isEditing ? currentId : DateTime.now().millisecondsSinceEpoch.toString();
     Map<String, String> newStudentMap = {
       "id": newId,
       "name": name,
@@ -179,16 +185,21 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
       if (!isEditing) {
         students.insert(0, newStudentMap);
       } else {
-        int idx = students.indexWhere((s) => s['id'] == _editingStudentId);
+        int idx = students.indexWhere((s) =>
+          (currentId.isNotEmpty && s['id'] == currentId) ||
+          (s['name'] == _editingOriginalName)
+        );
         if (idx != -1) {
           students[idx] = newStudentMap;
+        } else {
+          students.insert(0, newStudentMap);
         }
       }
     });
 
     StudentModel studentObj = StudentModel(
-      id: isEditing ? int.tryParse(_editingStudentId!) : null,
-      stringId: isEditing ? _editingStudentId : null,
+      id: isEditing ? int.tryParse(currentId) : null,
+      stringId: isEditing ? currentId : null,
       name: name,
       phone: phone,
       district: district,
@@ -198,8 +209,9 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
     );
 
     bool success = false;
+    String? oldNameToUpdate = _editingOriginalName;
     if (isEditing) {
-      success = await ApiService.updateStudent(_editingStudentId!, studentObj);
+      success = await ApiService.updateStudent(currentId, studentObj, oldName: oldNameToUpdate);
     } else {
       success = await ApiService.registerStudent(studentObj);
     }
@@ -248,6 +260,8 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
     _neighborController.clear();
     _selectedClass = null;
     _editingStudentId = null;
+    _editingOriginalName = null;
+    _editingOriginalPhone = null;
   }
 
   @override
@@ -548,6 +562,8 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
   void _startUpdate(Map<String, String> student) {
     setState(() {
       _editingStudentId = student['id'];
+      _editingOriginalName = student['name'];
+      _editingOriginalPhone = student['phone'];
       _nameController.text = student['name'] ?? '';
       _phoneController.text = student['phone'] ?? '';
       _districtController.text = student['district'] ?? '';

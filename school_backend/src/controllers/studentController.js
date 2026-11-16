@@ -65,8 +65,8 @@ exports.updateStudent = async (req, res) => {
     try {
         const id = req.params.id || req.body.id || req.body._id;
         const tenantId = getTenantId(req);
-        if (!id) {
-            return res.status(400).json({ error: "Student ID waa loo baahan yahay" });
+        if (!id && !req.body.old_name && !req.body.previous_name) {
+            return res.status(400).json({ error: "Student ID ama old_name waa loo baahan yahay" });
         }
         const updatedStudent = await StudentModel.updateStudent(id, req.body, tenantId);
         if (updatedStudent) {

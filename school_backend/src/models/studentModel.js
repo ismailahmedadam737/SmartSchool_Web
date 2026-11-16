@@ -79,20 +79,33 @@ const StudentModel = {
 
   // Cusboonaysiinta xogta ardayga (tenant-safe)
   updateStudent: async (id, studentData, tenantId) => {
-    const { name, phone, district, neighbor, class_name } = studentData;
-    const studentId = parseInt(id, 10) || id;
+    const { name, phone, district, neighbor, class_name, old_name } = studentData;
+    const studentId = parseInt(id, 10);
     let query, values;
-    if (tenantId) {
-      query = `UPDATE students SET name=$1, phone=$2, district=$3, neighbor=$4, class_name=$5
-               WHERE id=$6 AND tenant_id=$7 RETURNING *`;
-      values = [name, phone, district, neighbor, class_name || studentData.class, studentId, tenantId];
-    } else {
-      query = `UPDATE students SET name=$1, phone=$2, district=$3, neighbor=$4, class_name=$5
-               WHERE id=$6 RETURNING *`;
-      values = [name, phone, district, neighbor, class_name || studentData.class, studentId];
+    if (studentId && !isNaN(studentId)) {
+      if (tenantId) {
+        query = `UPDATE students SET name=$1, phone=$2, district=$3, neighbor=$4, class_name=$5
+                 WHERE id=$6 AND tenant_id=$7 RETURNING *`;
+        values = [name, phone, district, neighbor, class_name || studentData.class, studentId, tenantId];
+      } else {
+        query = `UPDATE students SET name=$1, phone=$2, district=$3, neighbor=$4, class_name=$5
+                 WHERE id=$6 RETURNING *`;
+        values = [name, phone, district, neighbor, class_name || studentData.class, studentId];
+      }
+    } else if (old_name) {
+      if (tenantId) {
+        query = `UPDATE students SET name=$1, phone=$2, district=$3, neighbor=$4, class_name=$5
+                 WHERE LOWER(TRIM(name)) = LOWER(TRIM($6)) AND tenant_id=$7 RETURNING *`;
+        values = [name, phone, district, neighbor, class_name || studentData.class, old_name, tenantId];
+      } else {
+        query = `UPDATE students SET name=$1, phone=$2, district=$3, neighbor=$4, class_name=$5
+                 WHERE LOWER(TRIM(name)) = LOWER(TRIM($6)) RETURNING *`;
+        values = [name, phone, district, neighbor, class_name || studentData.class, old_name];
+      }
     }
+    if (!query) return null;
     const { rows } = await pool.query(query, values);
-    return rows[0];
+    return rows ? rows[0] : null;
   }
 };
 
