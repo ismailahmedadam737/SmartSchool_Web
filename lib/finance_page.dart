@@ -34,6 +34,7 @@ class _FinancePageState extends State<FinancePage> {
 
   Future<void> loadClasses() async {
     final data = await ApiService.getAllClasses();
+    if (!mounted) return;
     setState(() {
       classes = data;
       if (classes.isNotEmpty) selectedClass = classes.first;
@@ -42,12 +43,14 @@ class _FinancePageState extends State<FinancePage> {
 
   Future<void> loadStudents() async {
     final data = await ApiService.getAllStudents();
+    if (!mounted) return;
     setState(() {
       students = data;
     });
     
     // Xogta ka soo jiid database-ka si aysan u tirtirmin
     for (var s in students) {
+      if (!mounted) return;
       if (s.id != null) {
         await fetchPaymentData(s);
       }
@@ -63,6 +66,7 @@ class _FinancePageState extends State<FinancePage> {
         totalPaid += double.tryParse(p['amount'].toString()) ?? 0;
         totalDept += double.tryParse(p['debt'].toString()) ?? 0;
       }
+      if (!mounted) return;
       setState(() {
         studentPaid[s.name] = totalPaid;
         studentDept[s.name] = totalDept;

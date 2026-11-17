@@ -70,22 +70,22 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
         }
       } catch (e) {
         debugPrint("Notice: getAllPayments fallback to individual fetch: $e");
-        // Fallback: Soo jiid xogta arday kasta
-        for (var s in students) {
-          if (s.id != null) {
-            try {
-              final payments = await PaymentApiService.getPaymentsByStudent(s.id!);
-              double totalPaid = 0;
-              double totalDebt = 0;
-              for (var p in payments) {
-                totalPaid += double.tryParse(p['amount']?.toString() ?? '0') ?? 0;
-                totalDebt += double.tryParse(p['debt']?.toString() ?? '0') ?? 0;
-              }
-              paidMap[s.id!] = totalPaid;
-              debtMap[s.id!] = totalDebt;
-            } catch (_) {}
-          }
-        }
+        if (!mounted) return;
+        // Fallback: Soo jiid xogta arday kasta in parallel
+        final futures = students.where((s) => s.id != null).map((s) async {
+          try {
+            final payments = await PaymentApiService.getPaymentsByStudent(s.id!);
+            double totalPaid = 0;
+            double totalDebt = 0;
+            for (var p in payments) {
+              totalPaid += double.tryParse(p['amount']?.toString() ?? '0') ?? 0;
+              totalDebt += double.tryParse(p['debt']?.toString() ?? '0') ?? 0;
+            }
+            paidMap[s.id!] = totalPaid;
+            debtMap[s.id!] = totalDebt;
+          } catch (_) {}
+        });
+        await Future.wait(futures);
       }
 
       if (mounted) {
@@ -508,74 +508,19 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
     required LinearGradient gradient,
   }) {
     final bool isSelected = filterStatus == id;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          setState(() {
-            filterStatus = isSelected && id != "all" ? "all" : id;
-          });
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: gradient,
-            borderRadius: BorderRadius.circular(16),
-            border: isSelected ? Border.all(color: Colors.white, width: 2.5) : null,
-            boxShadow: [
-              BoxShadow(
-                color: gradient.colors.first.withOpacity(isSelected ? 0.45 : 0.25),
-                blurRadius: isSelected ? 14 : 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Text(
-                      title,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 18),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+    return _KpiHoverCard(
+      id: id,
+      title: title,
+      value: value,
+      subtitle: subtitle,
+      icon: icon,
+      gradient: gradient,
+      isSelected: isSelected,
+      onTap: () {
+        setState(() {
+          filterStatus = isSelected && id != "all" ? "all" : id;
+        });
+      },
     );
   }
 
@@ -827,120 +772,123 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
       statusColor = const Color(0xFFEF4444);
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 40,
-            child: Text("$index", style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
-          ),
-          Expanded(
-            flex: 3,
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: statusColor.withOpacity(0.12),
-                  child: Text(
-                    s.name.isNotEmpty ? s.name[0].toUpperCase() : "A",
-                    style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 13),
+    return _HoverTableRow(
+      accentColor: statusColor,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 40,
+              child: Text("$index", style: const TextStyle(fontSize: 13, color: Color(0xFF94A3B8))),
+            ),
+            Expanded(
+              flex: 3,
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: statusColor.withOpacity(0.12),
+                    child: Text(
+                      s.name.isNotEmpty ? s.name[0].toUpperCase() : "A",
+                      style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 13),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    s.name,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
-                    overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      s.name,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF1E293B)),
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                s.className,
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
+                ],
               ),
             ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              "\$${paid.toStringAsFixed(0)}",
-              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              "\$${debt.toStringAsFixed(0)}",
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: debt > 0 ? const Color(0xFFEF4444) : const Color(0xFF94A3B8),
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Align(
-              alignment: Alignment.centerLeft,
+            Expanded(
+              flex: 2,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withOpacity(0.3)),
+                  color: const Color(0xFFF1F5F9),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  statusText,
-                  style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+                  s.className,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF475569)),
                 ),
               ),
             ),
-          ),
-          SizedBox(
-            width: 140,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () => _pay(s),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF10B981),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    minimumSize: Size.zero,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.add_rounded, size: 14),
-                      SizedBox(width: 4),
-                      Text("Bixi", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 6),
-                IconButton(
-                  tooltip: "Daabac Rasiidh",
-                  icon: const Icon(Icons.print_rounded, size: 20, color: Color(0xFF64748B)),
-                  onPressed: () => _printReceipt(s),
-                ),
-              ],
+            Expanded(
+              flex: 2,
+              child: Text(
+                "\$${paid.toStringAsFixed(0)}",
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF10B981)),
+              ),
             ),
-          ),
-        ],
+            Expanded(
+              flex: 2,
+              child: Text(
+                "\$${debt.toStringAsFixed(0)}",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: debt > 0 ? const Color(0xFFEF4444) : const Color(0xFF94A3B8),
+                ),
+              ),
+            ),
+            Expanded(
+              flex: 2,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: statusColor.withOpacity(0.3)),
+                  ),
+                  child: Text(
+                    statusText,
+                    style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 140,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => _pay(s),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF10B981),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.add_rounded, size: 14),
+                        SizedBox(width: 4),
+                        Text("Bixi", style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    tooltip: "Daabac Rasiidh",
+                    icon: const Icon(Icons.print_rounded, size: 20, color: Color(0xFF64748B)),
+                    onPressed: () => _printReceipt(s),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1060,6 +1008,153 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _KpiHoverCard extends StatefulWidget {
+  final String id;
+  final String title;
+  final String value;
+  final String subtitle;
+  final IconData icon;
+  final LinearGradient gradient;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _KpiHoverCard({
+    required this.id,
+    required this.title,
+    required this.value,
+    required this.subtitle,
+    required this.icon,
+    required this.gradient,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  State<_KpiHoverCard> createState() => _KpiHoverCardState();
+}
+
+class _KpiHoverCardState extends State<_KpiHoverCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          transform: _isHovered
+              ? (Matrix4.identity()..translate(0.0, -5.0, 0.0))
+              : Matrix4.identity(),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: widget.gradient,
+            borderRadius: BorderRadius.circular(16),
+            border: widget.isSelected
+                ? Border.all(color: Colors.white, width: 2.5)
+                : _isHovered
+                    ? Border.all(color: Colors.white.withOpacity(0.6), width: 1.5)
+                    : null,
+            boxShadow: [
+              BoxShadow(
+                color: widget.gradient.colors.first.withOpacity(widget.isSelected ? 0.5 : (_isHovered ? 0.45 : 0.22)),
+                blurRadius: widget.isSelected || _isHovered ? 18 : 8,
+                spreadRadius: _isHovered ? 2 : 0,
+                offset: Offset(0, _isHovered ? 6 : 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Flexible(
+                    child: Text(
+                      widget.title,
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  AnimatedScale(
+                    scale: _isHovered ? 1.15 : 1.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(widget.icon, color: Colors.white, size: 18),
+                    ),
+                  ),
+                ],
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.value,
+                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    widget.subtitle,
+                    style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HoverTableRow extends StatefulWidget {
+  final Widget child;
+  final Color accentColor;
+
+  const _HoverTableRow({required this.child, required this.accentColor});
+
+  @override
+  State<_HoverTableRow> createState() => _HoverTableRowState();
+}
+
+class _HoverTableRowState extends State<_HoverTableRow> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOut,
+        decoration: BoxDecoration(
+          color: _isHovered ? const Color(0xFFF1F5F9).withOpacity(0.65) : Colors.white,
+          border: Border(
+            left: BorderSide(
+              color: _isHovered ? widget.accentColor : Colors.transparent,
+              width: 4,
+            ),
+          ),
+        ),
+        child: widget.child,
       ),
     );
   }

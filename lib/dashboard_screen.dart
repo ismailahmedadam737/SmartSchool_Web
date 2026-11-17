@@ -1090,17 +1090,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             scrollDirection: Axis.horizontal,
             itemCount: _bannerImages.length,
             itemBuilder: (context, index) {
-              return Container(
-                width: 300,
-                margin: const EdgeInsets.only(right: 20),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(20),
-                  color: cardColor,
-                  boxShadow: const [
-                    BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
-                  ],
-                ),
-                child: Stack(
+              return _InteractiveHoverCard(
+                child: Container(
+                  width: 300,
+                  margin: const EdgeInsets.only(right: 20),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: cardColor,
+                    boxShadow: const [
+                      BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 4)),
+                    ],
+                  ),
+                  child: Stack(
                   children: [
                     Positioned.fill(
                       child: ClipRRect(
@@ -1140,8 +1141,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                   ],
                 ),
-              );
-            },
+              ),
+            );
+          },
           ),
         ),
       ],
@@ -1312,97 +1314,101 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
  Widget _lineChartCard() {
-    return Container(
-      height: 255,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15)],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text("Student Growth", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF2C3E50))),
-          const SizedBox(height: 30),
-          Expanded(
-            child: LineChart(
-              LineChartData(
-                gridData: const FlGridData(show: true, drawVerticalLine: false),
-                titlesData: FlTitlesData(
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      getTitlesWidget: (value, meta) {
-                        switch (value.toInt()) {
-                          case 1: return const Text('Jan');
-                          case 3: return const Text('Mar');
-                          case 5: return const Text('May');
-                          case 7: return const Text('Jul');
-                          case 9: return const Text('Sep');
-                          case 11: return const Text('Nov');
-                        }
-                        return const Text('');
-                      },
+    return _InteractiveHoverCard(
+      child: Container(
+        height: 255,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 15)],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Student Growth", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+            const SizedBox(height: 30),
+            Expanded(
+              child: LineChart(
+                LineChartData(
+                  gridData: const FlGridData(show: true, drawVerticalLine: false),
+                  titlesData: FlTitlesData(
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          switch (value.toInt()) {
+                            case 1: return const Text('Jan');
+                            case 3: return const Text('Mar');
+                            case 5: return const Text('May');
+                            case 7: return const Text('Jul');
+                            case 9: return const Text('Sep');
+                            case 11: return const Text('Nov');
+                          }
+                          return const Text('');
+                        },
+                      ),
                     ),
                   ),
+                  borderData: FlBorderData(show: false),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: const [
+                        FlSpot(1, 3000),
+                        FlSpot(3, 4500),
+                        FlSpot(5, 4000),
+                        FlSpot(7, 7000),
+                        FlSpot(9, 6500),
+                        FlSpot(11, 9500),
+                      ],
+                      isCurved: true,
+                      gradient: const LinearGradient(colors: [Color(0xFFFF512F), Color(0xFFDD2476)]),
+                      barWidth: 4,
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(colors: [const Color(0xFFFF512F).withOpacity(0.2), const Color(0xFFDD2476).withOpacity(0.0)]),
+                      ),
+                    ),
+                  ],
                 ),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: const [
-                      FlSpot(1, 3000),
-                      FlSpot(3, 4500),
-                      FlSpot(5, 4000),
-                      FlSpot(7, 7000),
-                      FlSpot(9, 6500),
-                      FlSpot(11, 9500),
-                    ],
-                    isCurved: true,
-                    gradient: const LinearGradient(colors: [Color(0xFFFF512F), Color(0xFFDD2476)]),
-                    barWidth: 4,
-                    belowBarData: BarAreaData(
-                      show: true,
-                      gradient: LinearGradient(colors: [const Color(0xFFFF512F).withOpacity(0.2), const Color(0xFFDD2476).withOpacity(0.0)]),
-                    ),
-                  ),
-                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-Widget _buildPieChart() {
-  return Container(
-    height: 255,
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]),
-    child: Column(children: [
-      Text("Class Distribution", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
-      Expanded(
-        child: PieChart(PieChartData(
-          sectionsSpace: 0,
-          centerSpaceRadius: 50,
-          sections: [
-            PieChartSectionData(color: Colors.lightBlue, value: 40, title: '', radius: 30),
-            PieChartSectionData(color: Colors.green, value: 30, title: '', radius: 30),
-            PieChartSectionData(color: Colors.redAccent, value: 30, title: '', radius: 30),
-          ],
-        )),
-      ),
-      const Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
-        Text("● Students", style: TextStyle(color: Colors.lightBlue)),
-        Text("● Classes", style: TextStyle(color: Colors.green)),
-        Text("● Teachers", style: TextStyle(color: Colors.redAccent)),
-      ])
-    ]),
+ Widget _buildPieChart() {
+  return _InteractiveHoverCard(
+    child: Container(
+      height: 255,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(20), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 10)]),
+      child: Column(children: [
+        Text("Class Distribution", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textColor)),
+        Expanded(
+          child: PieChart(PieChartData(
+            sectionsSpace: 0,
+            centerSpaceRadius: 50,
+            sections: [
+              PieChartSectionData(color: Colors.lightBlue, value: 40, title: '', radius: 30),
+              PieChartSectionData(color: Colors.green, value: 30, title: '', radius: 30),
+              PieChartSectionData(color: Colors.redAccent, value: 30, title: '', radius: 30),
+            ],
+          )),
+        ),
+        const Row(mainAxisAlignment: MainAxisAlignment.spaceAround, children: [
+          Text("● Students", style: TextStyle(color: Colors.lightBlue)),
+          Text("● Classes", style: TextStyle(color: Colors.green)),
+          Text("● Teachers", style: TextStyle(color: Colors.redAccent)),
+        ])
+      ]),
+    ),
   );
-}
+ }
 
   List<Map<String, dynamic>> _getNavItemsForRole() {
     String r = activeRole.toLowerCase();
@@ -1651,27 +1657,219 @@ Widget _buildPieChart() {
     );
   }
 
-Widget _navItem(IconData icon, String title) {
-  bool isActive = selectedMenu == title;
-  return ListTile(
-    onTap: () {
-      if (Navigator.canPop(context)) {
-        Navigator.pop(context);
-      }
-      if (title == "Log Out") {
-        _performLogout();
-      } else {
-        setState(() {
-          selectedMenu = title;
-          if (title == "Ogeysiisyada") {
-            _hasViewedAnnouncements = true;
-          }
-        });
-      }
-    },
-    leading: Icon(icon, color: isActive ? Colors.cyanAccent : Colors.white60),
-    title: Text(title, style: TextStyle(color: isActive ? Colors.white : Colors.white60)),
-    tileColor: isActive ? Colors.white.withValues(alpha: 0.05) : Colors.transparent
-  );
+  Widget _navItem(IconData icon, String title) {
+    bool isActive = selectedMenu == title;
+    return _SidebarNavItem(
+      icon: icon,
+      title: title,
+      isActive: isActive,
+      onTap: () {
+        if (Navigator.canPop(context)) {
+          Navigator.pop(context);
+        }
+        if (title == "Log Out") {
+          _performLogout();
+        } else {
+          setState(() {
+            selectedMenu = title;
+            if (title == "Ogeysiisyada") {
+              _hasViewedAnnouncements = true;
+            }
+          });
+        }
+      },
+    );
+  }
 }
+
+class _SidebarNavItem extends StatefulWidget {
+  final IconData icon;
+  final String title;
+  final bool isActive;
+  final VoidCallback onTap;
+
+  const _SidebarNavItem({
+    required this.icon,
+    required this.title,
+    required this.isActive,
+    required this.onTap,
+  });
+
+  @override
+  State<_SidebarNavItem> createState() => _SidebarNavItemState();
+}
+
+class _SidebarNavItemState extends State<_SidebarNavItem> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isLogout = widget.title == "Log Out";
+    final Color activeColor = isLogout ? Colors.redAccent : const Color(0xFF00D2FF);
+
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutCubic,
+          margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+          padding: EdgeInsets.only(
+            left: _isHovered && !widget.isActive ? 16 : 12,
+            right: 12,
+            top: 10,
+            bottom: 10,
+          ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            gradient: widget.isActive
+                ? LinearGradient(
+                    colors: [
+                      activeColor.withOpacity(0.22),
+                      const Color(0xFF6C63FF).withOpacity(0.08),
+                    ],
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                  )
+                : _isHovered
+                    ? LinearGradient(
+                        colors: [
+                          activeColor.withOpacity(0.12),
+                          Colors.white.withOpacity(0.02),
+                        ],
+                      )
+                    : null,
+            border: widget.isActive
+                ? Border.all(color: activeColor.withOpacity(0.4), width: 1)
+                : _isHovered
+                    ? Border.all(color: activeColor.withOpacity(0.2), width: 1)
+                    : null,
+            boxShadow: widget.isActive
+                ? [
+                    BoxShadow(
+                      color: activeColor.withOpacity(0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : _isHovered
+                    ? [
+                        BoxShadow(
+                          color: activeColor.withOpacity(0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+          ),
+          child: Row(
+            children: [
+              // Glowing accent pill on left
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: widget.isActive ? 4 : (_isHovered ? 3 : 0),
+                height: widget.isActive ? 20 : (_isHovered ? 14 : 0),
+                margin: EdgeInsets.only(right: widget.isActive || _isHovered ? 8 : 0),
+                decoration: BoxDecoration(
+                  color: activeColor,
+                  borderRadius: BorderRadius.circular(4),
+                  boxShadow: widget.isActive
+                      ? [
+                          BoxShadow(
+                            color: activeColor,
+                            blurRadius: 6,
+                          ),
+                        ]
+                      : null,
+                ),
+              ),
+              AnimatedScale(
+                scale: widget.isActive ? 1.1 : (_isHovered ? 1.08 : 1.0),
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  widget.icon,
+                  size: 20,
+                  color: widget.isActive
+                      ? activeColor
+                      : _isHovered
+                          ? Colors.white
+                          : Colors.white60,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: widget.isActive
+                        ? FontWeight.bold
+                        : _isHovered
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                    color: widget.isActive
+                        ? Colors.white
+                        : _isHovered
+                            ? Colors.white
+                            : Colors.white70,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+              if (widget.isActive)
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 12,
+                  color: activeColor.withOpacity(0.8),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InteractiveHoverCard extends StatefulWidget {
+  final Widget child;
+  const _InteractiveHoverCard({required this.child});
+
+  @override
+  State<_InteractiveHoverCard> createState() => _InteractiveHoverCardState();
+}
+
+class _InteractiveHoverCardState extends State<_InteractiveHoverCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        transform: _isHovered
+            ? (Matrix4.identity()..translate(0.0, -4.0, 0.0))
+            : Matrix4.identity(),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: _isHovered
+              ? [
+                  BoxShadow(
+                    color: const Color(0xFF2575FC).withOpacity(0.14),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                    offset: const Offset(0, 8),
+                  ),
+                ]
+              : null,
+        ),
+        child: widget.child,
+      ),
+    );
+  }
 }
