@@ -440,7 +440,7 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
     );
   }
 
-  // --- 1. KPI SUMMARY CARDS ---
+  // --- 1. KPI SUMMARY CARDS (Clean, Soft & Modern with Bottom Shade) ---
   Widget _buildSummaryCards(bool isDesktop) {
     final cards = [
       _buildKpiCard(
@@ -449,11 +449,8 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
         value: "$countTotalStudents",
         subtitle: "Wadarta: \$${sumTotalPaid.toStringAsFixed(0)}",
         icon: Icons.groups_rounded,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        accentColor: const Color(0xFF2563EB), // Vibrant Blue
+        softBgColor: const Color(0xFFEFF6FF), // Soft Blue tint
       ),
       _buildKpiCard(
         id: "paid",
@@ -461,11 +458,8 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
         value: "$countAllPaid",
         subtitle: "La bixiyay: \$${sumTotalPaid.toStringAsFixed(0)}",
         icon: Icons.verified_rounded,
-        gradient: const LinearGradient(
-          colors: [Color(0xFF10B981), Color(0xFF047857)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        accentColor: const Color(0xFF10B981), // Emerald Mint
+        softBgColor: const Color(0xFFECFDF5), // Soft Mint tint
       ),
       _buildKpiCard(
         id: "debt",
@@ -473,11 +467,8 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
         value: "$countDebtStudents",
         subtitle: "Baaqiga: \$${sumTotalDebt.toStringAsFixed(0)}",
         icon: Icons.pending_actions_rounded,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF59E0B), Color(0xFFD97706)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        accentColor: const Color(0xFFF59E0B), // Warm Amber
+        softBgColor: const Color(0xFFFFFBEB), // Soft Amber tint
       ),
       _buildKpiCard(
         id: "unpaid",
@@ -485,11 +476,8 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
         value: "$countUnpaidStudents",
         subtitle: "Weli waxba ma bixin",
         icon: Icons.money_off_rounded,
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEF4444), Color(0xFFB91C1C)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        accentColor: const Color(0xFFEF4444), // Coral Red
+        softBgColor: const Color(0xFFFEF2F2), // Soft Red tint
       ),
     ];
 
@@ -516,7 +504,8 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
     required String value,
     required String subtitle,
     required IconData icon,
-    required LinearGradient gradient,
+    required Color accentColor,
+    required Color softBgColor,
   }) {
     final bool isSelected = filterStatus == id;
     return _KpiHoverCard(
@@ -525,7 +514,8 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
       value: value,
       subtitle: subtitle,
       icon: icon,
-      gradient: gradient,
+      accentColor: accentColor,
+      softBgColor: softBgColor,
       isSelected: isSelected,
       onTap: () {
         setState(() {
@@ -1030,7 +1020,8 @@ class _KpiHoverCard extends StatefulWidget {
   final String value;
   final String subtitle;
   final IconData icon;
-  final LinearGradient gradient;
+  final Color accentColor;
+  final Color softBgColor;
   final bool isSelected;
   final VoidCallback onTap;
 
@@ -1040,7 +1031,8 @@ class _KpiHoverCard extends StatefulWidget {
     required this.value,
     required this.subtitle,
     required this.icon,
-    required this.gradient,
+    required this.accentColor,
+    required this.softBgColor,
     required this.isSelected,
     required this.onTap,
   });
@@ -1054,6 +1046,8 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
 
   @override
   Widget build(BuildContext context) {
+    final bool highlighted = widget.isSelected || _isHovered;
+
     return MouseRegion(
       cursor: SystemMouseCursors.click,
       onEnter: (_) => setState(() => _isHovered = true),
@@ -1066,68 +1060,171 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
           transform: _isHovered
               ? (Matrix4.identity()..translate(0.0, -5.0, 0.0))
               : Matrix4.identity(),
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            gradient: widget.gradient,
-            borderRadius: BorderRadius.circular(16),
-            border: widget.isSelected
-                ? Border.all(color: Colors.white, width: 2.5)
-                : _isHovered
-                    ? Border.all(color: Colors.white.withOpacity(0.6), width: 1.5)
-                    : null,
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: widget.isSelected
+                  ? widget.accentColor
+                  : _isHovered
+                      ? widget.accentColor.withOpacity(0.4)
+                      : const Color(0xFFE2E8F0),
+              width: widget.isSelected ? 2.0 : 1.2,
+            ),
             boxShadow: [
+              // Ambient soft shadow
               BoxShadow(
-                color: widget.gradient.colors.first.withOpacity(widget.isSelected ? 0.5 : (_isHovered ? 0.45 : 0.22)),
-                blurRadius: widget.isSelected || _isHovered ? 18 : 8,
-                spreadRadius: _isHovered ? 2 : 0,
-                offset: Offset(0, _isHovered ? 6 : 4),
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 10,
+                offset: const Offset(0, 3),
+              ),
+              // Soft bottom colored glow shadow (shade hoose)
+              BoxShadow(
+                color: widget.accentColor.withOpacity(highlighted ? 0.22 : 0.09),
+                blurRadius: highlighted ? 22 : 12,
+                spreadRadius: highlighted ? 1 : 0,
+                offset: Offset(0, highlighted ? 8 : 5),
               ),
             ],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Flexible(
-                    child: Text(
-                      widget.title,
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  AnimatedScale(
-                    scale: _isHovered ? 1.15 : 1.0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(17),
+            child: Stack(
+              children: [
+                // Soft bottom gradient shade
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 48,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          widget.accentColor.withOpacity(0.0),
+                          widget.accentColor.withOpacity(highlighted ? 0.09 : 0.04),
+                        ],
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
                       ),
-                      child: Icon(widget.icon, color: Colors.white, size: 18),
                     ),
                   ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    widget.value,
-                    style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+
+                // Card Main Content
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Top row: Title + Icon Badge
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Row(
+                              children: [
+                                if (widget.isSelected)
+                                  Container(
+                                    width: 7,
+                                    height: 7,
+                                    margin: const EdgeInsets.only(right: 6),
+                                    decoration: BoxDecoration(
+                                      color: widget.accentColor,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                Flexible(
+                                  child: Text(
+                                    widget.title,
+                                    style: TextStyle(
+                                      color: widget.isSelected
+                                          ? const Color(0xFF0F172A)
+                                          : const Color(0xFF64748B),
+                                      fontSize: 13,
+                                      fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          AnimatedScale(
+                            scale: _isHovered ? 1.12 : 1.0,
+                            duration: const Duration(milliseconds: 200),
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: widget.softBgColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: widget.accentColor.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Icon(widget.icon, color: widget.accentColor, size: 18),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Middle: Value (Count)
+                      Text(
+                        widget.value,
+                        style: const TextStyle(
+                          color: Color(0xFF0F172A),
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+
+                      // Bottom: Subtitle with soft badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        decoration: BoxDecoration(
+                          color: widget.softBgColor,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: widget.accentColor.withOpacity(0.25),
+                            width: 0.8,
+                          ),
+                        ),
+                        child: Text(
+                          widget.subtitle,
+                          style: TextStyle(
+                            color: widget.accentColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    widget.subtitle,
-                    style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: 11),
-                    overflow: TextOverflow.ellipsis,
+                ),
+
+                // Bottom Colored Accent Strip (Shade-ka hoose ee aadka u quruxda badan)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 3.5,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          widget.accentColor,
+                          widget.accentColor.withOpacity(0.5),
+                        ],
+                      ),
+                    ),
                   ),
-                ],
-              ),
-            ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
