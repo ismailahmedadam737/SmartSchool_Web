@@ -38,7 +38,7 @@ class EliteSchoolApp extends StatelessWidget {
         pageTransitionsTheme: PageTransitionsTheme(
           builders: {
             TargetPlatform.android: const ZoomPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(), // Laga saaray const-ka
             TargetPlatform.windows: const ZoomPageTransitionsBuilder(),
             TargetPlatform.macOS: const ZoomPageTransitionsBuilder(),
             TargetPlatform.linux: const ZoomPageTransitionsBuilder(),
