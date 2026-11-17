@@ -1020,6 +1020,7 @@ class _KpiHoverCard extends StatefulWidget {
   final String value;
   final String subtitle;
   final IconData icon;
+  final LinearGradient? gradient;
   final Color accentColor;
   final Color softBgColor;
   final bool isSelected;
@@ -1035,6 +1036,7 @@ class _KpiHoverCard extends StatefulWidget {
     required this.softBgColor,
     required this.isSelected,
     required this.onTap,
+    this.gradient,
   });
 
   @override

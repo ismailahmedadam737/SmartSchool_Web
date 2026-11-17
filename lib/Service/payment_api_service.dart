@@ -23,6 +23,7 @@ class PaymentApiService {
 
     try {
       final list = await getAllPayments();
+      if (list.isEmpty) return;
       final Map<int, double> pMap = {};
       final Map<int, double> dMap = {};
       final Map<String, double> pNameMap = {};
@@ -116,12 +117,16 @@ class PaymentApiService {
 
   // Method-kan ayaa soo celinaya dhammaan lacag bixinta ardayda oo dhan halmar
   static Future<List<dynamic>> getAllPayments() async {
-    final response = await http.get(Uri.parse('$baseUrl/payments/all'));
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Failed to load all payments');
-    }
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/payments/all'))
+          .timeout(const Duration(seconds: 4));
+      if (response.statusCode == 200) {
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) return decoded;
+      }
+    } catch (_) {}
+    return [];
   }
 
   // Method-kan ayaa tirtiraya dhammaan lacagaha server-ka marka Reset All la riixo
