@@ -35,13 +35,13 @@ class EliteSchoolApp extends StatelessWidget {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         ),
-        pageTransitionsTheme: const PageTransitionsTheme(
+        pageTransitionsTheme: PageTransitionsTheme(
           builders: {
-            TargetPlatform.android: ZoomPageTransitionsBuilder(),
+            TargetPlatform.android: const ZoomPageTransitionsBuilder(),
             TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
-            TargetPlatform.windows: ZoomPageTransitionsBuilder(),
-            TargetPlatform.macOS: ZoomPageTransitionsBuilder(),
-            TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+            TargetPlatform.windows: const ZoomPageTransitionsBuilder(),
+            TargetPlatform.macOS: const ZoomPageTransitionsBuilder(),
+            TargetPlatform.linux: const ZoomPageTransitionsBuilder(),
           },
         ),
       ),
