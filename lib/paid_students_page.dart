@@ -29,7 +29,21 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
   @override
   void initState() {
     super.initState();
-    // Haddii cache hore u jiro, isla markiiba ku bilow (0ms Instant Load)
+    // 1. Soo saar ardayda iyo fasallada isla markiiba (0ms Instant Load)
+    final immediateStudents = ApiService.getLocalStudentsImmediate();
+    if (immediateStudents.isNotEmpty) {
+      allStudents = immediateStudents;
+      final classesSet = immediateStudents
+          .map((s) => s.className.trim())
+          .where((c) => c.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      classesList = ["All", ...classesSet];
+      isLoading = false;
+    }
+
+    // 2. Ku bilow xogta cache-ka haddii ay jirto (0ms Instant Load)
     if (PaymentApiService.cachedPaidByStudentId.isNotEmpty) {
       studentPaidMap = Map<int, double>.from(PaymentApiService.cachedPaidByStudentId);
       studentDebtMap = Map<int, double>.from(PaymentApiService.cachedDebtByStudentId);
@@ -45,8 +59,8 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
   }
 
   Future<void> _loadAllData() async {
-    // Kaliya loading muuji haddii ardaydu eber tahay
-    if (allStudents.isEmpty && studentPaidMap.isEmpty) {
+    // Kaliya loading muuji haddii xogtu gebi ahaanba eber tahay
+    if (allStudents.isEmpty) {
       setState(() => isLoading = true);
     }
     try {
@@ -59,22 +73,33 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
       if (!mounted) return;
 
       final students = results[0] as List<StudentModel>;
-
-      // Fasallada kala sooc
-      final classesSet = <String>{};
-      for (var s in students) {
-        if (s.className.trim().isNotEmpty) {
-          classesSet.add(s.className.trim());
+      if (students.isNotEmpty) {
+        final classesSet = <String>{};
+        for (var s in students) {
+          if (s.className.trim().isNotEmpty) {
+            classesSet.add(s.className.trim());
+          }
         }
+        final sortedClasses = classesSet.toList()..sort();
+        allStudents = students;
+        classesList = ["All", ...sortedClasses];
       }
-      final sortedClasses = classesSet.toList()..sort();
 
       Map<int, double> paidMap = Map<int, double>.from(PaymentApiService.cachedPaidByStudentId);
       Map<int, double> debtMap = Map<int, double>.from(PaymentApiService.cachedDebtByStudentId);
 
-      // Haddii syncAllPayments eber tahay, fallback in parallel
-      if (paidMap.isEmpty && students.isNotEmpty) {
-        final futures = students.where((s) => s.id != null).map((s) async {
+      // Isla markiiba muuji ardayda UI-ga iyadoon la sugin (0ms delay)
+      if (mounted) {
+        setState(() {
+          studentPaidMap = paidMap;
+          studentDebtMap = debtMap;
+          isLoading = false;
+        });
+      }
+
+      // Haddii syncAllPayments eber tahay, fallback in background si xawaare sare leh
+      if (paidMap.isEmpty && allStudents.isNotEmpty) {
+        final futures = allStudents.where((s) => s.id != null).map((s) async {
           try {
             final payments = await PaymentApiService.getPaymentsByStudent(s.id!);
             double totalPaid = 0;
@@ -83,21 +108,15 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
               totalPaid += double.tryParse(p['amount']?.toString() ?? '0') ?? 0;
               totalDebt += double.tryParse(p['debt']?.toString() ?? '0') ?? 0;
             }
-            paidMap[s.id!] = totalPaid;
-            debtMap[s.id!] = totalDebt;
+            if (mounted) {
+              setState(() {
+                studentPaidMap[s.id!] = totalPaid;
+                studentDebtMap[s.id!] = totalDebt;
+              });
+            }
           } catch (_) {}
         });
         await Future.wait(futures);
-      }
-
-      if (mounted) {
-        setState(() {
-          allStudents = students;
-          classesList = ["All", ...sortedClasses];
-          studentPaidMap = paidMap;
-          studentDebtMap = debtMap;
-          isLoading = false;
-        });
       }
     } catch (e) {
       debugPrint("Cilad xogta lacagaha: $e");
@@ -1063,29 +1082,29 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
               ? (Matrix4.identity()..translate(0.0, -5.0, 0.0))
               : Matrix4.identity(),
           decoration: BoxDecoration(
-            color: Colors.white,
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              stops: const [0.0, 0.40, 1.0],
+              colors: [
+                widget.softBgColor, // Xagga sare: khafiif (soft & clean)
+                widget.accentColor.withOpacity(0.35), // Dhexe: kala-guur jilicsan
+                widget.accentColor.withOpacity(0.92), // Xagga hoose: rasiin (rich & vibrant)
+              ],
+            ),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
               color: widget.isSelected
-                  ? widget.accentColor
-                  : _isHovered
-                      ? widget.accentColor.withOpacity(0.4)
-                      : const Color(0xFFE2E8F0),
-              width: widget.isSelected ? 2.0 : 1.2,
+                  ? Colors.white
+                  : widget.accentColor.withOpacity(0.35),
+              width: widget.isSelected ? 2.5 : 1.2,
             ),
             boxShadow: [
-              // Ambient soft shadow
               BoxShadow(
-                color: Colors.black.withOpacity(0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 3),
-              ),
-              // Soft bottom colored glow shadow (shade hoose)
-              BoxShadow(
-                color: widget.accentColor.withOpacity(highlighted ? 0.22 : 0.09),
+                color: widget.accentColor.withOpacity(highlighted ? 0.35 : 0.18),
                 blurRadius: highlighted ? 22 : 12,
                 spreadRadius: highlighted ? 1 : 0,
-                offset: Offset(0, highlighted ? 8 : 5),
+                offset: Offset(0, highlighted ? 7 : 4),
               ),
             ],
           ),
@@ -1093,26 +1112,6 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
             borderRadius: BorderRadius.circular(17),
             child: Stack(
               children: [
-                // Soft bottom gradient shade
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 48,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          widget.accentColor.withOpacity(0.0),
-                          widget.accentColor.withOpacity(highlighted ? 0.09 : 0.04),
-                        ],
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                      ),
-                    ),
-                  ),
-                ),
-
                 // Card Main Content
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -1120,7 +1119,7 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Top row: Title + Icon Badge
+                      // Top row: Title + Icon Badge (Xagga sare ee khafiifka ah)
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -1132,20 +1131,18 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
                                     width: 7,
                                     height: 7,
                                     margin: const EdgeInsets.only(right: 6),
-                                    decoration: BoxDecoration(
-                                      color: widget.accentColor,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
                                       shape: BoxShape.circle,
                                     ),
                                   ),
                                 Flexible(
                                   child: Text(
                                     widget.title,
-                                    style: TextStyle(
-                                      color: widget.isSelected
-                                          ? const Color(0xFF0F172A)
-                                          : const Color(0xFF64748B),
+                                    style: const TextStyle(
+                                      color: Color(0xFF0F172A),
                                       fontSize: 13,
-                                      fontWeight: widget.isSelected ? FontWeight.bold : FontWeight.w600,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1157,14 +1154,16 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
                             scale: _isHovered ? 1.12 : 1.0,
                             duration: const Duration(milliseconds: 200),
                             child: Container(
-                              padding: const EdgeInsets.all(8),
+                              padding: const EdgeInsets.all(7),
                               decoration: BoxDecoration(
-                                color: widget.softBgColor,
+                                color: Colors.white,
                                 shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: widget.accentColor.withOpacity(0.2),
-                                  width: 1,
-                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: widget.accentColor.withOpacity(0.2),
+                                    blurRadius: 6,
+                                  ),
+                                ],
                               ),
                               child: Icon(widget.icon, color: widget.accentColor, size: 18),
                             ),
@@ -1172,32 +1171,35 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
                         ],
                       ),
 
-                      // Middle: Value (Count)
+                      // Middle: Value / Tirada (Xagga hoose ee rasiinka ah - Cadaanka ifaya)
                       Text(
                         widget.value,
                         style: const TextStyle(
-                          color: Color(0xFF0F172A),
-                          fontSize: 26,
-                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                          fontSize: 27,
+                          fontWeight: FontWeight.w900,
                           letterSpacing: -0.5,
+                          shadows: [
+                            Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 1)),
+                          ],
                         ),
                       ),
 
-                      // Bottom: Subtitle with soft badge
+                      // Bottom: Subtitle with frosted white badge
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
-                          color: widget.softBgColor,
+                          color: Colors.white.withOpacity(0.22),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: widget.accentColor.withOpacity(0.25),
+                            color: Colors.white.withOpacity(0.35),
                             width: 0.8,
                           ),
                         ),
                         child: Text(
                           widget.subtitle,
-                          style: TextStyle(
-                            color: widget.accentColor,
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1219,7 +1221,7 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
                       gradient: LinearGradient(
                         colors: [
                           widget.accentColor,
-                          widget.accentColor.withOpacity(0.5),
+                          widget.accentColor.withOpacity(0.6),
                         ],
                       ),
                     ),

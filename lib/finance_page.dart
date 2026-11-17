@@ -28,7 +28,23 @@ class _FinancePageState extends State<FinancePage> {
   @override
   void initState() {
     super.initState();
-    // Ku bilow xogta cache-ka haddii ay jirto (0ms - Instant display)
+    // 1. Soo saar ardayda iyo fasallada isla markiiba (0ms Instant Load)
+    final immediateStudents = ApiService.getLocalStudentsImmediate();
+    if (immediateStudents.isNotEmpty) {
+      students = immediateStudents;
+      final classesSet = immediateStudents
+          .map((s) => s.className.trim())
+          .where((c) => c.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+      if (classesSet.isNotEmpty) {
+        classes = classesSet;
+        selectedClass = classesSet.first;
+      }
+    }
+
+    // 2. Ku bilow xogta lacagaha ee cache-ka haddii ay jirto (0ms - Instant display)
     if (PaymentApiService.cachedPaidByName.isNotEmpty) {
       studentPaid = Map<String, double>.from(PaymentApiService.cachedPaidByName);
       studentDept = Map<String, double>.from(PaymentApiService.cachedDebtByName);

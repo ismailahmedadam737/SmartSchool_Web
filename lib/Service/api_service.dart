@@ -116,13 +116,39 @@ class ApiService {
     return null;
   }
 
+  static List<StudentModel>? _cachedStudents;
+
+  // Helitaanka ardayda maxalliga ah isla ilbiriqsiga ugu horreeya (0ms Instant Load)
+  static List<StudentModel> getLocalStudentsImmediate() {
+    if (_cachedStudents != null && _cachedStudents!.isNotEmpty) {
+      return List<StudentModel>.from(_cachedStudents!);
+    }
+    String? stored = _readFromStorage('local_students');
+    if (stored != null && stored.isNotEmpty) {
+      try {
+        List<dynamic> list = jsonDecode(stored);
+        final res = list.map((item) => StudentModel.fromJson(item)).toList();
+        if (res.isNotEmpty) {
+          _cachedStudents = res;
+          return List<StudentModel>.from(res);
+        }
+      } catch (_) {}
+    }
+    return List<StudentModel>.from(_localStudents);
+  }
+
   static Future<List<StudentModel>> getAllStudents({int page = 1, int limit = 20}) async {
     List<StudentModel> results = [];
     try {
-      final response = await http.get(Uri.parse("$baseUrl/all?page=$page&limit=$limit"), headers: _headers);
+      final response = await http
+          .get(Uri.parse("$baseUrl/all?page=$page&limit=$limit"), headers: _headers)
+          .timeout(const Duration(seconds: 4));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
         results = data.map((json) => StudentModel.fromJson(json)).toList();
+        if (results.isNotEmpty) {
+          _cachedStudents = results;
+        }
       }
     } catch (e) {
       log("Error fetching remote students: $e");
@@ -255,15 +281,25 @@ class ApiService {
 
   static Future<List<String>> getAllClasses() async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl/classes/all"), headers: _headers);
+      final response = await http
+          .get(Uri.parse("$baseUrl/classes/all"), headers: _headers)
+          .timeout(const Duration(seconds: 3));
       if (response.statusCode == 200) {
         final List<dynamic> data = jsonDecode(response.body);
-        return data.map((c) => c['class_name'].toString()).toList();
+        final list = data.map((c) => c['class_name'].toString()).toList();
+        if (list.isNotEmpty) return list;
       }
-      return [];
-    } catch (e) {
-      return [];
-    }
+    } catch (_) {}
+
+    // Fallback degdeg ah oo ka soo saaraya ardayda maxalliga ah (0ms)
+    final local = getLocalStudentsImmediate();
+    final classesSet = local
+        .map((s) => s.className.trim())
+        .where((c) => c.isNotEmpty)
+        .toSet()
+        .toList()
+      ..sort();
+    return classesSet;
   }
 
   static Future<List<dynamic>> getStudentsByClass(String className) async {
