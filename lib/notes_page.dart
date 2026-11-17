@@ -30,6 +30,16 @@ class _NotesPageState extends State<NotesPage> {
   @override
   void initState() {
     super.initState();
+    // Haddii cache hore u jiro, isla markiiba ku bilow (0ms Instant Load)
+    if (PaymentApiService.cachedDebtByStudentId.isNotEmpty) {
+      for (var entry in PaymentApiService.cachedPaidByStudentId.entries) {
+        studentPaidMap[entry.key.toString()] = entry.value;
+      }
+      for (var entry in PaymentApiService.cachedDebtByStudentId.entries) {
+        studentDebtMap[entry.key.toString()] = entry.value;
+      }
+      isLoading = false;
+    }
     _fetchData();
   }
 
@@ -40,41 +50,68 @@ class _NotesPageState extends State<NotesPage> {
   }
 
   Future<void> _fetchData() async {
-    setState(() => isLoading = true);
+    if (allStudents.isEmpty) {
+      setState(() => isLoading = true);
+    }
     try {
-      final studentsList = await ApiService.getAllStudents();
-      final classList = await ApiService.getAllClasses();
+      final results = await Future.wait([
+        ApiService.getAllStudents(),
+        ApiService.getAllClasses(),
+        PaymentApiService.syncAllPayments(),
+      ]);
 
-      Map<String, double> paidMap = {};
-      Map<String, double> debtMap = {};
+      if (!mounted) return;
+
+      final studentsList = results[0] as List<StudentModel>;
+      final classList = results[1] as List<String>;
+
+      Map<String, double> paidMap = Map<String, double>.from(studentPaidMap);
+      Map<String, double> debtMap = Map<String, double>.from(studentDebtMap);
 
       for (var s in studentsList) {
         int studentId = s.id ?? int.tryParse(s.idString) ?? 0;
-        if (studentId != 0) {
-          try {
-            final payments = await PaymentApiService.getPaymentsByStudent(studentId);
-            double totalPaid = 0;
-            double totalDept = 0;
-            for (var p in payments) {
-              totalPaid += double.tryParse(p['amount']?.toString() ?? '0') ?? 0;
-              totalDept += double.tryParse(p['debt']?.toString() ?? '0') ?? 0;
-            }
-            paidMap[s.idString] = totalPaid;
-            debtMap[s.idString] = totalDept;
-          } catch (_) {}
+        if (PaymentApiService.cachedPaidByStudentId.containsKey(studentId)) {
+          paidMap[s.idString] = PaymentApiService.cachedPaidByStudentId[studentId] ?? 0.0;
+          debtMap[s.idString] = PaymentApiService.cachedDebtByStudentId[studentId] ?? 0.0;
+        } else if (PaymentApiService.cachedPaidByName.containsKey(s.name)) {
+          paidMap[s.idString] = PaymentApiService.cachedPaidByName[s.name] ?? 0.0;
+          debtMap[s.idString] = PaymentApiService.cachedDebtByName[s.name] ?? 0.0;
         }
       }
 
-      setState(() {
-        allStudents = studentsList;
-        classes = classList;
-        studentPaidMap = paidMap;
-        studentDebtMap = debtMap;
-      });
+      // Haddii cache eber tahay, ku soo jiid parallel (degdeg)
+      if (PaymentApiService.cachedDebtByStudentId.isEmpty && studentsList.isNotEmpty) {
+        final futures = studentsList.where((s) => s.id != null).map((s) async {
+          int studentId = s.id ?? int.tryParse(s.idString) ?? 0;
+          if (studentId != 0) {
+            try {
+              final payments = await PaymentApiService.getPaymentsByStudent(studentId);
+              double totalPaid = 0;
+              double totalDept = 0;
+              for (var p in payments) {
+                totalPaid += double.tryParse(p['amount']?.toString() ?? '0') ?? 0;
+                totalDept += double.tryParse(p['debt']?.toString() ?? '0') ?? 0;
+              }
+              paidMap[s.idString] = totalPaid;
+              debtMap[s.idString] = totalDept;
+            } catch (_) {}
+          }
+        });
+        await Future.wait(futures);
+      }
+
+      if (mounted) {
+        setState(() {
+          allStudents = studentsList;
+          classes = classList;
+          studentPaidMap = paidMap;
+          studentDebtMap = debtMap;
+          isLoading = false;
+        });
+      }
     } catch (e) {
       debugPrint("Error loading fee notes data: $e");
-    } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -148,7 +185,7 @@ class _NotesPageState extends State<NotesPage> {
               _buildFilterControls(isMobile: isMobile),
               const SizedBox(height: 15),
               Expanded(
-                child: isLoading
+                child: (isLoading && allStudents.isEmpty)
                     ? const Center(child: CircularProgressIndicator(color: Colors.cyanAccent))
                     : filteredDebtorStudents.isEmpty
                         ? _buildEmptyState()

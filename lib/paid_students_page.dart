@@ -29,6 +29,12 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
   @override
   void initState() {
     super.initState();
+    // Haddii cache hore u jiro, isla markiiba ku bilow (0ms Instant Load)
+    if (PaymentApiService.cachedPaidByStudentId.isNotEmpty) {
+      studentPaidMap = Map<int, double>.from(PaymentApiService.cachedPaidByStudentId);
+      studentDebtMap = Map<int, double>.from(PaymentApiService.cachedDebtByStudentId);
+      isLoading = false;
+    }
     _loadAllData();
   }
 
@@ -39,10 +45,20 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
   }
 
   Future<void> _loadAllData() async {
-    setState(() => isLoading = true);
+    // Kaliya loading muuji haddii ardaydu eber tahay
+    if (allStudents.isEmpty && studentPaidMap.isEmpty) {
+      setState(() => isLoading = true);
+    }
     try {
-      // 1. Soo qaado dhammaan ardayda
-      final students = await ApiService.getAllStudents(limit: 2000);
+      // 1. Soo qaado ardayda iyo lacagaha isku mar (Parallel Fast)
+      final results = await Future.wait([
+        ApiService.getAllStudents(limit: 2000),
+        PaymentApiService.syncAllPayments(),
+      ]);
+
+      if (!mounted) return;
+
+      final students = results[0] as List<StudentModel>;
 
       // Fasallada kala sooc
       final classesSet = <String>{};
@@ -53,25 +69,11 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
       }
       final sortedClasses = classesSet.toList()..sort();
 
-      // 2. Soo qaado dhammaan lacag bixinta halmar (Faster)
-      Map<int, double> paidMap = {};
-      Map<int, double> debtMap = {};
+      Map<int, double> paidMap = Map<int, double>.from(PaymentApiService.cachedPaidByStudentId);
+      Map<int, double> debtMap = Map<int, double>.from(PaymentApiService.cachedDebtByStudentId);
 
-      try {
-        final allPayments = await PaymentApiService.getAllPayments();
-        for (var p in allPayments) {
-          int sId = int.tryParse(p['student_id']?.toString() ?? '0') ?? 0;
-          double amt = double.tryParse(p['amount']?.toString() ?? '0') ?? 0.0;
-          double dbt = double.tryParse(p['debt']?.toString() ?? '0') ?? 0.0;
-
-          paidMap[sId] = (paidMap[sId] ?? 0.0) + amt;
-          // Debt is typically the latest debt record or sum
-          debtMap[sId] = (debtMap[sId] ?? 0.0) + dbt;
-        }
-      } catch (e) {
-        debugPrint("Notice: getAllPayments fallback to individual fetch: $e");
-        if (!mounted) return;
-        // Fallback: Soo jiid xogta arday kasta in parallel
+      // Haddii syncAllPayments eber tahay, fallback in parallel
+      if (paidMap.isEmpty && students.isNotEmpty) {
         final futures = students.where((s) => s.id != null).map((s) async {
           try {
             final payments = await PaymentApiService.getPaymentsByStudent(s.id!);
@@ -387,7 +389,7 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: isLoading
+      body: (isLoading && allStudents.isEmpty)
           ? const Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -411,6 +413,15 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (isLoading)
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 12),
+                          child: LinearProgressIndicator(
+                            color: Color(0xFF10B981),
+                            backgroundColor: Color(0xFFE2E8F0),
+                            minHeight: 3,
+                          ),
+                        ),
                       // 1. KPI SUMMARY CARDS (Dhammaan, Paid, Baaqi, Unpaid)
                       _buildSummaryCards(isDesktop),
                       const SizedBox(height: 20),

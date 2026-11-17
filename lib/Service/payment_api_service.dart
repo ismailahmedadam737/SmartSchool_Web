@@ -5,6 +5,55 @@ import 'package:flutter/foundation.dart'; // Si loo isticmaalo debugPrint
 class PaymentApiService {
   static const String baseUrl = 'https://smartschool-web.onrender.com/api'; 
 
+  // Global In-Memory Caches for super-fast instant rendering (0ms delay)
+  static Map<int, double> cachedPaidByStudentId = {};
+  static Map<int, double> cachedDebtByStudentId = {};
+  static Map<String, double> cachedPaidByName = {};
+  static Map<String, double> cachedDebtByName = {};
+  static DateTime? _lastFetchTime;
+
+  // Single unified method to fetch all payments and update caches in 1 fast call
+  static Future<void> syncAllPayments({bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _lastFetchTime != null &&
+        DateTime.now().difference(_lastFetchTime!).inSeconds < 45 &&
+        cachedPaidByStudentId.isNotEmpty) {
+      return;
+    }
+
+    try {
+      final list = await getAllPayments();
+      final Map<int, double> pMap = {};
+      final Map<int, double> dMap = {};
+      final Map<String, double> pNameMap = {};
+      final Map<String, double> dNameMap = {};
+
+      for (var p in list) {
+        int sId = int.tryParse(p['student_id']?.toString() ?? '0') ?? 0;
+        String sName = (p['student_name'] ?? '').toString().trim();
+        double amt = double.tryParse(p['amount']?.toString() ?? '0') ?? 0.0;
+        double dbt = double.tryParse(p['debt']?.toString() ?? '0') ?? 0.0;
+
+        if (sId != 0) {
+          pMap[sId] = (pMap[sId] ?? 0.0) + amt;
+          dMap[sId] = (dMap[sId] ?? 0.0) + dbt;
+        }
+        if (sName.isNotEmpty) {
+          pNameMap[sName] = (pNameMap[sName] ?? 0.0) + amt;
+          dNameMap[sName] = (dNameMap[sName] ?? 0.0) + dbt;
+        }
+      }
+
+      cachedPaidByStudentId = pMap;
+      cachedDebtByStudentId = dMap;
+      cachedPaidByName = pNameMap;
+      cachedDebtByName = dNameMap;
+      _lastFetchTime = DateTime.now();
+    } catch (e) {
+      debugPrint("syncAllPayments note: $e");
+    }
+  }
+
   static Future<Map<String, dynamic>> addPayment({
     required int studentId,
     required double amount,
@@ -12,6 +61,10 @@ class PaymentApiService {
     required String month,
     required String transport,
   }) async {
+    // Update local cache immediately so UI reflects payment instantly (0ms delay)
+    cachedPaidByStudentId[studentId] = (cachedPaidByStudentId[studentId] ?? 0.0) + amount;
+    cachedDebtByStudentId[studentId] = debt;
+
     final response = await http.post(
       Uri.parse('$baseUrl/payments/add'),
       headers: {"Content-Type": "application/json"},
@@ -73,6 +126,13 @@ class PaymentApiService {
 
   // Method-kan ayaa tirtiraya dhammaan lacagaha server-ka marka Reset All la riixo
   static Future<void> resetAllPayments() async {
+    // Clear in-memory caches instantly
+    cachedPaidByStudentId.clear();
+    cachedDebtByStudentId.clear();
+    cachedPaidByName.clear();
+    cachedDebtByName.clear();
+    _lastFetchTime = null;
+
     final response = await http.delete(
       Uri.parse('$baseUrl/payments/reset-all'), 
       headers: {"Content-Type": "application/json"},

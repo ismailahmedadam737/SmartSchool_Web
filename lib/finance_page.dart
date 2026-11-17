@@ -28,32 +28,71 @@ class _FinancePageState extends State<FinancePage> {
   @override
   void initState() {
     super.initState();
-    loadClasses();
-    loadStudents();
+    // Ku bilow xogta cache-ka haddii ay jirto (0ms - Instant display)
+    if (PaymentApiService.cachedPaidByName.isNotEmpty) {
+      studentPaid = Map<String, double>.from(PaymentApiService.cachedPaidByName);
+      studentDept = Map<String, double>.from(PaymentApiService.cachedDebtByName);
+    }
+    _loadInitialDataFast();
   }
 
-  Future<void> loadClasses() async {
-    final data = await ApiService.getAllClasses();
-    if (!mounted) return;
-    setState(() {
-      classes = data;
-      if (classes.isNotEmpty) selectedClass = classes.first;
-    });
-  }
+  Future<void> _loadInitialDataFast() async {
+    // 1. Soo qaado fasallada iyo ardayda isku mar (Parallel Fast Fetch)
+    final results = await Future.wait([
+      ApiService.getAllClasses(),
+      ApiService.getAllStudents(),
+      PaymentApiService.syncAllPayments(),
+    ]);
 
-  Future<void> loadStudents() async {
-    final data = await ApiService.getAllStudents();
     if (!mounted) return;
-    setState(() {
-      students = data;
-    });
-    
-    // Xogta ka soo jiid database-ka si aysan u tirtirmin
-    for (var s in students) {
-      if (!mounted) return;
-      if (s.id != null) {
-        await fetchPaymentData(s);
+
+    final classList = results[0] as List<String>;
+    final studentList = results[1] as List<StudentModel>;
+
+    Map<String, double> pMap = Map<String, double>.from(studentPaid);
+    Map<String, double> dMap = Map<String, double>.from(studentDept);
+
+    for (var s in studentList) {
+      final sId = s.id ?? int.tryParse(s.idString) ?? 0;
+      if (PaymentApiService.cachedPaidByStudentId.containsKey(sId)) {
+        pMap[s.name] = PaymentApiService.cachedPaidByStudentId[sId] ?? 0.0;
+        dMap[s.name] = PaymentApiService.cachedDebtByStudentId[sId] ?? 0.0;
+      } else if (PaymentApiService.cachedPaidByName.containsKey(s.name)) {
+        pMap[s.name] = PaymentApiService.cachedPaidByName[s.name] ?? 0.0;
+        dMap[s.name] = PaymentApiService.cachedDebtByName[s.name] ?? 0.0;
       }
+    }
+
+    setState(() {
+      classes = classList;
+      if (classes.isNotEmpty && selectedClass == null) {
+        selectedClass = classes.first;
+      }
+      students = studentList;
+      studentPaid = pMap;
+      studentDept = dMap;
+    });
+
+    // Haddii backend /all uusan xog keenin, soo jiid fallback si parallel ah (degdeg ah)
+    if (PaymentApiService.cachedPaidByStudentId.isEmpty && studentList.isNotEmpty) {
+      final futures = studentList.where((s) => s.id != null).map((s) async {
+        try {
+          final payments = await PaymentApiService.getPaymentsByStudent(s.id!);
+          double totalPaid = 0;
+          double totalDept = 0;
+          for (var p in payments) {
+            totalPaid += double.tryParse(p['amount'].toString()) ?? 0;
+            totalDept += double.tryParse(p['debt'].toString()) ?? 0;
+          }
+          if (mounted) {
+            setState(() {
+              studentPaid[s.name] = totalPaid;
+              studentDept[s.name] = totalDept;
+            });
+          }
+        } catch (_) {}
+      });
+      await Future.wait(futures);
     }
   }
 
