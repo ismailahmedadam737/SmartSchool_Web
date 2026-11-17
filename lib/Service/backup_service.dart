@@ -2,7 +2,8 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/foundation.dart';
-import 'dart:html' as html;
+import 'dart:js_interop';
+import 'package:web/web.dart' as web;
 import 'api_service.dart';
 import '../models/student_model.dart';
 import '../models/bus_model.dart';

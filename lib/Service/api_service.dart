@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'package:flutter/foundation.dart';
-import 'dart:html' as html;
+import 'package:web/web.dart' as web;
 import 'package:http/http.dart' as http;
 import '../models/student_model.dart';
 import '../models/bus_model.dart';
@@ -50,7 +50,7 @@ class ApiService {
   static void removeStorage(String key) {
     if (kIsWeb) {
       try {
-        html.window.localStorage.remove(_scopedKey(key));
+        web.window.localStorage.removeItem(_scopedKey(key));
       } catch (e) {
         log("LocalStorage remove error: $e");
       }
@@ -98,7 +98,7 @@ class ApiService {
   static void _saveToStorage(String key, String data) {
     if (kIsWeb) {
       try {
-        html.window.localStorage[_scopedKey(key)] = data;
+        web.window.localStorage.setItem(_scopedKey(key), data);
       } catch (e) {
         log("LocalStorage write error: $e");
       }
@@ -108,7 +108,7 @@ class ApiService {
   static String? _readFromStorage(String key) {
     if (kIsWeb) {
       try {
-        return html.window.localStorage[_scopedKey(key)];
+        return web.window.localStorage.getItem(_scopedKey(key));
       } catch (e) {
         log("LocalStorage read error: $e");
       }
