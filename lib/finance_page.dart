@@ -5,6 +5,7 @@ import 'package:iftiinshe/models/expense_model.dart';
 import '../models/student_model.dart';
 import 'expenses_page.dart';
 import 'receipt_page.dart';
+import 'paid_students_page.dart';
 
 class FinancePage extends StatefulWidget {
   const FinancePage({super.key});
@@ -157,24 +158,57 @@ class _FinancePageState extends State<FinancePage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      final result = await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => ExpensesPage(expenseList: expenseList)),
-                      );
-                      if (result != null) setState(() => expenseList = result);
-                    },
-                    icon: const Icon(Icons.list),
-                    label: const Text("Expenses"),
-                  ),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 10,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => ExpensesPage(expenseList: expenseList)),
+                        );
+                        if (result != null) setState(() => expenseList = result);
+                      },
+                      icon: const Icon(Icons.list),
+                      label: const Text("Expenses"),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PaidStudentsPage()),
+                        );
+                      },
+                      icon: const Icon(Icons.payments_rounded, color: Colors.white, size: 20),
+                      label: const Text(
+                        "Dhammaan Ardayda Lacagta Bixisay",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981), // Emerald Green
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ],
                 ),
                 // Badhanka Reset All oo la keydiyay lagana ag dhigay meel ku habboon
                 ElevatedButton.icon(
                   onPressed: _resetAllPayments,
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
                   icon: const Icon(Icons.refresh),
                   label: const Text("Reset All"),
                 ),

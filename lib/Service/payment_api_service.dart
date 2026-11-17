@@ -61,6 +61,16 @@ class PaymentApiService {
     }
   }
 
+  // Method-kan ayaa soo celinaya dhammaan lacag bixinta ardayda oo dhan halmar
+  static Future<List<dynamic>> getAllPayments() async {
+    final response = await http.get(Uri.parse('$baseUrl/payments/all'));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load all payments');
+    }
+  }
+
   // Method-kan ayaa tirtiraya dhammaan lacagaha server-ka marka Reset All la riixo
   static Future<void> resetAllPayments() async {
     final response = await http.delete(

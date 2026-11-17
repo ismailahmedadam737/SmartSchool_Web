@@ -65,9 +65,21 @@ const resetAllPayments = async (req, res) => {
     }
 };
 
+// 5. Shaqada lagu helayo dhammaan lacag bixinta ardayda oo dhan (All Payments)
+const getAllPayments = async (req, res) => {
+    try {
+        const payments = await Payment.getAllPayments();
+        res.json(payments);
+    } catch (err) {
+        console.error("DEBUG: Cilad ka dhacday All Payments:", err.message);
+        res.status(500).json({ error: err.message });
+    }
+};
+
 module.exports = { 
     createPayment, 
     getHistory, 
     getTotalIncome,
-    resetAllPayments 
+    resetAllPayments,
+    getAllPayments 
 };

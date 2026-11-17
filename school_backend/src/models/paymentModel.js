@@ -41,10 +41,22 @@ const resetAllPayments = async () => {
   await pool.query(query);
 };
 
+const getAllPayments = async () => {
+  const query = `
+    SELECT p.*, s.name as student_name, s.class_name 
+    FROM payments p 
+    LEFT JOIN students s ON p.student_id = s.id 
+    ORDER BY p.payment_date DESC
+  `;
+  const { rows } = await pool.query(query);
+  return rows;
+};
+
 module.exports = { 
   addPayment, 
   getPaymentsByStudent, 
   getTotalIncome, 
   getTotalExpenses,
-  resetAllPayments 
+  resetAllPayments,
+  getAllPayments
 };

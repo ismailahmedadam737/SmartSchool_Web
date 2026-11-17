@@ -14,4 +14,7 @@ router.get('/total-income', controller.getTotalIncome);
 // 4. Endpoint-ka cusub ee tirtiraya dhammaan lacagaha (Reset All)
 router.delete('/reset-all', controller.resetAllPayments);
 
+// 5. Endpoint-ka dhammaan lacagaha ardayda (All Payments)
+router.get('/all', controller.getAllPayments);
+
 module.exports = router;
