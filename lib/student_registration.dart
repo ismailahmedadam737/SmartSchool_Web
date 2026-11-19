@@ -16,6 +16,7 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _districtController = TextEditingController();
   final TextEditingController _neighborController = TextEditingController();
+  final TextEditingController _searchStudentController = TextEditingController();
   
   final ScrollController _classScrollController = ScrollController();
 
@@ -30,6 +31,17 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
     super.initState();
     _loadSyncLocalStudents();
     _loadDataFromDatabase(); 
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _phoneController.dispose();
+    _districtController.dispose();
+    _neighborController.dispose();
+    _searchStudentController.dispose();
+    _classScrollController.dispose();
+    super.dispose();
   }
 
   void _loadSyncLocalStudents() {
@@ -437,18 +449,61 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Expanded(
-              child: Text("Dooro Fasal si aad u aragto Ardayda", 
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+              child: Text(
+                "Dooro Fasal si aad u aragto Ardayda", 
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
+                overflow: TextOverflow.ellipsis,
+              ),
             ),
+            const SizedBox(width: 12),
+            // Searching ardayda (Top Right - ku ag yaal + Button)
+            SizedBox(
+              width: isDesktop ? 250 : 180,
+              height: 40,
+              child: TextField(
+                controller: _searchStudentController,
+                onChanged: (_) => setState(() {}),
+                style: const TextStyle(fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: "Raadi arday...",
+                  hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
+                  prefixIcon: const Icon(Icons.search, size: 18, color: Color(0xFF6A11CB)),
+                  suffixIcon: _searchStudentController.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, size: 16, color: Colors.grey),
+                          onPressed: () {
+                            _searchStudentController.clear();
+                            setState(() {});
+                          },
+                        )
+                      : null,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
+                  filled: true,
+                  fillColor: Colors.white,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFF6A11CB), width: 1.5),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
             IconButton.filled(
               onPressed: _addNewClassDialog, 
               icon: const Icon(Icons.add),
               style: IconButton.styleFrom(backgroundColor: const Color(0xFF6A11CB)),
               tooltip: "Add New Class",
-            )
+            ),
           ],
         ),
         const SizedBox(height: 15),
@@ -520,8 +575,44 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
   }
 
   Widget _buildFilteredStudentList() {
-    final filteredList = students.where((s) => s['class'] == _viewingClass).toList();
-    if (filteredList.isEmpty) return const Center(child: Text("Fasalkan arday kuma jirto"));
+    final query = _searchStudentController.text.trim().toLowerCase();
+    final List<Map<String, String>> filteredList;
+
+    if (query.isEmpty) {
+      filteredList = students.where((s) => s['class'] == _viewingClass).toList();
+    } else {
+      final inClass = students.where((s) =>
+        s['class'] == _viewingClass &&
+        ((s['name'] ?? '').toLowerCase().contains(query) ||
+         (s['phone'] ?? '').toLowerCase().contains(query) ||
+         (s['district'] ?? '').toLowerCase().contains(query) ||
+         (s['neighbor'] ?? '').toLowerCase().contains(query))
+      ).toList();
+
+      if (inClass.isNotEmpty) {
+        filteredList = inClass;
+      } else {
+        filteredList = students.where((s) =>
+          (s['name'] ?? '').toLowerCase().contains(query) ||
+          (s['phone'] ?? '').toLowerCase().contains(query) ||
+          (s['class'] ?? '').toLowerCase().contains(query) ||
+          (s['district'] ?? '').toLowerCase().contains(query) ||
+          (s['neighbor'] ?? '').toLowerCase().contains(query)
+        ).toList();
+      }
+    }
+
+    if (filteredList.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Text(
+            query.isNotEmpty ? "Lama helin arday u dhigma '$query'" : "Fasalkan arday kuma jirto",
+            style: const TextStyle(color: Colors.grey, fontSize: 15),
+          ),
+        ),
+      );
+    }
 
     return ListView.builder(
       itemCount: filteredList.length,
@@ -538,7 +629,11 @@ class _RegistrationScreenState extends State<StudentRegistrationPage> {
               child: Text(student['name']![0], style: const TextStyle(color: Color(0xFF6A11CB), fontWeight: FontWeight.bold)),
             ),
             title: Text(student['name']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text(student['phone']!),
+            subtitle: Text(
+              query.isNotEmpty && filteredList.any((s) => s['class'] != _viewingClass)
+                  ? "${student['phone']!} • Fasal: ${student['class'] ?? ''}"
+                  : student['phone']!,
+            ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
