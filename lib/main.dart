@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'login_page.dart'; // Hubi in jidkani sax yahay
 
 void main() {
@@ -38,7 +39,7 @@ class EliteSchoolApp extends StatelessWidget {
         pageTransitionsTheme: PageTransitionsTheme(
           builders: {
             TargetPlatform.android: const ZoomPageTransitionsBuilder(),
-            TargetPlatform.iOS: CupertinoPageTransitionsBuilder(), // Laga saaray const-ka
+            TargetPlatform.iOS: const CupertinoPageTransitionsBuilder(),
             TargetPlatform.windows: const ZoomPageTransitionsBuilder(),
             TargetPlatform.macOS: const ZoomPageTransitionsBuilder(),
             TargetPlatform.linux: const ZoomPageTransitionsBuilder(),
