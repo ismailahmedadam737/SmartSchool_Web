@@ -1081,7 +1081,8 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
 
   @override
   Widget build(BuildContext context) {
-    final bool highlighted = widget.isSelected || _isHovered;
+    final bool isSelected = widget.isSelected;
+    final bool highlighted = isSelected || _isHovered;
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -1096,67 +1097,94 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
               ? (Matrix4.identity()..translate(0.0, -5.0, 0.0))
               : Matrix4.identity(),
           decoration: BoxDecoration(
+            color: Colors.white,
             gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0.0, 0.40, 1.0],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
               colors: [
-                widget.softBgColor, // Xagga sare: khafiif (soft & clean)
-                widget.accentColor.withOpacity(0.35), // Dhexe: kala-guur jilicsan
-                widget.accentColor.withOpacity(0.92), // Xagga hoose: rasiin (rich & vibrant)
+                Colors.white,
+                widget.softBgColor.withOpacity(isSelected ? 0.75 : 0.45),
+                widget.softBgColor.withOpacity(isSelected ? 0.95 : 0.70),
               ],
             ),
-            borderRadius: BorderRadius.circular(18),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: widget.isSelected
-                  ? Colors.white
-                  : widget.accentColor.withOpacity(0.35),
-              width: widget.isSelected ? 2.5 : 1.2,
+              color: isSelected
+                  ? widget.accentColor
+                  : (_isHovered
+                      ? widget.accentColor.withOpacity(0.5)
+                      : widget.accentColor.withOpacity(0.18)),
+              width: isSelected ? 2.2 : 1.2,
             ),
             boxShadow: [
               BoxShadow(
-                color: widget.accentColor.withOpacity(highlighted ? 0.35 : 0.18),
-                blurRadius: highlighted ? 22 : 12,
+                color: widget.accentColor.withOpacity(highlighted ? 0.22 : 0.07),
+                blurRadius: highlighted ? 20 : 10,
                 spreadRadius: highlighted ? 1 : 0,
-                offset: Offset(0, highlighted ? 7 : 4),
+                offset: Offset(0, highlighted ? 7 : 3),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.03),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(17),
+            borderRadius: BorderRadius.circular(19),
             child: Stack(
               children: [
-                // Card Main Content
+                // 1. Watermark icon in the background (Subtle, elegant glow)
+                Positioned(
+                  right: -12,
+                  bottom: -12,
+                  child: Icon(
+                    widget.icon,
+                    size: 80,
+                    color: widget.accentColor.withOpacity(highlighted ? 0.08 : 0.04),
+                  ),
+                ),
+
+                // 2. Card Content
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Top row: Title + Icon Badge (Xagga sare ee khafiifka ah)
+                      // Top row: Title + Dynamic Icon Badge
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Flexible(
                             child: Row(
                               children: [
-                                if (widget.isSelected)
+                                if (isSelected)
                                   Container(
-                                    width: 7,
-                                    height: 7,
-                                    margin: const EdgeInsets.only(right: 6),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.white,
+                                    width: 8,
+                                    height: 8,
+                                    margin: const EdgeInsets.only(right: 7),
+                                    decoration: BoxDecoration(
+                                      color: widget.accentColor,
                                       shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: widget.accentColor.withOpacity(0.5),
+                                          blurRadius: 6,
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 Flexible(
                                   child: Text(
                                     widget.title,
-                                    style: const TextStyle(
-                                      color: Color(0xFF0F172A),
+                                    style: TextStyle(
+                                      color: isSelected
+                                          ? widget.accentColor
+                                          : const Color(0xFF475569),
                                       fontSize: 13,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: isSelected ? FontWeight.w800 : FontWeight.w700,
+                                      letterSpacing: 0.2,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -1164,58 +1192,62 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
                               ],
                             ),
                           ),
-                          AnimatedScale(
-                            scale: _isHovered ? 1.12 : 1.0,
+                          AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
-                            child: Container(
-                              padding: const EdgeInsets.all(7),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: widget.accentColor.withOpacity(0.2),
-                                    blurRadius: 6,
-                                  ),
-                                ],
-                              ),
-                              child: Icon(widget.icon, color: widget.accentColor, size: 18),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: _isHovered
+                                  ? widget.accentColor
+                                  : widget.accentColor.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: _isHovered
+                                  ? [
+                                      BoxShadow(
+                                        color: widget.accentColor.withOpacity(0.35),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      )
+                                    ]
+                                  : null,
+                            ),
+                            child: Icon(
+                              widget.icon,
+                              color: _isHovered ? Colors.white : widget.accentColor,
+                              size: 19,
                             ),
                           ),
                         ],
                       ),
 
-                      // Middle: Value / Tirada (Xagga hoose ee rasiinka ah - Cadaanka ifaya)
+                      // Middle: Big Bold Clear Number / Value
                       Text(
                         widget.value,
                         style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 27,
+                          color: Color(0xFF0F172A),
+                          fontSize: 29,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: -0.5,
-                          shadows: [
-                            Shadow(color: Colors.black26, blurRadius: 4, offset: Offset(0, 1)),
-                          ],
+                          letterSpacing: -0.8,
                         ),
                       ),
 
-                      // Bottom: Subtitle with frosted white badge
+                      // Footer: Refined Pill Badge with Accent Tint
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.22),
-                          borderRadius: BorderRadius.circular(8),
+                          color: widget.accentColor.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.35),
-                            width: 0.8,
+                            color: widget.accentColor.withOpacity(0.20),
+                            width: 1,
                           ),
                         ),
                         child: Text(
                           widget.subtitle,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
+                          style: TextStyle(
+                            color: widget.accentColor,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.1,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -1224,23 +1256,23 @@ class _KpiHoverCardState extends State<_KpiHoverCard> {
                   ),
                 ),
 
-                // Bottom Colored Accent Strip (Shade-ka hoose ee aadka u quruxda badan)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  height: 3.5,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          widget.accentColor,
-                          widget.accentColor.withOpacity(0.6),
-                        ],
+                // 3. Left indicator bar for Selected state
+                if (isSelected)
+                  Positioned(
+                    left: 0,
+                    top: 10,
+                    bottom: 10,
+                    width: 4,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: widget.accentColor,
+                        borderRadius: const BorderRadius.only(
+                          topRight: Radius.circular(4),
+                          bottomRight: Radius.circular(4),
+                        ),
                       ),
                     ),
                   ),
-                ),
               ],
             ),
           ),
