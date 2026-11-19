@@ -5,7 +5,8 @@ import 'package:iftiinshe/models/student_model.dart';
 import 'package:iftiinshe/receipt_page.dart';
 
 class PaidStudentsPage extends StatefulWidget {
-  const PaidStudentsPage({super.key});
+  final List<StudentModel>? initialStudents;
+  const PaidStudentsPage({super.key, this.initialStudents});
 
   @override
   State<PaidStudentsPage> createState() => _PaidStudentsPageState();
@@ -29,11 +30,10 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
   @override
   void initState() {
     super.initState();
-    // 1. Soo saar ardayda iyo fasallada isla markiiba (0ms Instant Load)
-    final immediateStudents = ApiService.getLocalStudentsImmediate();
-    if (immediateStudents.isNotEmpty) {
-      allStudents = immediateStudents;
-      final classesSet = immediateStudents
+    // 0. Haddii hore loo soo gudbiyey ardayda (FinancePage), isla markiiba soo saar (0ms Instant Load)
+    if (widget.initialStudents != null && widget.initialStudents!.isNotEmpty) {
+      allStudents = List<StudentModel>.from(widget.initialStudents!);
+      final classesSet = allStudents
           .map((s) => s.className.trim())
           .where((c) => c.isNotEmpty)
           .toSet()
@@ -41,6 +41,20 @@ class _PaidStudentsPageState extends State<PaidStudentsPage> {
         ..sort();
       classesList = ["All", ...classesSet];
       isLoading = false;
+    } else {
+      // 1. Soo saar ardayda iyo fasallada isla markiiba (0ms Instant Load)
+      final immediateStudents = ApiService.getLocalStudentsImmediate();
+      if (immediateStudents.isNotEmpty) {
+        allStudents = immediateStudents;
+        final classesSet = immediateStudents
+            .map((s) => s.className.trim())
+            .where((c) => c.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
+        classesList = ["All", ...classesSet];
+        isLoading = false;
+      }
     }
 
     // 2. Ku bilow xogta cache-ka haddii ay jirto (0ms Instant Load)

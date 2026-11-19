@@ -241,7 +241,7 @@ class _FinancePageState extends State<FinancePage> {
                       onPressed: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const PaidStudentsPage()),
+                          MaterialPageRoute(builder: (_) => PaidStudentsPage(initialStudents: students)),
                         );
                       },
                       icon: const Icon(Icons.payments_rounded, color: Colors.white, size: 20),
