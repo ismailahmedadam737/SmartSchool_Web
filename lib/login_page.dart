@@ -452,8 +452,8 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
                     : Text(
                         _schoolDisplayName.toLowerCase().contains('frontend') ||
                         _schoolDisplayName.toLowerCase().contains('smartschool') ||
-                        _schoolDisplayName.toLowerCase() == 'welcome back to school'
-                            ? 'Welcome back to school'
+                        _schoolDisplayName.toLowerCase() == 'WELCOME BACK TO SCHOOL'
+                            ? 'WELCOME BACK TO SCHOOL'
                             : _schoolDisplayName.toUpperCase(),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
