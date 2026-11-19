@@ -458,7 +458,7 @@ class _FinancePageState extends State<FinancePage> {
                 const SizedBox(height: 10),
                 TextField(controller: deptController, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: "Dept", border: OutlineInputBorder())),
                 const SizedBox(height: 20),
-                GestureDetector(
+                _SavePaymentHoverButton(
                   onTap: () async {
                     double v = double.tryParse(c.text) ?? 0;
                     double d = double.tryParse(deptController.text) ?? 0;
@@ -476,20 +476,98 @@ class _FinancePageState extends State<FinancePage> {
                       // Dib u soo rar xogta si UI-ga u cusboonaado
                       await fetchPaymentData(s);
                       
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Payment Saved!")));
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Payment Saved!")));
+                      }
                     } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+                      }
                     }
                   },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(gradient: const LinearGradient(colors: [Color(0xff667eea), Color(0xff764ba2)]), borderRadius: BorderRadius.circular(12)),
-                    child: const Center(child: Text("Save Payment", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                  ),
                 ),
               ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SavePaymentHoverButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _SavePaymentHoverButton({required this.onTap});
+
+  @override
+  State<_SavePaymentHoverButton> createState() => _SavePaymentHoverButtonState();
+}
+
+class _SavePaymentHoverButtonState extends State<_SavePaymentHoverButton> {
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapUp: (_) => setState(() => _isPressed = false),
+        onTapCancel: () => setState(() => _isPressed = false),
+        child: AnimatedScale(
+          scale: _isPressed ? 0.97 : (_isHovered ? 1.02 : 1.0),
+          duration: const Duration(milliseconds: 150),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: _isHovered
+                    ? [const Color(0xff5568d3), const Color(0xff673ab7)]
+                    : [const Color(0xff667eea), const Color(0xff764ba2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xff667eea).withOpacity(_isHovered ? 0.45 : 0.22),
+                  blurRadius: _isHovered ? 14 : 7,
+                  offset: Offset(0, _isHovered ? 5 : 3),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                splashColor: Colors.white.withOpacity(0.25),
+                highlightColor: Colors.white.withOpacity(0.12),
+                onTap: widget.onTap,
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 14),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        "Save Payment",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ),
         ),
