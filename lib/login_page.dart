@@ -22,7 +22,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
   bool _obscurePassword = true;
 
   // Magaca iskuulka ee laga helayo URL-ka
-  String _schoolDisplayName = 'Elite Schools';
+  String _schoolDisplayName = 'Welcome back to school';
   bool _detectingSchool = true;
 
   late AnimationController _bgController;
@@ -68,7 +68,11 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         final parts = host.split('.');
         // Haddii ay 3+ parts yihiin iyo first part-ku aanuu 'www' ahayn
         if (parts.length >= 3 && parts[0] != 'www' && parts[0] != 'localhost') {
-          candidate = parts[0];
+          final p0 = parts[0].toLowerCase();
+          // Render domain-ka sida smartschools-frontend ma aha magac iskuul
+          if (!p0.contains('frontend') && !p0.contains('render') && !p0.contains('smartschool') && !p0.contains('iftiinshe')) {
+            candidate = parts[0];
+          }
         }
       }
 
@@ -123,11 +127,14 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
         } catch (_) {}
 
         // Haddii server-ka la soo gaadhi waayo, candidate-ka laftiisa tus (qurxin)
-        final prettyName = candidate
-            .replaceAll(RegExp(r'[-_]'), ' ')
-            .split(' ')
-            .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
-            .join(' ');
+        final bool isGeneric = candidate.toLowerCase().contains('frontend') || candidate.toLowerCase().contains('smartschool');
+        final prettyName = isGeneric
+            ? 'Welcome back to school'
+            : candidate
+                .replaceAll(RegExp(r'[-_]'), ' ')
+                .split(' ')
+                .map((w) => w.isEmpty ? '' : '${w[0].toUpperCase()}${w.substring(1)}')
+                .join(' ');
         if (mounted) {
           setState(() {
             _schoolDisplayName = prettyName;
@@ -141,7 +148,7 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
     // Fallback: haddii URL-ka waxba laga helin
     if (mounted) {
       setState(() {
-        _schoolDisplayName = 'Elite Schools';
+        _schoolDisplayName = 'Welcome back to school';
         _detectingSchool = false;
       });
     }
@@ -443,13 +450,17 @@ class _AuthPageState extends State<AuthPage> with TickerProviderStateMixin {
                         ),
                       )
                     : Text(
-                        _schoolDisplayName.toUpperCase(),
+                        _schoolDisplayName.toLowerCase().contains('frontend') ||
+                        _schoolDisplayName.toLowerCase().contains('smartschool') ||
+                        _schoolDisplayName.toLowerCase() == 'welcome back to school'
+                            ? 'Welcome back to school'
+                            : _schoolDisplayName.toUpperCase(),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          letterSpacing: 1.5,
+                          letterSpacing: 1.2,
                         ),
                       ),
                 const SizedBox(height: 8),
