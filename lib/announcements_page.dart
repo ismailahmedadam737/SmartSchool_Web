@@ -138,7 +138,7 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     }
   }
 
-  // Remove announcements older than 24 hours and persist the result
+  // Remove announcements that have already passed and persist the result
   void _removeExpiredAnnouncements() {
     final List<Map<String, dynamic>> recent = _filterRecentAnnouncements(_announcements);
     if (recent.length != _announcements.length) {
@@ -148,14 +148,22 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
       _saveAnnouncements();
     }
   }
-  // Helper to keep only announcements from the last 24 hours
+
+  // Helper to keep only active announcements (whose eventDate hasn't passed by > 1 day)
   List<Map<String, dynamic>> _filterRecentAnnouncements(List<Map<String, dynamic>> list) {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     return list.where((item) {
+      final eventStr = item['eventDate']?.toString() ?? '';
+      final eventDate = DateTime.tryParse(eventStr);
+      if (eventDate != null) {
+        final dateOnlyEvent = DateTime(eventDate.year, eventDate.month, eventDate.day);
+        return dateOnlyEvent.difference(today).inDays >= -1;
+      }
       final createdStr = item['createdAt']?.toString() ?? '';
       final created = DateTime.tryParse(createdStr);
       if (created == null) return false;
-      return now.difference(created).inHours < 24;
+      return now.difference(created).inDays < 7;
     }).toList();
   }
 
@@ -170,12 +178,14 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
 
     final int diffDays = dateOnlyEvent.difference(dateOnlyToday).inDays;
 
-    if (diffDays > 0) {
-      return "⏳ Waxaa ka dhiman $diffDays Maalmood";
+    if (diffDays > 1) {
+      return "⏳ Waxaa hadhay $diffDays Maalmood";
+    } else if (diffDays == 1) {
+      return "⏳ Waxaa hadhay 1 Maalin";
     } else if (diffDays == 0) {
-      return "🚨 Maanta Waa Maalinta Dhacdada!";
+      return "🚨 Maanta ayay ku egtahay!";
     } else {
-      return "✅ Maalintii Way Soo Dhaaftay";
+      return "✅ Way Soo Dhaaftay";
     }
   }
 
@@ -245,7 +255,9 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
     final descController = TextEditingController();
     String category = "Fasax";
     String targetRole = "All";
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 3));
+    int selectedDays = 3;
+    final now = DateTime.now();
+    DateTime selectedDate = DateTime(now.year, now.month, now.day).add(Duration(days: selectedDays));
 
     showDialog(
       context: context,
@@ -345,25 +357,61 @@ class _AnnouncementsPageState extends State<AnnouncementsPage> {
                     ),
                     const SizedBox(height: 14),
 
-                    Text("Taariikhda Dhacdada / Fasaxa", style: TextStyle(color: txtColor, fontWeight: FontWeight.bold, fontSize: 13)),
-                    const SizedBox(height: 6),
+                    Text("Maalmaha uu soconayo (Tirada Maalmaha Hadhay)", style: TextStyle(color: txtColor, fontWeight: FontWeight.bold, fontSize: 13)),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [1, 2, 3, 5, 7, 14, 30].map((days) {
+                        final isSel = selectedDays == days;
+                        return ChoiceChip(
+                          selected: isSel,
+                          label: Text(days == 1 ? "1 Maalin" : "$days Maalmood"),
+                          selectedColor: const Color(0xFF6C63FF),
+                          labelStyle: TextStyle(
+                            color: isSel ? Colors.white : txtColor,
+                            fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                            fontSize: 12,
+                          ),
+                          onSelected: (val) {
+                            if (val) {
+                              setDialogState(() {
+                                selectedDays = days;
+                                final n = DateTime.now();
+                                selectedDate = DateTime(n.year, n.month, n.day).add(Duration(days: days));
+                              });
+                            }
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 10),
                     OutlinedButton.icon(
                       onPressed: () async {
                         final picked = await showDatePicker(
                           context: context,
                           initialDate: selectedDate,
-                          firstDate: DateTime.now().subtract(const Duration(days: 30)),
+                          firstDate: DateTime.now(),
                           lastDate: DateTime.now().add(const Duration(days: 365)),
                         );
                         if (picked != null) {
-                          setDialogState(() => selectedDate = picked);
+                          setDialogState(() {
+                            selectedDate = picked;
+                            final n = DateTime.now();
+                            final today = DateTime(n.year, n.month, n.day);
+                            final dateOnlyPicked = DateTime(picked.year, picked.month, picked.day);
+                            selectedDays = dateOnlyPicked.difference(today).inDays;
+                          });
                         }
                       },
                       icon: const Icon(Icons.calendar_month_rounded, size: 18),
-                      label: Text("${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}"),
+                      label: Text(
+                        "Taariikhda dhicitaanka: ${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')} (${selectedDays <= 0 ? 'Maanta' : selectedDays == 1 ? '1 maalin baa hadhay' : '$selectedDays maalmood baa hadhay'})",
+                        style: const TextStyle(fontSize: 12),
+                      ),
                       style: OutlinedButton.styleFrom(
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       ),
                     ),
                     const SizedBox(height: 14),
