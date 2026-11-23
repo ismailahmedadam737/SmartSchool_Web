@@ -1944,111 +1944,177 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
     return t;
   }
 
+  static bool _tokensMatch(String t1, String t2) {
+    if (t1 == t2) return true;
+    if (t1.isEmpty || t2.isEmpty) return false;
+    // Prefix / containment match for compound or longer names (e.g. abdirahman / abdiraxman)
+    if (t1.length >= 4 && t2.length >= 4) {
+      if (t1.startsWith(t2) || t2.startsWith(t1)) return true;
+    }
+    // Levenshtein / single-character typo tolerance for strings >= 4 chars
+    if ((t1.length - t2.length).abs() <= 1 && t1.length >= 4 && t2.length >= 4) {
+      int diff = 0;
+      int i = 0, j = 0;
+      while (i < t1.length && j < t2.length) {
+        if (t1[i] != t2[j]) {
+          diff++;
+          if (diff > 1) return false;
+          if (t1.length > t2.length) { i++; continue; }
+          if (t2.length > t1.length) { j++; continue; }
+        }
+        i++;
+        j++;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  static double _calculateStudentMatchScore(
+    String docName,
+    String docId,
+    StudentModel student,
+  ) {
+    // 1. Direct Student ID Match
+    if (docId.isNotEmpty) {
+      if ((student.id != null && student.id.toString() == docId) ||
+          student.idString == docId ||
+          student.stringId == docId) {
+        return 10000.0;
+      }
+    }
+
+    final cleanDoc = _cleanSomaliName(docName);
+    final cleanDb = _cleanSomaliName(student.name);
+    if (cleanDoc.isEmpty || cleanDb.isEmpty) return 0.0;
+
+    // 2. Exact clean string match
+    if (cleanDoc == cleanDb) {
+      return 5000.0;
+    }
+
+    final docTokens = cleanDoc.split(' ').where((t) => t.isNotEmpty).map(_canonicalSomaliToken).toList();
+    final dbTokens = cleanDb.split(' ').where((t) => t.isNotEmpty).map(_canonicalSomaliToken).toList();
+    if (docTokens.isEmpty || dbTokens.isEmpty) return 0.0;
+
+    // 3. Exact canonical match (e.g. "Mohamed Ahmed Ali" == "Maxamed Axmed Cali")
+    if (docTokens.join(' ') == dbTokens.join(' ')) {
+      return 4000.0;
+    }
+
+    // 4. Token-by-token comparison (1st name, 2nd name, 3rd name)
+    int matchedTokensCount = 0;
+    int exactPositionMatches = 0;
+    final usedDbIndices = <int>{};
+
+    for (int d = 0; d < docTokens.length; d++) {
+      final dt = docTokens[d];
+      for (int s = 0; s < dbTokens.length; s++) {
+        if (usedDbIndices.contains(s)) continue;
+        if (_tokensMatch(dt, dbTokens[s])) {
+          matchedTokensCount++;
+          usedDbIndices.add(s);
+          if (d == s) {
+            exactPositionMatches++;
+          }
+          break;
+        }
+      }
+    }
+
+    bool firstMatches = _tokensMatch(docTokens.first, dbTokens.first);
+    bool lastMatches = _tokensMatch(docTokens.last, dbTokens.last);
+
+    // If at least 2 tokens match (e.g. 1st & 2nd, 1st & 3rd, 2nd & 3rd):
+    if (matchedTokensCount >= 2) {
+      double score = 1000.0 + (matchedTokensCount * 250.0) + (exactPositionMatches * 150.0);
+      if (firstMatches) score += 350.0;
+      if (lastMatches) score += 150.0;
+      // Bonus if all tokens in the shorter name are matched
+      if (matchedTokensCount == docTokens.length || matchedTokensCount == dbTokens.length) {
+        score += 400.0;
+      }
+      return score;
+    }
+
+    // If only 1 token matches:
+    if (matchedTokensCount == 1) {
+      if (docTokens.length == 1 && dbTokens.length == 1 && firstMatches) {
+        return 800.0;
+      }
+      if (firstMatches && (docTokens.length == 1 || dbTokens.length == 1)) {
+        return 450.0;
+      }
+    }
+
+    return 0.0;
+  }
+
   static StudentModel? _findBestStudentMatch(
     String docName,
     String docId,
     List<StudentModel> classStudents,
   ) {
     if (classStudents.isEmpty) return null;
-
-    // 1. First Priority: Student ID Match if docId exists
-    if (docId.isNotEmpty) {
-      for (final s in classStudents) {
-        if ((s.id != null && s.id.toString() == docId) ||
-            s.idString == docId ||
-            s.stringId == docId) {
-          return s;
-        }
-      }
-    }
-
-    final cleanDoc = _cleanSomaliName(docName);
-    if (cleanDoc.isEmpty) return null;
-
-    // 2. Second Priority: Clean exact string match
-    final exactMatches = classStudents.where((s) => _cleanSomaliName(s.name) == cleanDoc).toList();
-    if (exactMatches.length == 1) {
-      return exactMatches.first;
-    }
-
-    final docTokens = cleanDoc.split(' ').where((t) => t.isNotEmpty).toList();
-    if (docTokens.isEmpty) return null;
-    final docCanonical = docTokens.map(_canonicalSomaliToken).toList();
-
-    StudentModel? bestCandidate;
+    StudentModel? best;
     double bestScore = 0.0;
-    int candidatesWithBestScore = 0;
 
-    for (final student in classStudents) {
-      final cleanDb = _cleanSomaliName(student.name);
-      final dbTokens = cleanDb.split(' ').where((t) => t.isNotEmpty).toList();
-      if (dbTokens.isEmpty) continue;
-      final dbCanonical = dbTokens.map(_canonicalSomaliToken).toList();
-
-      // Check if canonical forms are identical (e.g. "Mohamed Ali Hassan" == "Maxamed Cali Xasan")
-      if (docCanonical.join(' ') == dbCanonical.join(' ')) {
-        return student; // 100% exact canonical match!
+    for (final s in classStudents) {
+      final score = _calculateStudentMatchScore(docName, docId, s);
+      if (score >= 400.0 && score > bestScore) {
+        bestScore = score;
+        best = s;
       }
+    }
+    return best;
+  }
 
-      int matchCount = 0;
-      bool firstNameMatches = (docCanonical.isNotEmpty &&
-          dbCanonical.isNotEmpty &&
-          docCanonical[0] == dbCanonical[0]);
+  static void _autoMatchAllRows(
+    List<_ExtractedRow> rows,
+    List<StudentModel> classStudents,
+  ) {
+    if (rows.isEmpty || classStudents.isEmpty) return;
 
-      for (int i = 0; i < docCanonical.length; i++) {
-        if (dbCanonical.contains(docCanonical[i])) {
-          matchCount++;
-        }
-      }
+    // Reset current matches
+    for (var r in rows) {
+      r.matchedStudent = null;
+    }
 
-      int positionMatches = 0;
-      int minLen = docCanonical.length < dbCanonical.length ? docCanonical.length : dbCanonical.length;
-      for (int i = 0; i < minLen; i++) {
-        if (docCanonical[i] == dbCanonical[i]) {
-          positionMatches++;
-        }
-      }
-
-      double maxLen = (docCanonical.length > dbCanonical.length ? docCanonical.length : dbCanonical.length).toDouble();
-      double tokenScore = matchCount / (maxLen > 0 ? maxLen : 1);
-      double posScore = positionMatches / (minLen > 0 ? minLen : 1);
-      double totalScore = (tokenScore * 0.6) + (posScore * 0.4);
-
-      if (firstNameMatches) {
-        totalScore += 0.30;
-      }
-
-      // If all doc tokens match in DB name (e.g. doc has "Mohamed Ali" and DB has "Mohamed Ali Hassan")
-      if (docCanonical.length >= 2 && matchCount == docCanonical.length && firstNameMatches) {
-        totalScore += 0.20;
-      }
-
-      bool isSufficientMatch = false;
-      if (firstNameMatches && matchCount >= 2 && totalScore >= 0.65) {
-        isSufficientMatch = true;
-      } else if (matchCount >= 3 && totalScore >= 0.65) {
-        isSufficientMatch = true;
-      } else if (docCanonical.length == 1 && matchCount == 1 && dbCanonical.length == 1) {
-        isSufficientMatch = true;
-      }
-
-      if (isSufficientMatch) {
-        if (totalScore > bestScore + 0.08) {
-          bestScore = totalScore;
-          bestCandidate = student;
-          candidatesWithBestScore = 1;
-        } else if ((totalScore - bestScore).abs() <= 0.08) {
-          candidatesWithBestScore++;
+    // Step 1: Collect all valid candidate matches with score
+    final candidates = <Map<String, dynamic>>[];
+    for (int r = 0; r < rows.length; r++) {
+      final row = rows[r];
+      for (final s in classStudents) {
+        final score = _calculateStudentMatchScore(row.docName, row.docId, s);
+        if (score >= 400.0) {
+          candidates.add({
+            'rowIdx': r,
+            'student': s,
+            'score': score,
+          });
         }
       }
     }
 
-    if (candidatesWithBestScore > 1) {
-      debugPrint('[BulkUpload] Ambiguous match for "$docName". Leaving for manual confirmation.');
-      return null;
-    }
+    // Step 2: Sort descending so the highest confidence matches are locked first!
+    candidates.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
 
-    return bestCandidate;
+    // Step 3: Assign 1-to-1 uniquely (guaranteeing ZERO duplicates!)
+    final matchedRowIndices = <int>{};
+    final matchedStudentIds = <int>{};
+
+    for (final c in candidates) {
+      final int rIdx = c['rowIdx'] as int;
+      final StudentModel student = c['student'] as StudentModel;
+      final int studentId = student.id ?? int.tryParse(student.idString) ?? student.hashCode;
+
+      if (matchedRowIndices.contains(rIdx)) continue;
+      if (matchedStudentIds.contains(studentId)) continue;
+
+      rows[rIdx].matchedStudent = student;
+      matchedRowIndices.add(rIdx);
+      matchedStudentIds.add(studentId);
+    }
   }
 
   void _checkDuplicates() {
@@ -2503,7 +2569,7 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
         if (normName.isEmpty) continue;
 
         // Skip headers or repeated headers across multi-page tables
-        if (nameKeywords.any((k) => normName == k || normName.contains(k))) continue;
+        if (nameKeywords.any((k) => normName == k)) continue;
         if (ignoreColKeywords.any((k) => normName == k)) continue;
         if (titleKeywords.any((k) => normName.contains(k))) continue;
         if (totalKeywords.any((k) => normName == k || normName.startsWith(k))) continue;
@@ -2537,13 +2603,11 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
           if (normName.length < 3 || titleKeywords.any((k) => normName.contains(k))) continue;
         }
 
-        StudentModel? matched = _findBestStudentMatch(docName, docId, classStudents);
-
         final extractedRow = _ExtractedRow(
           docId: docId,
           docName: docName,
           docTotal: docTotal,
-          matchedStudent: matched,
+          matchedStudent: null, // Assigned 1-to-1 uniquely below
           scores: scores,
         );
         extractedRow.initControllers(widget.subjects);
@@ -2551,6 +2615,8 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
       }
     }
 
+    // Halmar dhammaan ardayda fasalka ugu beeg si 1-to-1 ah iyadoo aan hal arday laba noqon!
+    _autoMatchAllRows(_parsedRows, classStudents);
     _checkDuplicates();
   }
 
@@ -2647,42 +2713,45 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
     int successCount = 0;
     int failedCount = 0;
 
-    for (int i = 0; i < validRows.length; i++) {
-      final row = validRows[i];
+    // Fast parallel saving in batches of 10 students (10x faster, no heavy waiting)
+    const int batchSize = 10;
+    for (int i = 0; i < validRows.length; i += batchSize) {
+      final chunk = validRows.sublist(i, (i + batchSize).clamp(0, validRows.length));
+
       setState(() {
-        saveProgress = (i + 1) / validRows.length;
-        saveProgressText = "Waxaa la kaydinayaa (${i + 1}/${validRows.length}): ${row.matchedStudent!.name}...";
+        saveProgress = (i + chunk.length) / validRows.length;
+        saveProgressText = "Waxaa la kaydinayaa (${i + chunk.length}/${validRows.length}) arday...";
       });
 
-      // Import only marks that actually exist for that student!
-      // If a subject was blank/missing, do not force 0 or save it.
-      final List<Map<String, dynamic>> grades = [];
-      for (final subj in widget.subjects) {
-        final score = row.scores[subj];
-        if (score != null) {
-          grades.add({
-            "subject": subj,
-            "score": score,
-            "exam_type": currentExamType,
-          });
+      final results = await Future.wait(chunk.map((row) async {
+        final List<Map<String, dynamic>> grades = [];
+        for (final subj in widget.subjects) {
+          final score = row.scores[subj];
+          if (score != null) {
+            grades.add({
+              "subject": subj,
+              "score": score,
+              "exam_type": currentExamType,
+            });
+          }
         }
-      }
 
-      if (grades.isEmpty) {
-        continue;
-      }
+        if (grades.isEmpty) return true;
 
-      int studentId = row.matchedStudent!.id ?? int.tryParse(row.matchedStudent!.idString) ?? 0;
-      bool ok = await ApiService.saveExamination(
-        studentId,
-        row.matchedStudent!.name,
-        grades,
-      );
+        int studentId = row.matchedStudent!.id ?? int.tryParse(row.matchedStudent!.idString) ?? 0;
+        return await ApiService.saveExamination(
+          studentId,
+          row.matchedStudent!.name,
+          grades,
+        );
+      }));
 
-      if (ok) {
-        successCount++;
-      } else {
-        failedCount++;
+      for (final res in results) {
+        if (res) {
+          successCount++;
+        } else {
+          failedCount++;
+        }
       }
     }
 
