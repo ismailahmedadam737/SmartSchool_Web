@@ -131,8 +131,9 @@ async function ensureTenantsTable() {
       await pool.query(`CREATE INDEX IF NOT EXISTS idx_${tbl}_tenant_id ON ${tbl}(tenant_id)`).catch(() => {});
     }
 
-    // Ensure examination table allows decimals (NUMERIC)
+    // Ensure examination table allows decimals (NUMERIC) and drops restrictive foreign key
     await pool.query(`ALTER TABLE examination ALTER COLUMN score TYPE NUMERIC(6,2)`).catch(() => {});
+    await pool.query(`ALTER TABLE examination DROP CONSTRAINT IF EXISTS examination_student_id_fkey`).catch(() => {});
 
     // Auto-link orphaned users in users table to tenants table if username matches admin_username
     await pool.query(`
