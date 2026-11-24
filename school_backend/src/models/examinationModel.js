@@ -4,8 +4,20 @@ const { ensureTenantColumn } = require('../utils/tenantIsolation');
 class Examination {
   // 1. Kaydi ama Update-garee natiijada (tenant-scoped)
   static async saveGrades(studentId, studentName, subject, score, examType, tenantId) {
-    await ensureTenantColumn('examination').catch(() => {});
-    await pool.query('ALTER TABLE examination ALTER COLUMN score TYPE NUMERIC(6,2)').catch(() => {});
+    if ((!studentId || studentId === 0) && studentName) {
+      try {
+        const sRes = await pool.query(
+          tenantId 
+            ? 'SELECT id FROM students WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) AND tenant_id = $2 LIMIT 1'
+            : 'SELECT id FROM students WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1',
+          tenantId ? [studentName, tenantId] : [studentName]
+        );
+        if (sRes.rows.length > 0) {
+          studentId = sRes.rows[0].id;
+        }
+      } catch (_) {}
+    }
+
     let query, values;
     if (tenantId) {
       query = `

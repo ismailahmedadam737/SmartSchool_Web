@@ -44,6 +44,7 @@ class _ExaminationPageState extends State<ExaminationPage> {
   List<String> dynamicClasses = []; 
   List<Map<String, dynamic>> currentStudentResults = [];
   bool isLoading = false;
+  bool isSavingManual = false;
 
   final List<String> subjects = ["Math", "English", "Somali", "Arabic", "Islamic", "Science", "Social"];
   Map<String, num> scoresMap = {};
@@ -932,29 +933,76 @@ pw.Text(
                 ],
               ),
               ElevatedButton.icon(
-                onPressed: () async {
-                  List<Map<String, dynamic>> finalGrades = subjects.map((s) => {
-                    "subject": s,
-                    "score": scoresMap[s] ?? 0,
-                    "exam_type": selectedExamType
-                  }).toList();
+                onPressed: isSavingManual ? null : () async {
+                  setState(() => isSavingManual = true);
+                  try {
+                    List<Map<String, dynamic>> finalGrades = subjects.map((s) => {
+                      "subject": s,
+                      "score": scoresMap[s] ?? 0,
+                      "exam_type": selectedExamType
+                    }).toList();
 
-                  int studentId = selectedStudent!.id ?? int.tryParse(selectedStudent!.idString) ?? 0;
-                  bool success = await ApiService.saveExamination(
-                    studentId,
-                    selectedStudent!.name,
-                    finalGrades,
-                  );
-
-                  if (success) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Waa la kaydiyey"), backgroundColor: Colors.green),
+                    int studentId = selectedStudent!.id ?? int.tryParse(selectedStudent!.idString) ?? 0;
+                    bool success = await ApiService.saveExamination(
+                      studentId,
+                      selectedStudent!.name,
+                      finalGrades,
                     );
-                    setState(() => selectedStudent = null);
+
+                    if (success) {
+                      for (var g in finalGrades) {
+                        currentStudentResults.removeWhere((r) =>
+                            r['exam_type'] == selectedExamType &&
+                            r['subject'].toString().toLowerCase() == g['subject'].toString().toLowerCase());
+                        currentStudentResults.add({
+                          'student_id': studentId,
+                          'student_name': selectedStudent!.name,
+                          'subject': g['subject'],
+                          'score': g['score'],
+                          'exam_type': selectedExamType,
+                        });
+                      }
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Guul: Natiijada ardayga ${selectedStudent!.name} ($selectedExamType) si guul leh ayaa loo keydiyey!"),
+                            backgroundColor: Colors.green.shade700,
+                            duration: const Duration(seconds: 3),
+                          ),
+                        );
+                        setState(() => selectedStudent = null);
+                      }
+                    } else {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Khalad: Natiijada lama keydin karin. Fadlan hubi khadka internet-ka."),
+                            backgroundColor: Colors.red,
+                            duration: Duration(seconds: 4),
+                          ),
+                        );
+                      }
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("Khalad: $e"), backgroundColor: Colors.red),
+                      );
+                    }
+                  } finally {
+                    if (mounted) {
+                      setState(() => isSavingManual = false);
+                    }
                   }
                 },
-                icon: const Icon(Icons.save, color: Colors.white),
-                label: const Text("Kaydi"),
+                icon: isSavingManual
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : const Icon(Icons.save, color: Colors.white),
+                label: Text(isSavingManual ? "Keydinayaa..." : "Kaydi"),
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               ),
             ],
@@ -2229,6 +2277,12 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
 
       _extractedTables = extractedTables;
       _processExtractedData();
+
+      // Marka la soo upload gareeyo, toos u keydi ardayda beegmay isla markiiba!
+      final matchedRows = _parsedRows.where((r) => r.matchedStudent != null).toList();
+      if (matchedRows.isNotEmpty) {
+        await _executeSaveDirectly(matchedRows, closeOnSuccess: true);
+      }
     } catch (e) {
       setState(() {
         errorMessage = "Khalad: $e";
@@ -2620,98 +2674,19 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
     _checkDuplicates();
   }
 
-  Future<void> _confirmAndSave() async {
-    if (_parsedRows.isEmpty) {
-      _showSnack("Fadlan marka hore soo geli faylka Word-ka ah (.docx)", isError: true);
-      return;
-    }
-
-    final exceedingRows = _parsedRows.where((r) => r.hasExceedingScore(maxAllowed, widget.subjects)).toList();
-    if (exceedingRows.isNotEmpty) {
-      _showSnack("Digniin: ${exceedingRows.length} arday dhibcahoodu waxay ka badan yihiin xadka $maxAllowed! Fadlan sax intaadan kaydin.", isError: true);
-      return;
-    }
-
-    final duplicateRows = _parsedRows.where((r) => r.isDuplicate).toList();
-    if (duplicateRows.isNotEmpty) {
-      _showSnack("Digniin: Waxaa jira arday laba jeer ku celis ah. Fadlan sax ardayda isku beegantay.", isError: true);
-      return;
-    }
-
-    final validRows = _parsedRows.where((r) => r.matchedStudent != null).toList();
-    if (validRows.isEmpty) {
-      _showSnack("Ma jiro hal arday oo ku beegmay fasalka $currentClass. Fadlan gacanta ku beeg ardayda.", isError: true);
-      return;
-    }
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: const [
-            Icon(Icons.security, color: Color(0xFF1E3A8A)),
-            SizedBox(width: 10),
-            Text("Xaqiijinta Kaydinta", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Ma hubtaa inaad rabto inaad kaydiso natiijooyinka ${validRows.length} arday?"),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.amber.shade400),
-              ),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline, color: Colors.amber, size: 20),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "Fasalka: $currentClass\nImtixaanka: $currentExamType (Xadka ugu sarreeya: $maxAllowed)\nHaddii ardaygu hore natiijo u lahaa waa la cusboonaysiin doonaa (Overwrite).",
-                      style: TextStyle(fontSize: 12, color: Colors.amber.shade900, height: 1.4),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text("Ka noqo", style: TextStyle(color: Colors.grey)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1E3A8A),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text("Haa, Kaydi"),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
+  Future<void> _executeSaveDirectly(List<_ExtractedRow> rowsToSave, {bool closeOnSuccess = true}) async {
+    final validRows = rowsToSave.where((r) => r.matchedStudent != null).toList();
+    if (validRows.isEmpty) return;
 
     setState(() {
       isSaving = true;
       saveProgress = 0.0;
-      saveProgressText = "Bilaabaya kaydinta...";
+      saveProgressText = "Bilaabaya kaydinta tooska ah...";
     });
 
     int successCount = 0;
     int failedCount = 0;
+    final List<_ExtractedRow> successfullySavedRows = [];
 
     // Fast parallel saving in batches of 10 students (10x faster, no heavy waiting)
     const int batchSize = 10;
@@ -2720,7 +2695,7 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
 
       setState(() {
         saveProgress = (i + chunk.length) / validRows.length;
-        saveProgressText = "Waxaa la kaydinayaa (${i + chunk.length}/${validRows.length}) arday...";
+        saveProgressText = "Waxaa la keydinayaa (${i + chunk.length}/${validRows.length}) arday...";
       });
 
       final results = await Future.wait(chunk.map((row) async {
@@ -2746,9 +2721,10 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
         );
       }));
 
-      for (final res in results) {
-        if (res) {
+      for (int k = 0; k < results.length; k++) {
+        if (results[k]) {
           successCount++;
+          successfullySavedRows.add(chunk[k]);
         } else {
           failedCount++;
         }
@@ -2759,24 +2735,64 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
       isSaving = false;
     });
 
-    int? firstSavedStudentId = validRows.isNotEmpty
-        ? (validRows.first.matchedStudent!.id ?? int.tryParse(validRows.first.matchedStudent!.idString))
+    int? firstSavedStudentId = successfullySavedRows.isNotEmpty
+        ? (successfullySavedRows.first.matchedStudent!.id ?? int.tryParse(successfullySavedRows.first.matchedStudent!.idString))
         : null;
 
-    await widget.onImportCompleted(currentClass, currentExamType, firstSavedStudentId);
+    if (successfullySavedRows.isNotEmpty) {
+      await widget.onImportCompleted(currentClass, currentExamType, firstSavedStudentId);
+    }
 
-    if (mounted) {
+    if (!mounted) return;
+
+    if (closeOnSuccess && _parsedRows.length == successfullySavedRows.length) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            "Guul: $successCount arday natiijadooda imtixaanka ($currentExamType) si toos ah ayaa loo kaydiyey!${failedCount > 0 ? ' ($failedCount lama kaydin karin)' : ''}",
+            "Guul: Dhammaan ${successfullySavedRows.length} arday natiijadooda ($currentExamType) si toos ah ayaa loo keydiyey isla markiiba!",
           ),
           backgroundColor: Colors.green.shade700,
           duration: const Duration(seconds: 4),
         ),
       );
+    } else {
+      // Hadii ardayda qaarkood ayna fasalka ku jirin, ka tag shaxda inta aan la keydin si loo arko
+      setState(() {
+        _parsedRows.removeWhere((r) => successfullySavedRows.contains(r));
+      });
+      _showSnack(
+        "Guul: $successCount arday natiijadooda si toos ah ayaa loo keydiyey isla markiiba!${_parsedRows.isNotEmpty ? ' Waxaa hadhay ${_parsedRows.length} arday oo aan fasalka ku jirin.' : ''}",
+        isError: false,
+      );
     }
+  }
+
+  Future<void> _confirmAndSave() async {
+    if (_parsedRows.isEmpty) {
+      _showSnack("Fadlan marka hore soo geli faylka Word-ka ah (.docx)", isError: true);
+      return;
+    }
+
+    final exceedingRows = _parsedRows.where((r) => r.hasExceedingScore(maxAllowed, widget.subjects)).toList();
+    if (exceedingRows.isNotEmpty) {
+      _showSnack("Digniin: ${exceedingRows.length} arday dhibcahoodu waxay ka badan yihiin xadka $maxAllowed! Fadlan sax intaadan kaydin.", isError: true);
+      return;
+    }
+
+    final duplicateRows = _parsedRows.where((r) => r.isDuplicate).toList();
+    if (duplicateRows.isNotEmpty) {
+      _showSnack("Digniin: Waxaa jira arday laba jeer ku celis ah. Fadlan sax ardayda isku beegantay.", isError: true);
+      return;
+    }
+
+    final validRows = _parsedRows.where((r) => r.matchedStudent != null).toList();
+    if (validRows.isEmpty) {
+      _showSnack("Ma jiro hal arday oo ku beegmay fasalka $currentClass. Fadlan gacanta ku beeg ardayda.", isError: true);
+      return;
+    }
+
+    await _executeSaveDirectly(validRows, closeOnSuccess: true);
   }
 
   void _showSnack(String msg, {bool isError = false}) {
