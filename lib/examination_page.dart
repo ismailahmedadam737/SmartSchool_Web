@@ -2119,49 +2119,87 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
 
   static void _autoMatchAllRows(
     List<_ExtractedRow> rows,
-    List<StudentModel> classStudents,
-  ) {
-    if (rows.isEmpty || classStudents.isEmpty) return;
+    List<StudentModel> classStudents, {
+    List<StudentModel>? allStudents,
+  }) {
+    if (rows.isEmpty) return;
 
     // Reset current matches
     for (var r in rows) {
       r.matchedStudent = null;
     }
 
-    // Step 1: Collect all valid candidate matches with score
-    final candidates = <Map<String, dynamic>>[];
-    for (int r = 0; r < rows.length; r++) {
-      final row = rows[r];
-      for (final s in classStudents) {
-        final score = _calculateStudentMatchScore(row.docName, row.docId, s);
-        if (score >= 400.0) {
-          candidates.add({
-            'rowIdx': r,
-            'student': s,
-            'score': score,
-          });
-        }
-      }
-    }
-
-    // Step 2: Sort descending so the highest confidence matches are locked first!
-    candidates.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
-
-    // Step 3: Assign 1-to-1 uniquely (guaranteeing ZERO duplicates!)
     final matchedRowIndices = <int>{};
     final matchedStudentIds = <int>{};
 
-    for (final c in candidates) {
-      final int rIdx = c['rowIdx'] as int;
-      final StudentModel student = c['student'] as StudentModel;
-      final int studentId = student.id ?? int.tryParse(student.idString) ?? student.hashCode;
+    // PASS 1: Match within classStudents (the selected / detected class)
+    if (classStudents.isNotEmpty) {
+      final candidates = <Map<String, dynamic>>[];
+      for (int r = 0; r < rows.length; r++) {
+        final row = rows[r];
+        for (final s in classStudents) {
+          final score = _calculateStudentMatchScore(row.docName, row.docId, s);
+          if (score >= 400.0) {
+            candidates.add({
+              'rowIdx': r,
+              'student': s,
+              'score': score,
+            });
+          }
+        }
+      }
 
-      if (matchedRowIndices.contains(rIdx)) continue;
-      if (matchedStudentIds.contains(studentId)) continue;
+      candidates.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
 
-      rows[rIdx].matchedStudent = student;
-      matchedRowIndices.add(rIdx);
-      matchedStudentIds.add(studentId);
+      for (final c in candidates) {
+        final int rIdx = c['rowIdx'] as int;
+        final StudentModel student = c['student'] as StudentModel;
+        final int studentId = student.id ?? int.tryParse(student.idString) ?? student.hashCode;
+
+        if (matchedRowIndices.contains(rIdx)) continue;
+        if (matchedStudentIds.contains(studentId)) continue;
+
+        rows[rIdx].matchedStudent = student;
+        matchedRowIndices.add(rIdx);
+        matchedStudentIds.add(studentId);
+      }
+    }
+
+    // PASS 2: Fallback across ALL registered school students for any unmatched rows
+    if (allStudents != null && allStudents.isNotEmpty && matchedRowIndices.length < rows.length) {
+      final candidates2 = <Map<String, dynamic>>[];
+      for (int r = 0; r < rows.length; r++) {
+        if (matchedRowIndices.contains(r)) continue;
+        final row = rows[r];
+        for (final s in allStudents) {
+          final int sId = s.id ?? int.tryParse(s.idString) ?? s.hashCode;
+          if (matchedStudentIds.contains(sId)) continue;
+
+          final score = _calculateStudentMatchScore(row.docName, row.docId, s);
+          if (score >= 400.0) {
+            candidates2.add({
+              'rowIdx': r,
+              'student': s,
+              'score': score,
+            });
+          }
+        }
+      }
+
+      candidates2.sort((a, b) => (b['score'] as double).compareTo(a['score'] as double));
+
+      for (final c in candidates2) {
+        final int rIdx = c['rowIdx'] as int;
+        final StudentModel student = c['student'] as StudentModel;
+        final int studentId = student.id ?? int.tryParse(student.idString) ?? student.hashCode;
+
+        if (matchedRowIndices.contains(rIdx)) continue;
+        if (matchedStudentIds.contains(studentId)) continue;
+
+        rows[rIdx].matchedStudent = student;
+        matchedRowIndices.add(rIdx);
+        matchedStudentIds.add(studentId);
+      }
     }
   }
 
@@ -2460,6 +2498,29 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
       }
     }
 
+    // Auto-detect class from document cells if present (e.g. "8A", "6A")
+    String? detectedClassFromDoc;
+    for (final table in _extractedTables) {
+      for (final row in table.take(6)) {
+        for (final cell in row) {
+          final trimmed = cell.trim().toLowerCase().replaceAll(' ', '');
+          if (trimmed.isEmpty) continue;
+          for (final availClass in widget.availableClasses) {
+            if (availClass.trim().toLowerCase().replaceAll(' ', '') == trimmed) {
+              detectedClassFromDoc = availClass;
+              break;
+            }
+          }
+          if (detectedClassFromDoc != null) break;
+        }
+        if (detectedClassFromDoc != null) break;
+      }
+      if (detectedClassFromDoc != null) break;
+    }
+    if (detectedClassFromDoc != null) {
+      currentClass = detectedClassFromDoc;
+    }
+
     // 2. Identify header row across tables (strictly ignoring title rows)
     List<String>? detectedHeaderRow;
     int? headerTableIdx;
@@ -2670,7 +2731,24 @@ class _BulkUploadDialogState extends State<_BulkUploadDialog> {
     }
 
     // Halmar dhammaan ardayda fasalka ugu beeg si 1-to-1 ah iyadoo aan hal arday laba noqon!
-    _autoMatchAllRows(_parsedRows, classStudents);
+    // Haddii arday ka maqan yahay fasalkaas, dhammaan ardayda iskuulka ka raadi (Pass 2)
+    _autoMatchAllRows(_parsedRows, classStudents, allStudents: widget.allStudents);
+
+    // Update currentClass to the majority matched students' class if needed
+    final classCounts = <String, int>{};
+    for (final r in _parsedRows) {
+      if (r.matchedStudent != null && r.matchedStudent!.className.isNotEmpty) {
+        final c = r.matchedStudent!.className;
+        classCounts[c] = (classCounts[c] ?? 0) + 1;
+      }
+    }
+    if (classCounts.isNotEmpty) {
+      final topClass = classCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+      if (widget.availableClasses.contains(topClass)) {
+        currentClass = topClass;
+      }
+    }
+
     _checkDuplicates();
   }
 
